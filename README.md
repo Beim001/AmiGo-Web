@@ -67,6 +67,7 @@
         ├── FamilyTab.tsx             # 「家族」标签页（世系族谱、传家宝、大事记、家族排行）
         ├── AuctionModal.tsx          # 拍卖会（门票/邀请入场、封闭式出价）
         ├── CreditsRoll.tsx           # 致谢名单（片尾式从下往上滚动，内容在 src/data/credits.ts）
+        ├── AboutUs.tsx               # 个人中心「关于我们」（两个维基、Discord、Reddit、QQ 群、哔哩哔哩）
         ├── BirthModal.tsx            # 「出生登记」界面（起名校验、随机身份生成、公民编号盖章）
         ├── GenderRightsModal.tsx     # 「性别权利」界面（公民法定性别变更与规费扣除）
         ├── CalendarModal.tsx         # 「卡罗尼亚帝国日历」弹窗（年份翻阅、节气事件与推进月份）

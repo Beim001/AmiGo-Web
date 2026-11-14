@@ -1,5 +1,5 @@
 // 致谢名单内容（来源：list.md）。集齐全部成就后以片尾形式从下往上滚动播放。
-// 世界观编写按阿米诺斯维基（fandom + miraheze 合并）编辑次数排名，统计见 wiki-contributors.md。
+// 世界观编写名单按阿米诺斯维基（fandom + miraheze 合并）编辑次数排序，统计见 wiki-contributors.md。
 
 export interface CreditSection {
   title: string;
@@ -10,13 +10,13 @@ export interface CreditSection {
 export const creditsHeadline = (rank: number | null) =>
   rank ? `恭喜你成为第 ${rank} 名获得本游戏全部成就的玩家` : '恭喜你获得本游戏全部成就';
 
-export const CREDITS_INTRO = ['感谢游玩本游戏', '如果想要感兴趣加入请搜索阿米诺斯联邦共和国'];
+export const CREDITS_INTRO = ['感谢游玩本游戏', '如果感兴趣，欢迎搜索阿米诺斯联邦共和国加入我们'];
 
 export const CREDIT_SECTIONS: CreditSection[] = [
   { title: '项目发起人', names: ['北洺'] },
   { title: '技术支持', names: ['温茶'] },
   {
-    title: '世界观编写（按维基编辑次数排名）',
+    title: '世界观编写',
     names: [
       '北洺', 'Mengma', 'Yuanpi', '温茶', '云山神人226', 'WholesomeStork328', '一只迷茫的星', 'Emtich',
       'VoguishBooch169', 'SUSUAMOY', 'McrNtr1088', 'QINGCI811', '阿米诺斯维基图片传输员', 'Canhong', '39hyh',

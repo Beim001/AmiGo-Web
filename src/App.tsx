@@ -18,6 +18,7 @@ import { randomTraits, PLAYER_TRAITS_KEY, diseaseTraitMultiplier, decayReduction
 import { REPUTATION_KEY, REP, HIGH_SALARY, clampReputation, reputationLevel, CHARITY_KEY, CHARITY_UNIT, charityRemaining } from './lib/reputation';
 import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, formatRealTime, unlockAllForTesting, clearAchievementsForTesting, hasAllAchievements, CREDITS_SEEN_KEY, CREDITS_RANK_KEY } from './lib/achievements';
 import { CreditsRoll } from './components/CreditsRoll';
+import { AboutUs } from './components/AboutUs';
 import { claimCompletionRank } from './lib/authClient';
 import { GUARDIANSHIP_KEY, Guardianship, takeCustody, monthlyGuardianship, ORPHANAGE_NAME, ADULT_AGE as GUARDIAN_ADULT_AGE } from './lib/guardianship';
 import { rankFamilies, familyNetWorth } from './lib/familyRank';
@@ -752,7 +753,7 @@ const ProfileModal = ({
   })();
   const ownedClothingCount = new Set(ownedClothes).size;
 
-  const [subTab, setSubTab] = useState<'info' | 'rank' | 'achievement' | 'settings' | 'cdkey'>('info');
+  const [subTab, setSubTab] = useState<'info' | 'rank' | 'achievement' | 'settings' | 'cdkey' | 'about'>('info');
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(playerName);
   const [copiedUid, setCopiedUid] = useState(false);
@@ -1330,7 +1331,7 @@ const ProfileModal = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="grid grid-cols-5 bg-[#21232e] p-1 rounded-xl border-2 border-black gap-1 shadow-[0_2px_0_#000]">
+        <div className="grid grid-cols-6 bg-[#21232e] p-1 rounded-xl border-2 border-black gap-1 shadow-[0_2px_0_#000]">
           <button
             onClick={() => setSubTab('info')}
             className={`py-2 text-[11px] font-black rounded-lg border transition-all cursor-pointer truncate ${
@@ -1381,6 +1382,16 @@ const ProfileModal = ({
             }`}
           >
             礼包兑换
+          </button>
+          <button
+            onClick={() => setSubTab('about')}
+            className={`py-2 text-[11px] font-black rounded-lg border transition-all cursor-pointer truncate ${
+              subTab === 'about'
+                ? 'bg-yellow-400 text-black border-black shadow-[0_1px_0_#000]'
+                : 'text-gray-400 border-transparent hover:text-white'
+            }`}
+          >
+            关于我们
           </button>
         </div>
 
@@ -1903,6 +1914,9 @@ const ProfileModal = ({
         )}
 
         {/* Tab 4: 礼包兑换 (CDKey) */}
+        {/* Tab 6: 关于我们 */}
+        {subTab === 'about' && <AboutUs />}
+
         {subTab === 'cdkey' && (
           <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] space-y-4">
             <div className="flex items-center gap-3">
