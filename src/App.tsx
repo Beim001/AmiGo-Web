@@ -24,6 +24,7 @@ import { StockModal } from './components/StockModal';
 import { AuthModal } from './components/AuthModal';
 import { AuthScreen } from './components/AuthScreen';
 import { EmailVerificationScreen } from './components/EmailVerificationScreen';
+import { DevToolsPanel } from './components/DevToolsPanel';
 import { auth, onAuthStateChanged, signOut, FirebaseUser } from './firebase';
 import {
   getBilibiliUserProfile,
@@ -3388,6 +3389,9 @@ export default function App() {
              }}
            />
          )}
+
+         {/* 开发测试工具：仅 npm run dev 下渲染，生产构建中被移除 */}
+         {import.meta.env.DEV && <DevToolsPanel coins={coins} setCoins={setCoins} />}
 
          {/* Firebase Authentication Overlay */}
          {showAuthModal && (
