@@ -435,6 +435,20 @@ export const getCompanyInfo = (deptName: string): CompanyInfo => {
   };
 };
 
+// 读取当前在职岗位 ID：
+// - 从未存档（新存档）→ 默认在职 'j1'（俄文通译），默认值待定见 undefined.md 第 3 题
+// - 存为空字符串 → 已离职、待业中
+export const CURRENT_JOB_KEY = 'amigo_current_job_id';
+export const readCurrentJobId = (): string | null => {
+  try {
+    const saved = localStorage.getItem(CURRENT_JOB_KEY);
+    if (saved === null) return 'j1';
+    return saved || null;
+  } catch (e) {
+    return 'j1';
+  }
+};
+
 export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) => {
   const [activeTab, setActiveTab] = useState<'hall' | 'resume'>('hall');
   const [search, setSearch] = useState('');
@@ -448,13 +462,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) 
   const [selectedCompanyDetail, setSelectedCompanyDetail] = useState<CompanyInfo | null>(null);
 
   // Saved Job State
-  const [currentJobId, setCurrentJobId] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('amigo_current_job_id') || 'j1';
-    } catch (e) {
-      return 'j1';
-    }
-  });
+  const [currentJobId, setCurrentJobId] = useState<string | null>(readCurrentJobId);
 
   const [jobHistoryIds, setJobHistoryIds] = useState<string[]>(() => {
     try {
@@ -549,7 +557,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) 
     }
     setCurrentJobId(job.id);
     try {
-      localStorage.setItem('amigo_current_job_id', job.id);
+      localStorage.setItem(CURRENT_JOB_KEY, job.id);
     } catch (e) {}
 
     // Record to history
@@ -569,7 +577,8 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) 
     if (!currentJob) return;
     setCurrentJobId(null);
     try {
-      localStorage.removeItem('amigo_current_job_id');
+      // 写入空字符串表示待业；若直接删除键，下次打开会被当成新存档而默认入职 'j1'
+      localStorage.setItem(CURRENT_JOB_KEY, '');
     } catch (e) {}
     showToast('已办理离职手续，目前处于自由待业状态');
   };

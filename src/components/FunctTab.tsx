@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   TrendingUp,
   Wallet,
@@ -132,66 +132,88 @@ export interface FunctTabProps {
   onOpenImmigrate?: () => void;
 }
 
-export const FunctTab: React.FC<FunctTabProps> = ({ 
-  onOpenBank, 
-  onOpenStock, 
-  onOpenHospital, 
-  onOpenJob, 
+export const FunctTab: React.FC<FunctTabProps> = ({
+  onOpenBank,
+  onOpenStock,
+  onOpenHospital,
+  onOpenJob,
   onOpenBirth,
   onOpenGender,
   onOpenHousing,
   onOpenVisa,
   onOpenImmigrate,
-}) => (
-  <div className="flex-1 overflow-y-auto bg-[#252632] pb-8 flex flex-col custom-scrollbar">
-    <div className="bg-[#1e3a8a] text-white text-center py-3 font-bold text-xl border-b-4 border-[#172554] relative z-10 shadow-lg flex-shrink-0">
-      <div className="absolute inset-0 flex justify-center items-center opacity-30 pointer-events-none overflow-hidden">
-         <div className="w-24 h-24 border-[6px] border-black rounded-full absolute -top-8"></div>
-         <div className="w-32 h-32 border-[6px] border-black rounded-full absolute -bottom-16"></div>
-      </div>
-      <span className="relative z-10 drop-shadow-[0_2px_0_#000] font-black tracking-widest text-2xl">功能</span>
-    </div>
+}) => {
+  const [toast, setToast] = useState<string | null>(null);
 
-    <div className="p-3.5 space-y-4">
-      <div className="grid grid-cols-4 gap-2.5 auto-rows-[76px]">
-        {FUNC_BENTO.map((item) => (
-          <div 
-            key={item.id} 
-            onClick={() => {
-              if (item.id === 'finance' && onOpenBank) {
-                onOpenBank();
-              } else if (item.id === 'stock' && onOpenStock) {
-                onOpenStock();
-              } else if (item.id === 'hospital' && onOpenHospital) {
-                onOpenHospital();
-              } else if (item.id === 'job' && onOpenJob) {
-                onOpenJob();
-              } else if (item.id === 'birth' && onOpenBirth) {
-                onOpenBirth();
-              } else if (item.id === 'gender' && onOpenGender) {
-                onOpenGender();
-              } else if (item.id === 'housing' && onOpenHousing) {
-                onOpenHousing();
-              } else if (item.id === 'visa' && onOpenVisa) {
-                onOpenVisa();
-              } else if (item.id === 'immigrate' && onOpenImmigrate) {
-                onOpenImmigrate();
-              }
-            }}
-            className={`
-              ${item.span} 
-              rounded-xl border-2 border-black relative overflow-hidden shadow-[0_4px_0_#000] 
-              cursor-pointer active:translate-y-[4px] active:shadow-none hover:brightness-110 transition-all
-            `}
-            style={{ backgroundColor: item.color }}
-          >
-            {renderBentoContent(item)}
-          </div>
-        ))}
+  // 已实现的功能入口；不在此表中的入口显示「即将开放」
+  const handlers: Record<string, (() => void) | undefined> = {
+    stock: onOpenStock,
+    finance: onOpenBank,
+    birth: onOpenBirth,
+    visa: onOpenVisa,
+    immigrate: onOpenImmigrate,
+    gender: onOpenGender,
+    housing: onOpenHousing,
+    job: onOpenJob,
+    hospital: onOpenHospital,
+  };
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast((prev) => (prev === msg ? null : prev)), 2200);
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto bg-[#252632] pb-8 flex flex-col custom-scrollbar">
+      {toast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[60] bg-black/90 text-yellow-300 border-2 border-yellow-500 text-xs font-black px-4 py-2 rounded-xl shadow-[0_4px_0_#000] animate-in fade-in slide-in-from-top-2 duration-200 text-center max-w-[85%] pointer-events-none">
+          {toast}
+        </div>
+      )}
+
+      <div className="bg-[#1e3a8a] text-white text-center py-3 font-bold text-xl border-b-4 border-[#172554] relative z-10 shadow-lg flex-shrink-0">
+        <div className="absolute inset-0 flex justify-center items-center opacity-30 pointer-events-none overflow-hidden">
+           <div className="w-24 h-24 border-[6px] border-black rounded-full absolute -top-8"></div>
+           <div className="w-32 h-32 border-[6px] border-black rounded-full absolute -bottom-16"></div>
+        </div>
+        <span className="relative z-10 drop-shadow-[0_2px_0_#000] font-black tracking-widest text-2xl">功能</span>
+      </div>
+
+      <div className="p-3.5 space-y-4">
+        <div className="grid grid-cols-4 gap-2.5 auto-rows-[76px]">
+          {FUNC_BENTO.map((item) => {
+            const open = handlers[item.id];
+            const available = !!open;
+            return (
+              <div
+                key={item.id}
+                onClick={() => {
+                  if (open) open();
+                  else showToast(`「${item.label}」即将开放，敬请期待`);
+                }}
+                className={`
+                  ${item.span}
+                  rounded-xl border-2 border-black relative overflow-hidden shadow-[0_4px_0_#000]
+                  cursor-pointer active:translate-y-[4px] active:shadow-none transition-all
+                  ${available ? 'hover:brightness-110' : 'grayscale-[55%] opacity-75'}
+                `}
+                style={{ backgroundColor: item.color }}
+                title={available ? item.label : `${item.label}（即将开放）`}
+              >
+                {renderBentoContent(item)}
+                {!available && (
+                  <div className="absolute top-1 right-1 z-20 bg-black/80 text-yellow-300 text-[8px] font-black px-1 py-px rounded border border-yellow-500/60 leading-tight pointer-events-none">
+                    即将开放
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Alias FuncTab for backward compatibility
 export const FuncTab = FunctTab;

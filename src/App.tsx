@@ -13,7 +13,7 @@ import { SimTab } from './components/SimTab';
 import { LogTab } from './components/LogTab';
 import { FamilyTab as MapTab, FamilyTab } from './components/FamilyTab';
 import { HospitalModal } from './components/HospitalModal';
-import { JobModal } from './components/JobModal';
+import { JobModal, JOB_POSITIONS, readCurrentJobId } from './components/JobModal';
 import { BirthModal } from './components/BirthModal';
 import { WealthChartModal } from './components/WealthChartModal';
 import { GenderRightsModal } from './components/GenderRightsModal';
@@ -272,6 +272,16 @@ const ChestAnimation = ({ isDrawing, result, onComplete }: any) => {
   );
 };
 
+// 商城服饰（不含初始服装 default）
+const SHOP_ITEMS = [
+  { id: 'knight', name: '骑士盔甲', effect: '防御力+10', currency: 'coin', price: 2000, icon: <Shirt size={26} className="text-gray-700 absolute fill-gray-400" strokeWidth={2}/>, bg: 'bg-[#b4f0c0]', iconBg: 'bg-[#cbd5e1]' },
+  { id: 'mage', name: '法师长袍', effect: '魔力+15', currency: 'coin', price: 50000, icon: <Shirt size={26} className="text-purple-900 absolute fill-purple-700" strokeWidth={2}/>, bg: 'bg-[#c8e8ff]', iconBg: 'bg-[#93c5fd]' },
+  { id: 'casual', name: '休闲卫衣', effect: '魅力+5', currency: 'coin', price: 8000, icon: <Shirt size={26} className="text-orange-700 absolute fill-orange-400" strokeWidth={2}/>, bg: 'bg-[#b4f0c0]', iconBg: 'bg-[#fde047]' }
+];
+
+// 可拥有的服装总数 = 初始服装 + 商城服饰
+const TOTAL_CLOTHING_COUNT = SHOP_ITEMS.length + 1;
+
 const ShopModal = ({ 
   onClose,
   coins,
@@ -284,11 +294,6 @@ const ShopModal = ({
   setFreeDrawUsed
 }: any) => {
 
-  const SHOP_ITEMS = [
-    { id: 'knight', name: '骑士盔甲', effect: '防御力+10', currency: 'coin', price: 2000, icon: <Shirt size={26} className="text-gray-700 absolute fill-gray-400" strokeWidth={2}/>, bg: 'bg-[#b4f0c0]', iconBg: 'bg-[#cbd5e1]' },
-    { id: 'mage', name: '法师长袍', effect: '魔力+15', currency: 'coin', price: 50000, icon: <Shirt size={26} className="text-purple-900 absolute fill-purple-700" strokeWidth={2}/>, bg: 'bg-[#c8e8ff]', iconBg: 'bg-[#93c5fd]' },
-    { id: 'casual', name: '休闲卫衣', effect: '魅力+5', currency: 'coin', price: 8000, icon: <Shirt size={26} className="text-orange-700 absolute fill-orange-400" strokeWidth={2}/>, bg: 'bg-[#b4f0c0]', iconBg: 'bg-[#fde047]' }
-  ];
 
   const [isDrawing, setIsDrawing] = React.useState(false);
   const [drawResult, setDrawResult] = React.useState<any | null>(null);
@@ -642,6 +647,9 @@ interface ProfileModalProps {
   isAvatarModalOpen: boolean;
   setIsAvatarModalOpen: (open: boolean) => void;
   renderAvatarContent: () => React.ReactNode;
+  ownedClothes: string[];
+  isRegistered: boolean;
+  age: number;
 }
 
 const ProfileModal = ({
@@ -662,7 +670,29 @@ const ProfileModal = ({
   isAvatarModalOpen,
   setIsAvatarModalOpen,
   renderAvatarContent,
+  ownedClothes,
+  isRegistered,
+  age,
 }: ProfileModalProps) => {
+  // 名片资料：读取真实游戏状态（岗位、房产、服装）
+  const currentJob = (() => {
+    const id = readCurrentJobId();
+    return id ? JOB_POSITIONS.find((j) => j.id === id) || null : null;
+  })();
+  const propertySummary = (() => {
+    try {
+      const props = JSON.parse(localStorage.getItem('amigo_owned_properties') || '[]');
+      if (Array.isArray(props) && props.length > 0) {
+        const primary = props.find((p: any) => p.isPrimaryResidence) || props[0];
+        return props.length > 1 ? `${primary.title} 等 ${props.length} 套` : primary.title;
+      }
+      const rental = JSON.parse(localStorage.getItem('amigo_current_rental') || 'null');
+      if (rental?.title) return `租住：${rental.title}`;
+    } catch (e) {}
+    return null;
+  })();
+  const ownedClothingCount = new Set(ownedClothes).size;
+
   const [subTab, setSubTab] = useState<'info' | 'rank' | 'achievement' | 'settings' | 'cdkey'>('info');
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(playerName);
@@ -1081,9 +1111,6 @@ const ProfileModal = ({
                   <Camera size={9} />
                   <span>更换</span>
                 </div>
-                <div className="absolute top-0 right-0 bg-black/90 text-yellow-400 text-[8px] font-black px-1 py-0.2 rounded-bl border-b border-l border-yellow-400">
-                  Lv.22
-                </div>
               </div>
             </div>
 
@@ -1176,10 +1203,10 @@ const ProfileModal = ({
               {/* Title & UID */}
               <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                 <span className="bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded border border-black shadow-[0_1px_0_#000]">
-                  帝国名誉男爵
+                  {isRegistered ? `帝国公民 · ${age} 岁` : '未登记公民'}
                 </span>
                 <span className="bg-purple-900/80 text-purple-200 text-[10px] font-black px-2 py-0.5 rounded border border-purple-500">
-                  瓦伦丁少东家
+                  {currentJob ? currentJob.title : '待业'}
                 </span>
               </div>
 
@@ -1229,15 +1256,15 @@ const ProfileModal = ({
           <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-gray-700/80 text-center">
             <div className="bg-[#21232e] p-2 rounded-xl border border-black">
               <div className="text-[10px] text-gray-400 font-bold">声望等级</div>
-              <div className="text-yellow-400 font-black text-xs mt-0.5">名声远扬 (S)</div>
+              <div className="text-gray-500 font-black text-xs mt-0.5">暂未开放</div>
             </div>
             <div className="bg-[#21232e] p-2 rounded-xl border border-black">
               <div className="text-[10px] text-gray-400 font-bold">机械推演</div>
-              <div className="text-white font-black text-xs mt-0.5">18 胜 / 0 败</div>
+              <div className="text-gray-500 font-black text-xs mt-0.5">暂未开放</div>
             </div>
             <div className="bg-[#21232e] p-2 rounded-xl border border-black">
               <div className="text-[10px] text-gray-400 font-bold">拥有服装</div>
-              <div className="text-emerald-400 font-black text-xs mt-0.5">4 / 4 套</div>
+              <div className="text-emerald-400 font-black text-xs mt-0.5">{ownedClothingCount} / {TOTAL_CLOTHING_COUNT} 套</div>
             </div>
           </div>
         </div>
@@ -1312,15 +1339,19 @@ const ProfileModal = ({
                 </div>
                 <div className="flex justify-between items-center bg-[#21232e] p-2.5 rounded-xl border border-black">
                   <span className="text-gray-400">毕业院校</span>
-                  <span className="text-yellow-400 font-black">帝国理工学院 (工程系第1名)</span>
+                  <span className="text-gray-500 font-black">暂无学历（教育学府即将开放）</span>
                 </div>
                 <div className="flex justify-between items-center bg-[#21232e] p-2.5 rounded-xl border border-black">
                   <span className="text-gray-400">当前主业</span>
-                  <span className="text-sky-300 font-black">卡罗尼亚重工 · 助理工程师</span>
+                  <span className={currentJob ? 'text-sky-300 font-black' : 'text-gray-500 font-black'}>
+                    {currentJob ? `${currentJob.department} · ${currentJob.title}` : '待业中'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center bg-[#21232e] p-2.5 rounded-xl border border-black">
                   <span className="text-gray-400">持有地产</span>
-                  <span className="text-emerald-400 font-black">中央大街7号机械研制所</span>
+                  <span className={propertySummary ? 'text-emerald-400 font-black text-right' : 'text-gray-500 font-black'}>
+                    {propertySummary || '暂无房产'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -3306,6 +3337,9 @@ export default function App() {
              isAvatarModalOpen={isAvatarModalOpen}
              setIsAvatarModalOpen={setIsAvatarModalOpen}
              renderAvatarContent={renderAvatarContent}
+             ownedClothes={ownedClothes}
+             isRegistered={isRegistered}
+             age={currentAge}
            />
          )}
 
