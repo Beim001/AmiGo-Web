@@ -24,6 +24,12 @@ interface DevToolsPanelProps {
   onUnlockAllAchievements: () => void;
   /** 立即在本月开办一场拍卖会 */
   onOpenAuctionNow: () => void;
+  /** 简洁模式开关（第 49 题） */
+  simpleMode: boolean;
+  onToggleSimpleMode: () => void;
+  /** 快进时智能安排（自动看病、推演、送礼与人生选择） */
+  smartFastForward: boolean;
+  onToggleSmartFastForward: () => void;
   onClearAchievements: () => void;
   /** 礼物背包件数 */
   giftTotal: number;
@@ -64,6 +70,10 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
   achievementProgress,
   onUnlockAllAchievements,
   onOpenAuctionNow,
+  simpleMode,
+  onToggleSimpleMode,
+  smartFastForward,
+  onToggleSmartFastForward,
   onClearAchievements,
   giftTotal,
   giftsGiven,
@@ -234,9 +244,16 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
               >
                 快进
               </button>
+              <label className="flex items-center gap-1.5 mt-2 text-[10px] font-bold text-gray-300 cursor-pointer select-none">
+                <input type="checkbox" checked={smartFastForward} onChange={onToggleSmartFastForward} className="accent-fuchsia-500" />
+                智能安排：自动看病、处理推演（选稳妥）、给父母配偶送礼，并替你求职、结婚、买房
+              </label>
               <div className="text-[9px] text-gray-500 font-bold mt-1.5">角色去世时会自动停止。</div>
               <button disabled={!isRegistered} onClick={onOpenAuctionNow} className={`${btn} w-full mt-2`}>
                 立即开办本月拍卖会
+              </button>
+              <button onClick={onToggleSimpleMode} className={`${btn} w-full mt-1.5`}>
+                {simpleMode ? '切回完整模式' : '切到简洁模式'}
               </button>
             </>
           )}

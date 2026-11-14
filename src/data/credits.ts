@@ -10,7 +10,7 @@ export interface CreditSection {
 export const creditsHeadline = (rank: number | null) =>
   rank ? `恭喜你成为第 ${rank} 名获得本游戏全部成就的玩家` : '恭喜你获得本游戏全部成就';
 
-export const CREDITS_INTRO = ['感谢游玩本游戏', '如果感兴趣，欢迎搜索阿米诺斯联邦共和国加入我们'];
+export const CREDITS_INTRO = ['感谢游玩本游戏', '如果感兴趣，欢迎搜索阿米诺斯联邦共和国并加入我们'];
 
 export const CREDIT_SECTIONS: CreditSection[] = [
   { title: '项目发起人', names: ['北洺'] },

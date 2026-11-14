@@ -13,17 +13,19 @@ import { SimTab } from './components/SimTab';
 import { LogTab } from './components/LogTab';
 import { FamilyTab } from './components/FamilyTab';
 import { MarriageModal } from './components/MarriageModal';
-import { FamilyState, INITIAL_FAMILY_STATE, promoteFamily, getHeirlooms, addHeirloom, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
-import { randomTraits, PLAYER_TRAITS_KEY, diseaseTraitMultiplier, decayReduction, salaryMultiplier, depositInterestMultiplier, traitNames, traitById } from './lib/traits';
+import { FamilyState, INITIAL_FAMILY_STATE, demoteFamily, generateSpouseCandidates, marry, MARRIAGE_FEE, MARRIAGE_MIN_AGE, SPOUSE_MEMBER_ID, canInteract, applyInteraction, GIFT_COST, promoteFamily, getHeirlooms, addHeirloom, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
+import { randomTraits, affinityBonus, withBirthPrivilege, rollMaintenance, fertileMaxAge, MAINTENANCE_COST, FERTILITY_TRAITS, PLAYER_TRAITS_KEY, diseaseTraitMultiplier, decayReduction, salaryMultiplier, depositInterestMultiplier, traitNames, traitById } from './lib/traits';
 import { REPUTATION_KEY, REP, HIGH_SALARY, clampReputation, reputationLevel, CHARITY_KEY, CHARITY_UNIT, charityRemaining } from './lib/reputation';
 import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, formatRealTime, unlockAllForTesting, clearAchievementsForTesting, hasAllAchievements, CREDITS_SEEN_KEY, CREDITS_RANK_KEY, readGiftsGiven, recordGiftsGiven } from './lib/achievements';
 import { CreditsRoll } from './components/CreditsRoll';
-import { GiftInventory, GIFT_INVENTORY_KEY, GIFT_QUALITY_STYLE, GIFT_TASTE_LABEL, CHILD_AGE as GIFT_CHILD_AGE, addGifts, driftGiftTastes, giftCount } from './lib/gifts';
+import { SimpleModeView, SimpleCard } from './components/SimpleModeView';
+import { SIMPLE_MODE_KEY, autoOptionIndex, recommendJobs, recommendHome, shouldSuggestHome, buyRecommended, sellAll } from './lib/simpleMode';
+import { GiftInventory, GIFT_INVENTORY_KEY, GIFT_QUALITY_STYLE, GIFT_TASTE_LABEL, CHILD_AGE as GIFT_CHILD_AGE, addGifts, driftGiftTastes, giftCount, giftById, giftAffinityGain, removeGift } from './lib/gifts';
 import { AboutUs } from './components/AboutUs';
 import { claimCompletionRank } from './lib/authClient';
 import { GUARDIANSHIP_KEY, Guardianship, takeCustody, monthlyGuardianship, ORPHANAGE_NAME, ADULT_AGE as GUARDIAN_ADULT_AGE } from './lib/guardianship';
 import { rankFamilies, familyNetWorth } from './lib/familyRank';
-import { rollClass, generateOrigin, classById, readChildJob, CHILD_JOB_KEY, CHILD_LABOR_MAX_AGE, checkPromotion } from './lib/lineage';
+import { rollClass, generateOrigin, classById, readChildJob, CHILD_JOB_KEY, CHILD_LABOR_MAX_AGE, CHILD_JOBS, checkPromotion, checkDemotion, PLAYER_LIFESPAN_KEY, rollPlayerLifespan } from './lib/lineage';
 import { applySurname } from './lib/names';
 import { Auction, AUCTION_KEY, AUCTION_CHANCE, TICKET_PRICE, generateAuction, placeBid, isInvited, heirloomById, heirloomsValue } from './lib/heirlooms';
 import { AuctionModal } from './components/AuctionModal';
@@ -44,13 +46,13 @@ import {
   loanRateFor,
   formatRate,
 } from './lib/bank';
-import { advanceMarket, loadMarket, saveMarket, TRADING_DAYS_PER_MONTH, findFinanceBackground } from './lib/stockMarket';
+import { advanceMarket, loadMarket, saveMarket, TRADING_DAYS_PER_MONTH, findFinanceBackground, STOCK_KEYS, StockHolding, StockTradeLog } from './lib/stockMarket';
 import { HospitalModal } from './components/HospitalModal';
 import { JobModal, JOB_POSITIONS, readCurrentJobId, readJobHistoryIds, CURRENT_JOB_KEY, JOB_HISTORY_KEY } from './components/JobModal';
 import { BirthModal } from './components/BirthModal';
 import { WealthChartModal } from './components/WealthChartModal';
 import { GenderRightsModal } from './components/GenderRightsModal';
-import { HousingModal } from './components/HousingModal';
+import { HousingModal, HOUSING_MARKET_PROPERTIES } from './components/HousingModal';
 import { VisaModal } from './components/VisaModal';
 import { ImmigrationModal } from './components/ImmigrationModal';
 import { StockModal } from './components/StockModal';
@@ -100,7 +102,8 @@ const saveStored = (key: string, value: unknown) => {
 };
 
 // 重置人生时保留的存档键（账号级数据，不属于某一段人生）
-const KEYS_KEPT_ON_RESET = new Set(['amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements', 'amigo_credits_seen', 'amigo_credits_rank', 'amigo_gifts_given']);
+const SIMPLE_SNOOZE_KEY = 'amigo_simple_snooze';
+const KEYS_KEPT_ON_RESET = new Set(['amigo_simple_mode', 'amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements', 'amigo_credits_seen', 'amigo_credits_rank', 'amigo_gifts_given']);
 
 
 
@@ -718,6 +721,9 @@ interface ProfileModalProps {
   age: number;
   /** 播放致谢名单（集齐全部成就后可用） */
   onPlayCredits: () => void;
+  /** 简洁模式（第 49 题） */
+  simpleMode: boolean;
+  onToggleSimpleMode: () => void;
 }
 
 const ProfileModal = ({
@@ -748,6 +754,8 @@ const ProfileModal = ({
   isRegistered,
   age,
   onPlayCredits,
+  simpleMode,
+  onToggleSimpleMode,
 }: ProfileModalProps) => {
   // 名片资料：读取真实游戏状态（岗位、房产、服装）
   const currentJob = (() => {
@@ -1762,6 +1770,23 @@ const ProfileModal = ({
               <h3 className="text-white font-black text-sm mb-2 flex items-center gap-2 border-b border-gray-700/80 pb-2">
                 <Settings size={16} className="text-yellow-400" /> 音效与画面设置
               </h3>
+
+              <div className="flex justify-between items-center bg-[#21232e] p-3 rounded-xl border border-black">
+                <div className="flex items-center gap-2">
+                  <Baby size={18} className={simpleMode ? 'text-yellow-400' : 'text-gray-500'} />
+                  <div>
+                    <div className="text-white font-black text-xs">简洁模式</div>
+                    <div className="text-gray-400 text-[10px]">一个大界面、大按钮，只管人生里最重要的事（与完整模式共用存档）</div>
+                  </div>
+                </div>
+                <button
+                  onClick={onToggleSimpleMode}
+                  className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors cursor-pointer shrink-0 ${simpleMode ? 'bg-yellow-400' : 'bg-gray-700'}`}
+                  title="切换简洁模式"
+                >
+                  <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white border border-black transition-all ${simpleMode ? 'left-6' : 'left-0.5'}`} />
+                </button>
+              </div>
 
               <div className="flex justify-between items-center bg-[#21232e] p-3 rounded-xl border border-black">
                 <div className="flex items-center gap-2">
@@ -3082,9 +3107,14 @@ export default function App() {
       }
       else if (sick.damage > 0 && currentDisease) notes.push(`${currentDisease.name} -${sick.damage}`);
     }
-    const newHealth = isRegistered
-      ? nextHealth(health, comfort, ageNextMonth, diseaseDamage + childLaborDamage - decayReduction(playerTraits, ageNextMonth))
-      : Math.min(100, health + comfort);
+    // 第 51 题：到达寿命即寿终正寝，医疗只能延缓衰减
+    const reachedLifespan = isRegistered && playerLifespan !== null && ageNextMonth >= playerLifespan;
+    if (reachedLifespan) notes.push('🕯️ 寿终正寝');
+    const newHealth = reachedLifespan
+      ? 0
+      : isRegistered
+        ? nextHealth(health, comfort, ageNextMonth, diseaseDamage + childLaborDamage - decayReduction(playerTraits, ageNextMonth))
+        : Math.min(100, health + comfort);
     setHealth(newHealth);
     if (isRegistered) {
       const delta = newHealth - health;
@@ -3097,7 +3127,7 @@ export default function App() {
     let familyCash = 0; // 本月家族相关的现金变动
     let repDelta = 0;
     if (isRegistered && newHealth > 0) {
-      const birth = tryHaveChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits);
+      const birth = tryHaveChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits, gender);
       if (birth.child) {
         fam = birth.state;
         repDelta += REP.child * birth.children.length;
@@ -3124,7 +3154,7 @@ export default function App() {
         } else {
           familyCash -= upkeep;
           notes.push(`供养情人 -${upkeep.toLocaleString()}`);
-          const secret = tryIllegitimateChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits);
+          const secret = tryIllegitimateChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits, gender);
           if (secret.child) {
             fam = secret.state;
             notes.push(`🤫 私生${secret.child.gender === '女' ? '女' : '子'} ${secret.child.name} 降生`);
@@ -3190,6 +3220,17 @@ export default function App() {
         fam = promoteFamily(fam, toCls.id, toCls.label, nextY, nextM, promo.reason);
         notes.push(`🎖️ 家族晋升为${toCls.label}`);
         addLifeLog('大事', `家族跻身${toCls.label}`, promo.reason, logWhenFamily);
+      } else {
+        // 阶层降级（第 46 题）：晋升上来的阶层，资产连续 12 个月低于门槛一半则降一级
+        const dem = checkDemotion(getOrigin(fam).classId, netWorthNow, fam.demotionStreak ?? 0, fam.baseClassId);
+        if (dem.demote) {
+          const toCls = classById(dem.demote.to);
+          fam = demoteFamily(fam, toCls.id, toCls.label, nextY, nextM);
+          notes.push(`📉 家道中落，家族跌回${toCls.label}`);
+          addLifeLog('大事', `家道中落，跌回${toCls.label}`, '家族资产长期缩水。', logWhenFamily);
+        } else if ((fam.demotionStreak ?? 0) !== dem.streak) {
+          fam = { ...fam, demotionStreak: dem.streak };
+        }
       }
     }
     if (fam !== family) setFamily(fam);
@@ -3279,12 +3320,14 @@ export default function App() {
     } catch (e) {}
     clearLifeLog();
     setSimEvents([]);
-    const traits = randomTraits();
+    const traits = withBirthPrivilege(cls.id, randomTraits());
     setPlayerTraits(traits);
+    setPlayerLifespan(rollPlayerLifespan(cls.id, traits));
     setReputation(cls.startReputation);
     setGuardianship(null);
     addLifeLog('成长', '出生登记', `出生于${cls.label}之家（${origin.surname}家族），性别${generatedGender}，特质：${traitNames(traits).join('、')}。`, { year: gameYear, month: gameMonth, age: 8 });
     unlockAchievement('born');
+    if (simpleMode) setShowBirthModal(false);
     showToast(`🎉 出生登记成功！${finalName}，出生在${cls.label}之家（${origin.surname}家族），性别：${generatedGender}，初始年龄：8岁`);
     return { gender: generatedGender, age: 8, classLabel: cls.label, surname: origin.surname, name: finalName };
   };
@@ -3333,6 +3376,7 @@ export default function App() {
     } catch (e) {}
     setShowSuccession(false);
     setPlayerTraits(heir.traits && heir.traits.length > 0 ? heir.traits : randomTraits());
+    setPlayerLifespan(null);
     setReputation((r) => clampReputation(r * REP.heirShare));
     unlockAchievement('succession');
 
@@ -3394,6 +3438,7 @@ export default function App() {
     setSimEvents([]);
     setSimScore(0);
     setPlayerTraits([]);
+    setPlayerLifespan(null);
     setReputation(0);
     setGuardianship(null);
     setCharity(null);
@@ -3566,8 +3611,10 @@ export default function App() {
   // 开发测试工具：一键快进。每次只推进一个月，等界面用新状态重新渲染后再推进下一个月，
   // 保证每个月都按最新的现金、健康、家族等状态完整结算；角色去世时自动停止。
   const [fastForwardRemaining, setFastForwardRemaining] = useState(0);
+  /** 快进时「智能安排」：自动看病、处理推演、送礼，并替你做求职、结婚、买房的选择 */
+  const [smartFastForward, setSmartFastForward] = useState(false);
   React.useEffect(() => {
-    if (fastForwardRemaining <= 0) return;
+    if (fastForwardRemaining <= 0 || smartFastForward) return;
     if (isRegistered && health <= 0) {
       setFastForwardRemaining(0);
       return;
@@ -3577,7 +3624,7 @@ export default function App() {
       setFastForwardRemaining((n) => Math.max(0, n - 1));
     }, 0);
     return () => clearTimeout(timer);
-  }, [fastForwardRemaining, gameYear, gameMonth, health]);
+  }, [fastForwardRemaining, gameYear, gameMonth, health, smartFastForward]);
 
   const handleDevSetAge = (age: number) => {
     const regYear = gameYear - (age - 8);
@@ -3617,6 +3664,393 @@ export default function App() {
       .filter((m) => m.kin === 'parent' && !m.isPlayer)
       .map((m) => ({ name: m.name, relation: m.relation, occupation: m.occupation, affinity: m.affinity, status: m.status }));
     return computeAllowance(parents, age, familyClass.id, !!family.playerIllegitimate);
+  };
+
+  // 主角寿命（第 51 题）：旧存档或传承后没有寿命时，按当前阶层与特质补抽
+  const [playerLifespan, setPlayerLifespan] = useState<number | null>(() => loadStored<number | null>(PLAYER_LIFESPAN_KEY, null));
+  React.useEffect(() => saveStored(PLAYER_LIFESPAN_KEY, playerLifespan), [playerLifespan]);
+  React.useEffect(() => {
+    if (isRegistered && playerLifespan === null) setPlayerLifespan(rollPlayerLifespan(familyClass.id, playerTraits));
+  }, [isRegistered, playerLifespan, familyClass.id]);
+
+  // ---------- 简洁模式（第 49 题）：面向 7 岁儿童的一屏界面，与完整模式共用存档 ----------
+  const [simpleMode, setSimpleMode] = useState<boolean>(() => loadStored<boolean>(SIMPLE_MODE_KEY, false));
+  React.useEffect(() => saveStored(SIMPLE_MODE_KEY, simpleMode), [simpleMode]);
+  /** 人生节点卡片「以后再说」：卡片类型 → 到哪个月（年 × 12 + 月）之前不再弹出 */
+  const [simpleSnooze, setSimpleSnooze] = useState<Record<string, number>>(() => loadStored<Record<string, number>>(SIMPLE_SNOOZE_KEY, {}));
+  React.useEffect(() => saveStored(SIMPLE_SNOOZE_KEY, simpleSnooze), [simpleSnooze]);
+  const [simpleAutoNotes, setSimpleAutoNotes] = useState<string[]>([]);
+  /** 最近一次月度结算的提示（渲染时从提示文字中取，避免在副作用里连锁更新状态） */
+  const simpleMonthNotesRef = React.useRef<string[]>([]);
+  if (toast && (toast.startsWith('🗓️') || toast.startsWith('⚠️ 时局剧变'))) simpleMonthNotesRef.current = toast.split('｜').map((t) => t.trim()).filter(Boolean);
+  const simpleMonthNotes = simpleMonthNotesRef.current;
+  const [simpleAdvancePending, setSimpleAdvancePending] = useState(false);
+  const simpleMonthIndex = gameYear * 12 + gameMonth;
+
+  // 自动处理完当月事务、界面用新状态重新渲染后，再推进月份（避免月度结算用到旧的健康、现金）
+  React.useEffect(() => {
+    if (!simpleAdvancePending) return;
+    // 放到下一个宏任务执行，打断副作用里的同步连锁更新（连续推进时会触发 React 的嵌套更新上限警告）
+    const timer = setTimeout(() => {
+      setSimpleAdvancePending(false);
+      handleNextMonth();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [simpleAdvancePending]);
+
+  /** 「过一个月」前自动处理：治病、补健康、推演事件（选稳妥）、给父母和配偶送礼 */
+  const simpleAutoHandle = (): string[] => {
+    const out: string[] = [];
+    let cash = coins;
+    let hp = health;
+    const parentsPay = isMinor(currentAge) && familyClass.parentsPayMedical;
+    if (currentDisease) {
+      const cost = parentsPay ? 0 : currentDisease.cost;
+      if (cash >= cost) {
+        cash -= cost;
+        setDisease(null);
+        unlockAchievement('cured');
+        addLifeLog('健康', `治愈${currentDisease.name}`, '简洁模式自动就医。');
+        out.push(`🩺 治好了${currentDisease.name}${cost > 0 ? `（-${cost.toLocaleString()} ₽）` : '（爸妈付钱）'}`);
+      } else {
+        out.push(`🤒 钱不够，治不了${currentDisease.name}（要 ${cost.toLocaleString()} ₽）`);
+      }
+    }
+    if (hp < 40) {
+      const cost = parentsPay ? 0 : 1500;
+      if (cash >= cost) {
+        cash -= cost;
+        hp = Math.min(100, hp + 30);
+        out.push('💊 去医院打了营养针，健康 +30');
+      }
+    }
+    let fam = family;
+    let score = 0;
+    const resolved: string[] = [];
+    for (const inst of simEvents) {
+      const def = eventDef(inst);
+      if (!def) continue;
+      const idx = autoOptionIndex(def, cash);
+      if (idx === null) continue;
+      const option = def.options[idx];
+      const result = resolveOption(option);
+      cash = Math.max(0, cash + result.coins);
+      hp = Math.max(0, Math.min(100, hp + result.health));
+      score += result.score;
+      resolved.push(inst.uid);
+      addLifeLog('大事', def.headline, `${option.label}：${result.text}`);
+      out.push(`📰 ${def.headline} → ${result.text}`);
+      if (result.heirloom) {
+        const h = heirloomById(result.heirloom);
+        fam = addHeirloom(fam, { id: result.heirloom, source: def.title, year: gameYear, month: gameMonth, keeper: '当家人' });
+        if (h) addLifeLog('大事', `获得传家宝：${h.name}`, h.desc);
+      }
+    }
+    if (resolved.length > 0) {
+      setSimEvents((prev) => prev.filter((e) => !resolved.includes(e.uid)));
+      setSimScore((n) => n + score);
+    }
+    let inv = giftInventory;
+    let given = 0;
+    const members = buildFamilyMembers(fam, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth });
+    const close = (m: FamilyMemberView) => m.kin === 'parent' || m.id === SPOUSE_MEMBER_ID;
+    const targets = members
+      .filter((m) => !m.isPlayer && m.status !== '已故')
+      .sort((a, b) => Number(close(b)) - Number(close(a)) || a.affinity - b.affinity);
+    for (const m of targets) {
+      if (canInteract(fam, m, gameYear, gameMonth)) continue;
+      const best = Object.keys(inv)
+        .map((id) => giftById(id))
+        .filter((g): g is NonNullable<typeof g> => !!g)
+        .sort((a, b) => giftAffinityGain(b, m, fam.giftTastes) - giftAffinityGain(a, m, fam.giftTastes))[0];
+      if (best) {
+        inv = removeGift(inv, best.id) ?? inv;
+        fam = applyInteraction(fam, m, 'gift', gameYear, gameMonth, affinityBonus(playerTraits), giftAffinityGain(best, m, fam.giftTastes));
+        out.push(`🎁 送给${m.relation}「${best.name}」`);
+      } else if (cash >= GIFT_COST + 2000) {
+        cash -= GIFT_COST;
+        fam = applyInteraction(fam, m, 'gift', gameYear, gameMonth, affinityBonus(playerTraits));
+        out.push(`🎁 给${m.relation}买了礼物（-${GIFT_COST} ₽）`);
+      } else continue;
+      given++;
+    }
+    if (given > 0) {
+      setGiftInventory(inv);
+      recordGiftsGiven(given);
+    }
+    if (fam !== family) setFamily(fam);
+    setCoins(cash);
+    setHealth(hp);
+    if (hp <= 0) addLifeLog('大事', '辞世', `${playerName} 离开了人世，享年 ${currentAge} 岁。`);
+    return out;
+  };
+
+  const handleSimpleNextMonth = () => {
+    if (!isRegistered) return;
+    const notes = simpleAutoHandle();
+    setSimpleAutoNotes(notes);
+    simpleMonthNotesRef.current = [];
+    setSimpleAdvancePending(true);
+  };
+
+  const simpleSpouseCandidates = React.useMemo(
+    () => generateSpouseCandidates(currentAge, Math.random, 3, gender === '男' || gender === '女' ? (gender as Gender) : null),
+    [gameYear, family.spouse?.name, gender],
+  );
+
+  const simpleCard = ((): SimpleCard | null => {
+    if (!isRegistered) return null;
+    const snoozed = (k: string) => (simpleSnooze[k] ?? 0) > simpleMonthIndex;
+    if (health <= 0) {
+      const heirs = listHeirs(buildFamilyMembers(family, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth }));
+      return {
+        kind: 'heir',
+        emoji: '🕯️',
+        question: `${playerName} 离开了我们`,
+        hint: heirs.length > 0 ? '选一位家人继续这个家族的故事' : '家里没有可以继承的人了',
+        choices: [
+          ...heirs.map((h) => ({ id: h.id, title: `由 ${h.name} 继承`, detail: `${h.relation} · ${h.age} 岁` })),
+          { id: 'restart', title: '重新出生', detail: '从头开始新的人生' },
+        ],
+      };
+    }
+    const hasJob = !!readCurrentJobId();
+    const childJob = readChildJob();
+    if (currentAge >= 16 && !hasJob && !childJob && !snoozed('job')) {
+      return {
+        kind: 'job',
+        emoji: '💼',
+        question: '要去工作吗？',
+        hint: '有工作才能领俸禄，还能拿到月薪',
+        laterLabel: '以后再说',
+        choices: recommendJobs(JOB_POSITIONS, 3).map((j) => ({ id: j.id, title: j.title, detail: `${j.department} · 每月约 ${(j.dailySalary * 22).toLocaleString()} ₽` })),
+      };
+    }
+    if (currentAge >= 8 && currentAge <= CHILD_LABOR_MAX_AGE && familyClass.childLabor && !childJob && !snoozed('child')) {
+      return {
+        kind: 'job',
+        emoji: '🧹',
+        question: '家里穷，要去打零工吗？',
+        hint: '每月有工钱，但会累坏身体',
+        laterLabel: '先不去',
+        choices: [...CHILD_JOBS].sort((a, b) => a.healthCost - b.healthCost || b.salary - a.salary).slice(0, 3).map((j) => ({ id: `child:${j.id}`, title: j.title, detail: `每月 ${j.salary} ₽ · 健康 -${j.healthCost}` })),
+      };
+    }
+    if (currentAge >= MARRIAGE_MIN_AGE && currentAge < 45 && !family.spouse && !snoozed('marriage')) {
+      return {
+        kind: 'marriage',
+        emoji: '💍',
+        question: '想结婚吗？',
+        hint: `结婚要交 ${MARRIAGE_FEE.toLocaleString()} ₽ 登记费`,
+        laterLabel: '以后再说',
+        choices: simpleSpouseCandidates.map((c, i) => ({ id: String(i), title: c.name, detail: `${c.age} 岁 · ${c.occupation}${c.traits?.length ? ` · ${traitNames(c.traits).join('、')}` : ''}` })),
+      };
+    }
+    const owned = (() => {
+      try {
+        const v = JSON.parse(localStorage.getItem('amigo_owned_properties') || '[]');
+        return Array.isArray(v) ? v.length : 0;
+      } catch {
+        return 0;
+      }
+    })();
+    const cheapest = Math.min(...HOUSING_MARKET_PROPERTIES.map((h) => h.price));
+    if (shouldSuggestHome(currentAge, owned > 0, coins, cheapest) && !snoozed('home')) {
+      const home = recommendHome(HOUSING_MARKET_PROPERTIES, coins);
+      if (home) {
+        return {
+          kind: 'home',
+          emoji: '🏠',
+          question: '买一套自己的房子吗？',
+          hint: '住得舒服，每个月都能恢复健康',
+          laterLabel: '以后再说',
+          choices: [{ id: home.id, title: home.title, detail: `${home.price.toLocaleString()} ₽ · 每月健康 +${home.comfortBonus}` }],
+        };
+      }
+    }
+    return null;
+  })();
+
+  const handleSimpleChoose = (card: SimpleCard, choiceId: string) => {
+    if (card.kind === 'heir') {
+      if (choiceId === 'restart') handleResetLife();
+      else handleSuccession(choiceId, true);
+      return;
+    }
+    if (card.kind === 'job') {
+      if (choiceId.startsWith('child:')) {
+        const j = CHILD_JOBS.find((x) => `child:${x.id}` === choiceId);
+        if (!j) return;
+        try {
+          localStorage.setItem(CHILD_JOB_KEY, j.id);
+        } catch (e) {}
+        addLifeLog('事业', `开始做童工「${j.title}」`, j.desc);
+        showToast(`🧹 开始做「${j.title}」，每月 ${j.salary} ₽`);
+        setSimpleSnooze((s) => ({ ...s }));
+        return;
+      }
+      const job = JOB_POSITIONS.find((x) => x.id === choiceId);
+      if (!job) return;
+      try {
+        localStorage.setItem(CURRENT_JOB_KEY, job.id);
+        const history = readJobHistoryIds();
+        if (!history.includes(job.id)) localStorage.setItem(JOB_HISTORY_KEY, JSON.stringify([job.id, ...history]));
+      } catch (e) {}
+      addLifeLog('事业', `入职「${job.title}」`, `进入${job.department}任职，日薪 ${job.dailySalary} ₽。`);
+      showToast(`💼 开始在「${job.department}」做${job.title}`);
+      setSimpleSnooze((s) => ({ ...s }));
+      return;
+    }
+    if (card.kind === 'marriage') {
+      const c = simpleSpouseCandidates[Number(choiceId)];
+      if (!c) return;
+      if (coins < MARRIAGE_FEE) {
+        showToast(`钱不够，结婚登记要 ${MARRIAGE_FEE.toLocaleString()} ₽`);
+        return;
+      }
+      setCoins((prev) => prev - MARRIAGE_FEE);
+      setFamily((prev) => marry(prev, c, gameYear, gameMonth));
+      changeReputation(REP.marriage);
+      addLifeLog('大事', `与 ${c.name} 结婚`, `${c.gender} · ${c.age} 岁 · ${c.occupation}，在帝国民政署登记结婚。`);
+      showToast(`💍 你和 ${c.name} 结婚啦！`);
+      return;
+    }
+    if (card.kind === 'home') {
+      const home = HOUSING_MARKET_PROPERTIES.find((h) => h.id === choiceId);
+      if (!home || coins < home.price) return;
+      try {
+        const props = JSON.parse(localStorage.getItem('amigo_owned_properties') || '[]');
+        const list = Array.isArray(props) ? props : [];
+        const item = {
+          id: `owned_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          propertyId: home.id,
+          title: home.title,
+          district: home.district,
+          category: home.category,
+          purchasePrice: home.price,
+          currentValue: home.price,
+          rentPerMonth: home.rentPerMonth,
+          renovationTier: home.renovationTier,
+          isRentedOut: false,
+          isPrimaryResidence: list.length === 0,
+          purchaseYear: gameYear,
+          purchaseMonth: gameMonth,
+          totalRentCollected: 0,
+        };
+        localStorage.setItem('amigo_owned_properties', JSON.stringify([item, ...list]));
+        if (list.length === 0) localStorage.removeItem('amigo_current_rental');
+      } catch (e) {}
+      setCoins((prev) => prev - home.price);
+      addLifeLog('财富', `购入房产「${home.title}」`, `位于${home.district}，花费 ${home.price.toLocaleString()} ₽。`);
+      unlockAchievement('home');
+      showToast(`🏠 买下了「${home.title}」`);
+    }
+  };
+
+  // 简洁模式连续推进（过半年、一年、十年）：遇到需要选择的卡片或角色去世时停下
+  const [simpleRemaining, setSimpleRemaining] = useState(0);
+  React.useEffect(() => {
+    if (simpleRemaining <= 0 || simpleAdvancePending) return;
+    if (!isRegistered || health <= 0 || simpleCard) {
+      setSimpleRemaining(0);
+      return;
+    }
+    const timer = setTimeout(() => {
+      handleSimpleNextMonth();
+      setSimpleRemaining((n) => Math.max(0, n - 1));
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [simpleRemaining, simpleAdvancePending, gameYear, gameMonth, health]);
+
+  // 开发测试工具：快进的「智能安排」。每一步要么替玩家做一个选择，要么推进一个月（避免同一步内状态互相覆盖）
+  const [smartTick, setSmartTick] = useState(0);
+  React.useEffect(() => {
+    if (!smartFastForward || fastForwardRemaining <= 0 || simpleAdvancePending) return;
+    if (!isRegistered || health <= 0) {
+      setFastForwardRemaining(0);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const card = simpleCard;
+      if (card && card.kind !== 'heir') {
+        let choice = card.choices[0]?.id;
+        if (card.kind === 'marriage') {
+          const idx = simpleSpouseCandidates.findIndex((c) => !(c.traits ?? []).includes('infertile'));
+          choice = idx >= 0 ? String(idx) : undefined;
+        }
+        if (choice !== undefined && !(card.kind === 'marriage' && coins < MARRIAGE_FEE)) handleSimpleChoose(card, choice);
+        else handleSimpleLater(card);
+        setSmartTick((t) => t + 1);
+        return;
+      }
+      handleSimpleNextMonth();
+      setFastForwardRemaining((n) => Math.max(0, n - 1));
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [smartFastForward, fastForwardRemaining, simpleAdvancePending, smartTick, gameYear, gameMonth, health]);
+
+  /** 保养（第 50 题）：有概率获得「精力旺盛」或「富养」，延长生育年龄 */
+  const handleMaintenance = (target: 'self' | 'spouse'): string => {
+    if (!isRegistered) return '请先完成出生登记';
+    const spouse = family.spouse;
+    if (target === 'spouse' && !spouse) return '还没有配偶';
+    const current = target === 'self' ? playerTraits : spouse?.traits ?? [];
+    if (FERTILITY_TRAITS.every((id) => current.includes(id))) return '已经同时拥有「精力旺盛」和「富养」，不需要再保养';
+    if (coins < MAINTENANCE_COST) return `钱不够，保养一次要 ${MAINTENANCE_COST.toLocaleString()} ₽`;
+    setCoins((prev) => prev - MAINTENANCE_COST);
+    const who = target === 'self' ? '你' : spouse!.name;
+    const r = rollMaintenance(current);
+    if (!r.gained) {
+      addLifeLog('健康', '保养调理', `为${who}做了一次保养，这次没有明显效果。`);
+      return `💆 为${who}做了保养（-${MAINTENANCE_COST.toLocaleString()} ₽），这次没有明显效果`;
+    }
+    if (target === 'self') setPlayerTraits(r.traits);
+    else setFamily((prev) => (prev.spouse ? { ...prev, spouse: { ...prev.spouse, traits: r.traits } } : prev));
+    const name = traitById(r.gained)?.name ?? r.gained;
+    addLifeLog('健康', `保养获得「${name}」`, `${who}通过保养获得了「${name}」，生育年龄上限延长。`);
+    return `✨ ${who}获得了「${name}」！生育年龄上限延长`;
+  };
+  const fertilityText = isRegistered
+    ? `你可以生孩子到 ${fertileMaxAge(gender, playerTraits)} 岁${family.spouse ? `，${family.spouse.name} 到 ${fertileMaxAge(family.spouse.gender, family.spouse.traits)} 岁` : ''}。保养有机会获得「精力旺盛」或「富养」，让这个年龄变大。`
+    : '';
+
+  const handleSimpleLater = (card: SimpleCard) => {
+    const key = card.kind === 'job' && card.emoji === '🧹' ? 'child' : card.kind;
+    setSimpleSnooze((s) => ({ ...s, [key]: simpleMonthIndex + 12 }));
+  };
+
+  const stockOpenedNow = localStorage.getItem(STOCK_KEYS.accountOpened) === 'true';
+  const simpleStock = (() => {
+    const market = loadMarket();
+    const holdings = loadStored<StockHolding[]>(STOCK_KEYS.holdings, []);
+    const value = holdings.reduce((sum, h) => sum + Math.round(h.shares * (market.stocks.find((x) => x.id === h.stockId)?.price ?? 0)), 0);
+    return { market, holdings, value };
+  })();
+  const saveTrade = (holdings: StockHolding[], logs: StockTradeLog[]) => {
+    try {
+      localStorage.setItem(STOCK_KEYS.holdings, JSON.stringify(holdings));
+      const prev = JSON.parse(localStorage.getItem(STOCK_KEYS.tradeLogs) || '[]');
+      localStorage.setItem(STOCK_KEYS.tradeLogs, JSON.stringify([...logs, ...(Array.isArray(prev) ? prev : [])]));
+    } catch (e) {}
+  };
+  const handleSimpleBuyStocks = () => {
+    const r = buyRecommended(simpleStock.market.stocks, simpleStock.holdings, Math.floor(coins * 0.3), simpleStock.market.tradingDay);
+    if (r.cashDelta === 0) {
+      showToast('钱太少，一股也买不起');
+      return;
+    }
+    saveTrade(r.holdings, r.logs);
+    setCoins((prev) => prev + r.cashDelta);
+    addLifeLog('财富', '一键买入股票', `${r.summary.join('、')}，共 ${(-r.cashDelta).toLocaleString()} ₽。`);
+    showToast(`📈 买入 ${r.summary.join('、')}`);
+  };
+  const handleSimpleSellStocks = () => {
+    const r = sellAll(simpleStock.market.stocks, simpleStock.holdings, simpleStock.market.tradingDay);
+    if (r.cashDelta === 0) return;
+    saveTrade(r.holdings, r.logs);
+    setCoins((prev) => prev + r.cashDelta);
+    addLifeLog('财富', '一键卖出全部股票', `收回 ${r.cashDelta.toLocaleString()} ₽，${r.profit >= 0 ? '赚了' : '亏了'} ${Math.abs(r.profit).toLocaleString()} ₽。`);
+    showToast(`📉 全部卖出，${r.profit >= 0 ? '赚了' : '亏了'} ${Math.abs(r.profit).toLocaleString()} ₽`);
   };
 
   // 成就：解锁时弹出提示；集齐全部成就时自动播放一次致谢名单；状态类成就随数据变化自动检查
@@ -3710,6 +4144,49 @@ export default function App() {
             <span>{toast}</span>
           </div>
         )}
+         {simpleMode ? (
+           <SimpleModeView
+             isRegistered={isRegistered}
+             name={playerName}
+             age={currentAge}
+             health={health}
+             coins={coins}
+             deposit={bankDeposit}
+             year={gameYear}
+             month={gameMonth}
+             familyLabel={isRegistered ? `${familyOrigin.surname}家 · ${familyClass.label}` : ''}
+             diseaseName={currentDisease?.name ?? null}
+             jobTitle={(() => {
+               const id = readCurrentJobId();
+               const j = id ? JOB_POSITIONS.find((x) => x.id === id) : null;
+               return j ? j.title : readChildJob()?.title ?? null;
+             })()}
+             spouseName={family.spouse?.name ?? null}
+             childrenCount={family.children.length}
+             recent={readLifeLog().slice(-6).reverse().map((e) => ({ title: `${e.year}.${e.month} ${e.title}`, detail: e.desc }))}
+             lastSummary={[...simpleAutoNotes, ...simpleMonthNotes]}
+             card={simpleCard}
+             onChoose={handleSimpleChoose}
+             onLater={handleSimpleLater}
+             onNextMonth={handleSimpleNextMonth}
+             stockOpened={stockOpenedNow}
+             stockValue={simpleStock.value}
+             onBuyStocks={handleSimpleBuyStocks}
+             onSellStocks={handleSimpleSellStocks}
+             onRegister={() => setShowBirthModal(true)}
+             onExit={() => {
+               setSimpleRemaining(0);
+               setSimpleMode(false);
+             }}
+             advanceRemaining={simpleRemaining}
+             onAdvance={(n) => setSimpleRemaining(n)}
+             onStopAdvance={() => setSimpleRemaining(0)}
+             maintenanceCost={MAINTENANCE_COST}
+             fertilityText={fertilityText}
+             onMaintenance={() => showToast(handleMaintenance('self'))}
+           />
+         ) : (
+         <>
          <TopBar 
            coins={coins} 
            playerName={playerName} 
@@ -3810,6 +4287,8 @@ export default function App() {
          )}
          
          <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+         </>
+         )}
          
          {/* Birth Registration Overlay */}
          {showBirthModal && (
@@ -3867,6 +4346,9 @@ export default function App() {
                setDisease(null);
                unlockAchievement('cured');
              }}
+             onMaintenance={handleMaintenance}
+             hasSpouse={!!family.spouse}
+             fertilityText={fertilityText}
            />
          )}
 
@@ -3988,6 +4470,11 @@ export default function App() {
              playerTraits={playerTraits}
              onDonate={handleDonate}
              onPlayCredits={() => playCredits()}
+             simpleMode={simpleMode}
+             onToggleSimpleMode={() => {
+               setSimpleMode((v) => !v);
+               setShowProfile(false);
+             }}
            />
          )}
 
@@ -4083,6 +4570,7 @@ export default function App() {
              isDeceased={isRegistered && health <= 0}
              playerName={playerName}
              age={currentAge}
+             playerGender={gender}
              coins={coins}
              setCoins={setCoins}
              gameYear={gameYear}
@@ -4212,6 +4700,10 @@ export default function App() {
                showToast(`🛠️ 已解锁全部 ${ACHIEVEMENTS.length} 项成就（新增 ${added} 项）`);
                autoPlayCreditsIfComplete();
              }}
+             simpleMode={simpleMode}
+             onToggleSimpleMode={() => setSimpleMode((v) => !v)}
+             smartFastForward={smartFastForward}
+             onToggleSmartFastForward={() => setSmartFastForward((v) => !v)}
              onOpenAuctionNow={() => {
                const next = generateAuction(gameYear, gameMonth, getHeirlooms(family).map((h) => h.id), isInvited(familyClass.id, reputation));
                if (!next) {

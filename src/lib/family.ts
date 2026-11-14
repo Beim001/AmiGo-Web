@@ -7,7 +7,7 @@
 // - 每位在世成员每个游戏月可互动 1 次，好感度持久化
 // - 主角去世后可由年满 HEIR_MIN_AGE 岁的子嗣或兄弟姐妹继承，家族世系以继承人为「你」重新排列
 
-import { randomTraits, inheritTraits, fertilityMultiplier, twinChanceFor } from './traits';
+import { randomTraits, inheritTraits, fertilityMultiplier, twinChanceFor, fertileMaxAge } from './traits';
 import { randomFullName, MALE_GIVEN_NAMES, FEMALE_GIVEN_NAMES } from './names';
 import { OwnedHeirloom, VALENTINE_DEFAULT_HEIRLOOMS } from './heirlooms';
 
@@ -152,6 +152,10 @@ export interface FamilyState {
   giftTastes?: Record<string, 'toy' | 'jewelry' | 'antique'>;
   /** 当家人是继承上来的私生子女（父母给的零花减半，见 allowance.ts） */
   playerIllegitimate?: boolean;
+  /** 晋升前（出生时）的阶层：降级最多降回这里（第 46 题） */
+  baseClassId?: string;
+  /** 资产连续低于降级门槛的月数 */
+  demotionStreak?: number;
   /** 家族传家宝；旧存档没有此字段时，瓦伦丁家族默认持有三件祖传宝物 */
   heirlooms?: OwnedHeirloom[];
 }
@@ -420,16 +424,21 @@ export interface SpouseCandidate {
   traits?: string[];
 }
 
+/**
+ * 生成结婚（或情人）候选人。
+ * 传入主角性别时只生成异性（第 48 题：同性不可结婚）；情人候选人不传，男女都可能出现。
+ */
 export const generateSpouseCandidates = (
   playerAge: number,
   rng: () => number = Math.random,
   count = SPOUSE_CANDIDATE_COUNT,
+  oppositeOf: Gender | null = null,
 ): SpouseCandidate[] => {
   const candidates: SpouseCandidate[] = [];
   const usedNames = new Set<string>();
   // 名字组合共 (10+10)×8 = 160 种；限制尝试次数，防止极端随机数下死循环
   for (let attempt = 0; candidates.length < count && attempt < count * 20; attempt++) {
-    const gender: Gender = rng() < 0.5 ? '男' : '女';
+    const gender: Gender = oppositeOf ? (oppositeOf === '男' ? '女' : '男') : rng() < 0.5 ? '男' : '女';
     const name = randomFullName(gender, pick(SPOUSE_SURNAMES, rng), rng, usedNames);
     if (usedNames.has(name)) continue;
     usedNames.add(name);
@@ -537,12 +546,16 @@ export const tryHaveChild = (
   month: number,
   rng: () => number = Math.random,
   playerTraits: string[] = [],
+  playerGender: string | null = null,
 ): BirthResult => {
   const none = { state, child: null, children: [] };
   const s = state.spouse;
   if (!s) return none;
+  // 第 48 题：同性伴侣不生育（旧存档中已有的同性婚姻保留，但不再生育）
+  if (playerGender && s.gender === playerGender) return none;
   const spouseAge = year - s.birthYear;
-  if (playerAge > BIRTH_MAX_AGE || spouseAge > BIRTH_MAX_AGE || state.children.length >= MAX_CHILDREN) return none;
+  // 第 50 题：过了生育年龄（按性别与「精力旺盛」「富养」特质）不再生育
+  if (playerAge > fertileMaxAge(playerGender, playerTraits) || spouseAge > fertileMaxAge(s.gender, s.traits) || state.children.length >= MAX_CHILDREN) return none;
   if (rng() >= BIRTH_CHANCE * fertilityMultiplier(playerTraits, s.traits)) return none;
   const twins = rng() < twinChanceFor(TWIN_CHANCE, playerTraits, s.traits) && state.children.length + 2 <= MAX_CHILDREN;
   return giveBirth(state, year, month, twins ? 2 : 1, rng, s, playerTraits);
@@ -578,10 +591,13 @@ export const tryIllegitimateChild = (
   month: number,
   rng: () => number = Math.random,
   playerTraits: string[] = [],
+  playerGender: string | null = null,
 ): BirthResult => {
   const none = { state, child: null, children: [] };
   const l = state.lover;
-  if (!l || playerAge > BIRTH_MAX_AGE || year - l.birthYear > BIRTH_MAX_AGE || state.children.length >= MAX_CHILDREN) return none;
+  // 第 48 题：贵族、皇族可以有同性情人，但同性情人不会生下私生子女
+  if (l && playerGender && l.gender === playerGender) return none;
+  if (!l || playerAge > fertileMaxAge(playerGender, playerTraits) || year - l.birthYear > fertileMaxAge(l.gender, l.traits) || state.children.length >= MAX_CHILDREN) return none;
   if (rng() >= ILLEGITIMATE_CHANCE * fertilityMultiplier(playerTraits, l.traits)) return none;
   return giveBirth(state, year, month, 1, rng, l, playerTraits, true);
 };
@@ -611,8 +627,21 @@ export const promoteFamily = (state: FamilyState, classId: string, classLabel: s
   const origin = getOrigin(state);
   return {
     ...state,
+    baseClassId: state.baseClassId ?? origin.classId,
+    demotionStreak: 0,
     origin: { ...origin, classId, classLabel },
     events: [...state.events, { year, month, title: `跻身${classLabel}`, desc: `${origin.surname}家族由${origin.classLabel}晋升为${classLabel}。${reason}` }],
+  };
+};
+
+/** 家道中落：降回较低的阶层（第 46 题） */
+export const demoteFamily = (state: FamilyState, classId: string, classLabel: string, year: number, month: number): FamilyState => {
+  const origin = getOrigin(state);
+  return {
+    ...state,
+    demotionStreak: 0,
+    origin: { ...origin, classId, classLabel },
+    events: [...state.events, { year, month, title: '家道中落', desc: `${origin.surname}家族资产长期缩水，由${origin.classLabel}跌回${classLabel}。` }],
   };
 };
 

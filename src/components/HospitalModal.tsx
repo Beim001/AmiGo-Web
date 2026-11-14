@@ -1,6 +1,7 @@
 import { addLifeLog } from '../lib/lifeLog';
 import React, { useState } from 'react';
 import type { DiseaseInfo } from '../lib/disease';
+import { MAINTENANCE_COST, MAINTENANCE_CHANCE } from '../lib/traits';
 import {
   ChevronLeft,
   Hospital,
@@ -27,6 +28,11 @@ export interface HospitalModalProps {
   /** 当前所患疾病 */
   disease?: DiseaseInfo | null;
   onCureDisease?: () => void;
+  /** 保养（第 50 题）：返回提示文字 */
+  onMaintenance?: (target: 'self' | 'spouse') => string;
+  hasSpouse?: boolean;
+  /** 生育年龄说明 */
+  fertilityText?: string;
 }
 
 export interface HospitalInfo {
@@ -194,6 +200,9 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
   parentsPay = false,
   disease = null,
   onCureDisease,
+  onMaintenance,
+  hasSpouse = false,
+  fertilityText = '',
 }) => {
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>('h1');
   const [isSelectingHospital, setIsSelectingHospital] = useState<boolean>(false);
@@ -335,6 +344,29 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                 className="bg-red-400 hover:bg-red-300 text-black text-xs font-black px-3 py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer shrink-0"
               >
                 治疗 {costOf(disease.cost).toLocaleString()} ₽
+              </button>
+            </div>
+          </div>
+        )}
+        {onMaintenance && (
+          <div className="bg-violet-950/70 border-2 border-violet-500/60 rounded-2xl p-3 shadow-[0_3px_0_#000] space-y-2">
+            <div className="text-violet-200 font-black text-sm">💆 保养调理（{MAINTENANCE_COST.toLocaleString()} ₽ / 次）</div>
+            <p className="text-violet-200/80 text-[11px] font-bold leading-relaxed">
+              每次有 {Math.round(MAINTENANCE_CHANCE * 100)}% 的概率获得「精力旺盛」或「富养」，生育年龄上限延长到女 50 岁、男 65 岁。{fertilityText}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => showToast(onMaintenance('self'))}
+                className="bg-violet-400 hover:bg-violet-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer"
+              >
+                为自己保养
+              </button>
+              <button
+                onClick={() => showToast(onMaintenance('spouse'))}
+                disabled={!hasSpouse}
+                className="bg-violet-400 hover:bg-violet-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer disabled:opacity-40"
+              >
+                为配偶保养
               </button>
             </div>
           </div>

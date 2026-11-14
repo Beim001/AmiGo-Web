@@ -41,6 +41,8 @@ export interface MarriageModalProps {
   classId?: string;
   /** 结婚 +3、离婚 -3 声望 */
   onReputationChange?: (delta: number) => void;
+  /** 主角性别：结婚候选人只出现异性（第 48 题） */
+  playerGender?: string | null;
 }
 
 /** 特质标签（悬停显示效果） */
@@ -75,10 +77,12 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
   onOpenFamily,
   classId = '',
   onReputationChange,
+  playerGender = null,
 }) => {
+  const opposite = playerGender === '男' || playerGender === '女' ? (playerGender as '男' | '女') : null;
   const [loverCandidates, setLoverCandidates] = useState<SpouseCandidate[]>(() => generateSpouseCandidates(age).slice(0, 5));
   const [confirmLover, setConfirmLover] = useState<SpouseCandidate | null>(null);
-  const [candidates, setCandidates] = useState<SpouseCandidate[]>(() => generateSpouseCandidates(age));
+  const [candidates, setCandidates] = useState<SpouseCandidate[]>(() => generateSpouseCandidates(age, Math.random, undefined, opposite));
   const [confirming, setConfirming] = useState<SpouseCandidate | null>(null);
   const [confirmDivorce, setConfirmDivorce] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -113,7 +117,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
     setFamily((prev) => divorce(prev, gameYear, gameMonth));
     onReputationChange?.(REP.divorce);
     setConfirmDivorce(false);
-    setCandidates(generateSpouseCandidates(age));
+    setCandidates(generateSpouseCandidates(age, Math.random, undefined, opposite));
     addLifeLog('大事', `与 ${formerName} 离婚`, '在帝国民政署办理了离婚手续。');
     showToast(`已与 ${formerName} 解除婚姻关系`);
   };
@@ -162,7 +166,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
             <Baby size={16} className="text-yellow-400" /> 子嗣 {family.children.length} / {MAX_CHILDREN} 人
           </div>
           <p className="text-gray-400 text-[11px] font-bold leading-relaxed">
-            婚后每推进一个月，有 {Math.round(BIRTH_CHANCE * 100)}% 的概率迎来新的家庭成员（你与配偶都不超过 {BIRTH_MAX_AGE} 岁时）。
+            婚后每推进一个月，有 {Math.round(BIRTH_CHANCE * 100)}% 的概率迎来新的家庭成员（女性 42 岁、男性 55 岁后不能生育；有「精力旺盛」或「富养」特质可延长到 50 / 65 岁，可在医院保养获得；同性伴侣不能生育）。
           </p>
           <button onClick={onOpenFamily} className={`${primaryBtn} w-full flex items-center justify-center gap-1`}>
             <Users size={14} /> 查看家族世系
@@ -243,7 +247,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
             <div className="text-gray-400 text-[11px] font-bold">登记规费 {MARRIAGE_FEE.toLocaleString()} ₽ · 当前现金 {coins.toLocaleString()} ₽</div>
           </div>
           <button
-            onClick={() => setCandidates(generateSpouseCandidates(age))}
+            onClick={() => setCandidates(generateSpouseCandidates(age, Math.random, undefined, opposite))}
             className="text-gray-200 hover:text-white flex items-center gap-1 bg-[#21232e] px-2 py-1 rounded-lg border border-black text-[11px] font-black cursor-pointer active:scale-95"
           >
             <RefreshCw size={12} /> 换一批

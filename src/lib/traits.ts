@@ -7,6 +7,8 @@ export interface TraitDef {
   desc: string;
   /** 不能同时拥有的特质 */
   conflicts?: string[];
+  /** 特殊特质：不进随机池，只能通过保养或贵族、皇族出身获得（第 50 题） */
+  special?: boolean;
 }
 
 export const TRAITS: TraitDef[] = [
@@ -19,6 +21,8 @@ export const TRAITS: TraitDef[] = [
   { id: 'diligent', name: '勤勉', desc: '月薪 +10%' },
   { id: 'shrewd', name: '精明', desc: '银行存款利息 +20%' },
   { id: 'amiable', name: '亲和', desc: '家族互动好感度额外 +1' },
+  { id: 'vigorous', name: '精力旺盛', desc: '生育年龄上限延长到女 50 岁、男 65 岁', special: true },
+  { id: 'pampered', name: '富养', desc: '生育年龄上限延长到女 50 岁、男 65 岁', special: true },
 ];
 
 export const TRAIT_INHERIT_CHANCE = 0.3;
@@ -35,7 +39,8 @@ const compatible = (current: string[], id: string) =>
 const fillRandom = (current: string[], target: number, rng: () => number): string[] => {
   const result = [...current];
   for (let attempt = 0; result.length < target && attempt < 50; attempt++) {
-    const t = TRAITS[Math.floor(rng() * TRAITS.length)];
+    const pool = TRAITS.filter((x) => !x.special);
+    const t = pool[Math.floor(rng() * pool.length)];
     if (compatible(result, t.id)) result.push(t.id);
   }
   return result;
@@ -66,3 +71,38 @@ export const depositInterestMultiplier = (t?: string[]) => (has('shrewd', t) ? 1
 export const affinityBonus = (t?: string[]) => (has('amiable', t) ? 1 : 0);
 
 export const PLAYER_TRAITS_KEY = 'amigo_player_traits';
+
+// ---------- 生育年龄（第 50 题，默认值） ----------
+
+/** 能延长生育年龄的特质 */
+export const FERTILITY_TRAITS = ['vigorous', 'pampered'];
+export const FERTILE_MAX_AGE: Record<'男' | '女', number> = { 女: 42, 男: 55 };
+export const FERTILE_MAX_AGE_EXTENDED: Record<'男' | '女', number> = { 女: 50, 男: 65 };
+/** 性别未知时（旧数据）沿用原来的 45 岁 */
+export const FERTILE_MAX_AGE_UNKNOWN = 45;
+
+/** 此人能生育的最大年龄 */
+export const fertileMaxAge = (gender: string | null | undefined, traits?: string[]): number => {
+  if (gender !== '男' && gender !== '女') return FERTILE_MAX_AGE_UNKNOWN;
+  return FERTILITY_TRAITS.some((id) => traits?.includes(id)) ? FERTILE_MAX_AGE_EXTENDED[gender] : FERTILE_MAX_AGE[gender];
+};
+
+/** 保养：每次花费 MAINTENANCE_COST，有 MAINTENANCE_CHANCE 概率获得一项还没有的「精力旺盛」或「富养」 */
+export const MAINTENANCE_COST = 20000;
+export const MAINTENANCE_CHANCE = 0.25;
+
+export const rollMaintenance = (traits: string[], rng: () => number = Math.random): { traits: string[]; gained: string | null } => {
+  const missing = FERTILITY_TRAITS.filter((id) => !traits.includes(id));
+  if (missing.length === 0 || rng() >= MAINTENANCE_CHANCE) return { traits, gained: null };
+  const gained = missing[Math.floor(rng() * missing.length)];
+  return { traits: [...traits, gained], gained };
+};
+
+/** 贵族、皇族出身：出生登记时有概率自带「精力旺盛」或「富养」 */
+export const NOBLE_FERTILITY_CHANCE: Record<string, number> = { noble: 0.3, royal: 0.5 };
+
+export const withBirthPrivilege = (classId: string, traits: string[], rng: () => number = Math.random): string[] => {
+  const chance = NOBLE_FERTILITY_CHANCE[classId] ?? 0;
+  if (chance <= 0 || rng() >= chance || FERTILITY_TRAITS.some((id) => traits.includes(id))) return traits;
+  return [...traits, FERTILITY_TRAITS[Math.floor(rng() * FERTILITY_TRAITS.length)]];
+};

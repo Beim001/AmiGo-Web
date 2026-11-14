@@ -117,6 +117,44 @@ export const checkPromotion = (classId: string, netWorth: number, reputation: nu
   return p && netWorth >= p.minNetWorth && reputation >= p.minReputation ? p : undefined;
 };
 
+// ---------- 主角寿命（第 51 题，默认值） ----------
+// 出生时按阶层决定寿命：比同阶层家人的寿命范围多 PLAYER_LIFESPAN_BONUS 岁（主角会就医保养），「长寿」特质再加 10 岁。
+// 到达寿命即寿终正寝，医院只能延缓健康衰减，不能阻止。
+
+export const PLAYER_LIFESPAN_KEY = 'amigo_player_lifespan';
+export const PLAYER_LIFESPAN_BONUS = 15;
+export const LONGEVITY_LIFESPAN_BONUS = 10;
+
+export const rollPlayerLifespan = (classId: string, traits: string[] = [], rng: () => number = Math.random): number => {
+  const [lo, hi] = classById(classId).lifespanRange;
+  return lo + PLAYER_LIFESPAN_BONUS + Math.floor(rng() * (hi - lo + 1)) + (traits.includes('longevity') ? LONGEVITY_LIFESPAN_BONUS : 0);
+};
+
+// ---------- 阶层降级（第 46 题） ----------
+// 家族资产净值连续 DEMOTION_MONTHS 个月低于「晋升到当前阶层所需资产」的 DEMOTION_RATIO，就降一级。
+// 只会降回晋升前的阶层：出生时所在的阶层不会因资产低而被降级（否则小康、中产出身的角色一开始就会被降级）；贵族、皇族不降。
+
+export const DEMOTION_MONTHS = 12;
+export const DEMOTION_RATIO = 0.5;
+
+const CLASS_ORDER: ClassId[] = ['beggar', 'commoner', 'modest', 'middle', 'merchant', 'noble', 'royal'];
+export const classRank = (id: string) => CLASS_ORDER.indexOf(id as ClassId);
+
+export interface DemotionCheck {
+  /** 连续低于门槛的月数 */
+  streak: number;
+  /** 需要降级时：从哪一级降回哪一级 */
+  demote?: { from: ClassId; to: ClassId };
+}
+
+export const checkDemotion = (classId: string, netWorth: number, streak: number, baseClassId: string | undefined): DemotionCheck => {
+  if (classId === 'noble' || classId === 'royal' || !baseClassId || classRank(classId) <= classRank(baseClassId)) return { streak: 0 };
+  const p = PROMOTIONS.find((x) => x.to === classId);
+  if (!p || netWorth >= p.minNetWorth * DEMOTION_RATIO) return { streak: 0 };
+  const next = streak + 1;
+  return next >= DEMOTION_MONTHS ? { streak: 0, demote: { from: p.to, to: p.from } } : { streak: next };
+};
+
 export const classById = (id: string | undefined): SocialClass =>
   SOCIAL_CLASSES.find((c) => c.id === id) ?? SOCIAL_CLASSES.find((c) => c.id === 'noble')!;
 
