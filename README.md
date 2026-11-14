@@ -191,3 +191,6 @@
 - [ ] **云端数据库存档**：项目目前仅使用 Firebase Authentication，尚未配置 Firestore / 云存储或 B 站 `setCloudStorage` 来跨设备保存玩家人生档案。
 - [ ] **多账号存档隔离**：游戏状态存储在全局 `localStorage` Key（如 `amigo_owned_properties`、`amigo_multi_bank_accounts_v1` 等），未按 `authUser.uid` 隔离，同一浏览器切换账号会共享同一份本地存档。
 - [ ] **月度核心循环全链路联动**：目前 `handleNextMonth` 仅结算固定 1,500 ₽ 俸禄与房产租金，尚未自动联动：在职岗位月薪发放（`JobModal`）、银行存款利息与贷款扣息（`BankModal`）、股票交易日推进（`StockModal`）、自然衰老与健康消耗机制。
+
+### 4. 开发与测试工具
+- [ ] **开发模式加钱按钮**：仅在 `npm run dev` 下显示（与 `VITE_SKIP_AUTH` 一样不进入生产构建），一键增加或设置现金余额，方便测试商城、购房、移民等高额消费功能与大额数字的界面显示。目前需在浏览器控制台手动执行 `localStorage.setItem('amigo_coins', '9999999'); location.reload();`。

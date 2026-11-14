@@ -369,10 +369,20 @@ const ShopModal = ({
           <button onClick={onClose} className="p-1.5 bg-[#0f4b99] border-2 border-[#072a66] rounded-xl active:scale-95 shadow-[0_2px_0_#072a66]">
             <ChevronLeft size={24} className="text-white drop-shadow-md" strokeWidth={3} />
           </button>
-          <div className="flex-1 flex justify-center items-center -ml-10 pointer-events-none">
+          <div className="absolute inset-0 pt-1 flex justify-center items-center pointer-events-none">
              <span className="text-white text-3xl font-black tracking-widest" style={{ textShadow: '-2px -2px 0 #072a66, 2px -2px 0 #072a66, -2px 2px 0 #072a66, 2px 2px 0 #072a66, 0 4px 6px rgba(0,0,0,0.6)' }}>
                商城
              </span>
+          </div>
+          {/* 右上角金钱余额 */}
+          <div
+            className="ml-auto relative flex items-center bg-[#1b1c25] rounded-full pl-1 pr-2.5 py-1 border-2 border-black shadow-[0_2px_0_#072a66]"
+            title="当前现金余额"
+          >
+            <div className="w-5 h-5 bg-yellow-400 rounded-full border border-yellow-700 flex justify-center items-center mr-1">
+              <CircleDollarSign size={13} className="text-yellow-700" strokeWidth={3} />
+            </div>
+            <span className="font-black text-white text-xs font-mono">{coins.toLocaleString()}</span>
           </div>
         </div>
       </div>
