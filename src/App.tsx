@@ -11,7 +11,9 @@ import { AvatarSelectModal, PRESET_AVATARS } from './components/AvatarSelectModa
 import { FunctTab as FuncTab } from './components/FunctTab';
 import { SimTab } from './components/SimTab';
 import { LogTab } from './components/LogTab';
-import { FamilyTab as MapTab, FamilyTab } from './components/FamilyTab';
+import { FamilyTab } from './components/FamilyTab';
+import { MarriageModal } from './components/MarriageModal';
+import { FamilyState, INITIAL_FAMILY_STATE, tryHaveChild } from './lib/family';
 import { HospitalModal } from './components/HospitalModal';
 import { JobModal, JOB_POSITIONS, readCurrentJobId } from './components/JobModal';
 import { BirthModal } from './components/BirthModal';
@@ -2777,6 +2779,7 @@ export default function App() {
   const [showBirthModal, setShowBirthModal] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showMarriage, setShowMarriage] = useState(false);
 
   const [isRegistered, setIsRegistered] = useState<boolean>(() => {
     try {
@@ -2964,6 +2967,16 @@ export default function App() {
     let extraMsg = '';
     if (propertyRentIncome > 0) extraMsg += ` | 房租净收 +${propertyRentIncome} ₽`;
     if (rentExpense > 0) extraMsg += ` | 租金扣除 -${rentExpense} ₽`;
+
+    // 婚后每月有概率迎来子嗣
+    if (isRegistered && health > 0) {
+      const ageNextMonth = 8 + Math.max(0, nextY - birthRegisteredYear);
+      const birth = tryHaveChild(family, ageNextMonth, nextY, nextM);
+      if (birth.child) {
+        setFamily(birth.state);
+        extraMsg += ` | 👶 ${birth.child.name} 降生！`;
+      }
+    }
     showToast(`🗓️ 已步入 ${nextY}.${mStr}！月度基本俸禄 +${monthlyStipend} ₽${extraMsg}`);
   };
 
@@ -3006,6 +3019,7 @@ export default function App() {
     setBankDeposit(500000);
     setBankLoan(0);
     setFreeDrawUsed(false);
+    setFamily(INITIAL_FAMILY_STATE);
 
     // 4. 清理本地存储中本段人生的全部存档（amigo_* / aminoac_* 前缀），保留账号级数据
     try {
@@ -3024,6 +3038,7 @@ export default function App() {
     saveStored('amigo_equipped_clothing', 'default');
     saveStored('amigo_owned_clothes', ['default']);
     saveStored('amigo_free_draw_used', false);
+    saveStored('amigo_family', INITIAL_FAMILY_STATE);
 
     showToast('✨ 人生已重置！角色与所有状态已恢复初始状态');
   };
@@ -3088,6 +3103,17 @@ export default function App() {
   React.useEffect(() => saveStored('amigo_equipped_clothing', equippedClothing), [equippedClothing]);
   React.useEffect(() => saveStored('amigo_owned_clothes', ownedClothes), [ownedClothes]);
   React.useEffect(() => saveStored('amigo_free_draw_used', freeDrawUsed), [freeDrawUsed]);
+
+  // 家族：好感度、婚姻、子嗣与家族大事
+  const [family, setFamily] = useState<FamilyState>(() => loadStored('amigo_family', INITIAL_FAMILY_STATE));
+  React.useEffect(() => saveStored('amigo_family', family), [family]);
+
+  const playerOccupation = (() => {
+    const id = readCurrentJobId();
+    const job = id ? JOB_POSITIONS.find((j) => j.id === id) : null;
+    if (job) return job.title;
+    return currentAge < 18 ? '学堂学生' : '待业';
+  })();
 
   if (authLoading) {
     return (
@@ -3170,6 +3196,7 @@ export default function App() {
              isRegistered={isRegistered}
              gender={gender}
              age={currentAge}
+             childrenCount={family.children.length}
            />
          )}
          {activeTab === 'bag' && (
@@ -3183,6 +3210,7 @@ export default function App() {
              onOpenHousing={() => setShowHousing(true)}
              onOpenVisa={() => setShowVisa(true)}
              onOpenImmigrate={() => setShowImmigrate(true)}
+             onOpenMarriage={() => setShowMarriage(true)}
            />
          )}
          {activeTab === 'combat' && (
@@ -3198,7 +3226,24 @@ export default function App() {
            />
          )}
          {activeTab === 'log' && <LogTab />}
-         {activeTab === 'map' && <MapTab />}
+         {activeTab === 'map' && (
+           <FamilyTab
+             isRegistered={isRegistered}
+             playerName={playerName}
+             gender={gender}
+             age={currentAge}
+             playerOccupation={playerOccupation}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
+             coins={coins}
+             setCoins={setCoins}
+             setHealth={setHealth}
+             family={family}
+             setFamily={setFamily}
+             onOpenMarriage={() => setShowMarriage(true)}
+             onGoToBirthRegistration={() => setShowBirthModal(true)}
+           />
+         )}
          
          <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
          
@@ -3430,6 +3475,31 @@ export default function App() {
              onOpenBirth={() => {
                setShowImmigrate(false);
                setShowBirthModal(true);
+             }}
+           />
+         )}
+
+         {/* Marriage Registration Overlay */}
+         {showMarriage && (
+           <MarriageModal
+             onClose={() => setShowMarriage(false)}
+             isRegistered={isRegistered}
+             isDeceased={isRegistered && health <= 0}
+             playerName={playerName}
+             age={currentAge}
+             coins={coins}
+             setCoins={setCoins}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
+             family={family}
+             setFamily={setFamily}
+             onOpenBirth={() => {
+               setShowMarriage(false);
+               setShowBirthModal(true);
+             }}
+             onOpenFamily={() => {
+               setShowMarriage(false);
+               setActiveTab('map');
              }}
            />
          )}

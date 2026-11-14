@@ -130,6 +130,7 @@ export interface FunctTabProps {
   onOpenHousing?: () => void;
   onOpenVisa?: () => void;
   onOpenImmigrate?: () => void;
+  onOpenMarriage?: () => void;
 }
 
 export const FunctTab: React.FC<FunctTabProps> = ({
@@ -142,6 +143,7 @@ export const FunctTab: React.FC<FunctTabProps> = ({
   onOpenHousing,
   onOpenVisa,
   onOpenImmigrate,
+  onOpenMarriage,
 }) => {
   const [toast, setToast] = useState<string | null>(null);
 
@@ -152,6 +154,7 @@ export const FunctTab: React.FC<FunctTabProps> = ({
     birth: onOpenBirth,
     visa: onOpenVisa,
     immigrate: onOpenImmigrate,
+    marriage: onOpenMarriage,
     gender: onOpenGender,
     housing: onOpenHousing,
     job: onOpenJob,

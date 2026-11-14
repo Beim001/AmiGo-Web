@@ -197,6 +197,7 @@ export interface RoleTabProps {
   isRegistered?: boolean;
   gender?: string | null;
   age?: number;
+  childrenCount?: number;
 }
 
 export const RoleTab: React.FC<RoleTabProps> = ({
@@ -216,6 +217,7 @@ export const RoleTab: React.FC<RoleTabProps> = ({
   isRegistered = false,
   gender,
   age = 8,
+  childrenCount = 0,
 }) => {
   const formattedMonth = gameMonth < 10 ? `0${gameMonth}` : `${gameMonth}`;
   const isDeceased = isRegistered && health <= 0;
@@ -387,7 +389,7 @@ export const RoleTab: React.FC<RoleTabProps> = ({
           />
           <StatCard
             title="子嗣"
-            value={!isRegistered ? '未激活' : isDeceased ? '0' : '0'}
+            value={!isRegistered ? '未激活' : String(childrenCount)}
             unit={!isRegistered ? '' : '人'}
             color={!isRegistered ? 'bg-[#373b47]' : 'bg-[#6b4c8a]'}
             icon={<ChildIcon />}
