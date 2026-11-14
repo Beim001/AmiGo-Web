@@ -106,6 +106,14 @@ export const SENSITIVE_WORDS_CONFIG = [
   }
 ];
 
+// 含拉丁字母的词（如 US、SS、CN）只按整词匹配：前后不能紧挨其他英文字母，
+// 避免 Augustus、Russell 等正常名字被误判；中日韩词与纯数字词仍按子串匹配。
+const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const containsWord = (text: string, word: string): boolean => {
+  if (!/[A-Z]/.test(word)) return text.includes(word);
+  return new RegExp(`(?<![A-Z])${escapeRegExp(word)}(?![A-Z])`).test(text);
+};
+
 // 角色昵称敏感词与规则校验函数
 export const validatePlayerName = (name: string): { valid: boolean; reason?: string; category?: string; word?: string } => {
   const trimmed = name.trim();
@@ -138,8 +146,8 @@ export const validatePlayerName = (name: string): { valid: boolean; reason?: str
       const strippedTarget = targetWord.replace(/[^\w\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/g, '');
 
       if (
-        normalized.includes(targetWord) ||
-        (strippedTarget.length > 0 && strippedNormalized.includes(strippedTarget))
+        containsWord(normalized, targetWord) ||
+        (strippedTarget.length > 0 && containsWord(strippedNormalized, strippedTarget))
       ) {
         return {
           valid: false,

@@ -48,6 +48,24 @@ const DEV_MOCK_USER: AppUser = {
   isMock: true,
 };
 
+// localStorage 读取工具（读取失败或无存档时返回默认值）
+const loadStored = <T,>(key: string, fallback: T): T => {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved !== null ? (JSON.parse(saved) as T) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+};
+const saveStored = (key: string, value: unknown) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {}
+};
+
+// 重置人生时保留的存档键（账号级数据，不属于某一段人生）
+const KEYS_KEPT_ON_RESET = new Set(['amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes']);
+
 
 
 const AgeIcon = () => (
@@ -100,7 +118,7 @@ const TopBar = ({
   onOpenBank?: () => void,
   onOpenWealthChart?: () => void,
   onOpenAuth?: () => void,
-  authUser?: FirebaseUser | null,
+  authUser?: FirebaseUser | AppUser | null,
   avatarContent?: React.ReactNode,
 }) => (
   <div className="flex justify-between items-center bg-[#252632] px-3 py-2.5 border-b-2 border-black z-20 shadow-md">
@@ -273,6 +291,12 @@ const ShopModal = ({
 
   const [isDrawing, setIsDrawing] = React.useState(false);
   const [drawResult, setDrawResult] = React.useState<any | null>(null);
+  const [shopToast, setShopToast] = React.useState<string | null>(null);
+
+  const showShopToast = (msg: string) => {
+    setShopToast(msg);
+    setTimeout(() => setShopToast((prev) => (prev === msg ? null : prev)), 2500);
+  };
 
   const handleDraw = (times: number) => {
     let cost = 0;
@@ -287,11 +311,11 @@ const ShopModal = ({
     }
 
     if (coins < cost) {
-      alert("金币不足！");
+      showShopToast(`金币不足！需要 ${cost.toLocaleString()} ₽`);
       return;
     }
 
-    if (cost > 0) setCoins(coins - cost);
+    if (cost > 0) setCoins((prev: number) => prev - cost);
     if (times === 1 && !freeDrawUsed) setFreeDrawUsed(true);
 
     setIsDrawing(true);
@@ -314,12 +338,12 @@ const ShopModal = ({
       
       const newClothes = results.filter(r => r.type !== 'coin').map(r => r.id);
       if (newClothes.length > 0) {
-        setOwnedClothes([...ownedClothes, ...newClothes]);
+        setOwnedClothes((prev: string[]) => [...prev, ...newClothes]);
       }
       
       const totalCoins = results.filter(r => r.type === 'coin').reduce((sum, r) => sum + r.amount, 0);
       if (totalCoins > 0) {
-        setCoins(coins + totalCoins);
+        setCoins((prev: number) => prev + totalCoins);
       }
       
       setDrawResult(results);
@@ -328,6 +352,11 @@ const ShopModal = ({
 
   return (
     <div className="absolute inset-0 bg-[#252632] flex flex-col z-50 animate-in slide-in-from-bottom-4 duration-200">
+      {shopToast && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-black/90 text-yellow-300 border-2 border-yellow-500 text-xs font-black px-4 py-2 rounded-xl shadow-[0_4px_0_#000] animate-in fade-in slide-in-from-top-2 duration-200 text-center max-w-[85%]">
+          {shopToast}
+        </div>
+      )}
       <div className="relative w-full h-16 z-20 drop-shadow-[0_4px_4px_rgba(0,0,0,0.25)] flex-shrink-0">
         <div className="absolute inset-0 flex">
           {[...Array(6)].map((_, i) => (
@@ -413,11 +442,11 @@ const ShopModal = ({
                   setEquippedClothing(item.id);
                 } else {
                   if (item.currency === 'coin' && coins >= item.price) {
-                    setCoins(coins - item.price);
-                    setOwnedClothes([...ownedClothes, item.id]);
+                    setCoins((prev: number) => prev - item.price);
+                    setOwnedClothes((prev: string[]) => [...prev, item.id]);
                     setEquippedClothing(item.id);
                   } else {
-                    alert('余额不足');
+                    showShopToast(`余额不足！需要 ${item.price.toLocaleString()} ₽`);
                   }
                 }
               };
@@ -721,7 +750,7 @@ const ProfileModal = ({
   
   // CDKey state
   const [cdkeyInput, setCdkeyInput] = useState('');
-  const [redeemedCodes, setRedeemedCodes] = useState<string[]>([]);
+  const [redeemedCodes, setRedeemedCodes] = useState<string[]>(() => loadStored<string[]>('amigo_redeemed_codes', []));
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -982,7 +1011,9 @@ const ProfileModal = ({
 
     if (code === 'VALENTINE' || code === '2026' || code === '666666' || code === 'GIFT2026') {
       setCoins(prev => prev + 50000);
-      setRedeemedCodes([...redeemedCodes, code]);
+      const updatedCodes = [...redeemedCodes, code];
+      setRedeemedCodes(updatedCodes);
+      saveStored('amigo_redeemed_codes', updatedCodes);
       setCdkeyInput('');
       showToast('🎉 兑换成功！获得 50,000金币！');
     } else {
@@ -2786,9 +2817,9 @@ export default function App() {
     } catch (e) {}
   };
 
-  const [coins, setCoins] = useState(1047650);
-  const [health, setHealth] = useState(100);
-  const [equippedClothing, setEquippedClothing] = useState('default');
+  const [coins, setCoins] = useState<number>(() => loadStored('amigo_coins', 1047650));
+  const [health, setHealth] = useState<number>(() => loadStored('amigo_health', 100));
+  const [equippedClothing, setEquippedClothing] = useState<string>(() => loadStored('amigo_equipped_clothing', 'default'));
 
   const [gameYear, setGameYear] = useState<number>(() => {
     try {
@@ -2924,29 +2955,23 @@ export default function App() {
     setBankLoan(0);
     setFreeDrawUsed(false);
 
-    // 4. 清理本地存储中相关持久化数据
+    // 4. 清理本地存储中本段人生的全部存档（amigo_* / aminoac_* 前缀），保留账号级数据
     try {
-      localStorage.removeItem('amigo_is_registered');
-      localStorage.removeItem('amigo_gender');
-      localStorage.removeItem('amigo_birth_registered_year');
-      localStorage.removeItem('amigo_player_name');
-      localStorage.removeItem('amigo_coins');
-      localStorage.removeItem('amigo_equipped_clothing');
-      localStorage.removeItem('amigo_owned_clothes');
-      localStorage.removeItem('amigo_avatar_source');
-      localStorage.removeItem('amigo_game_year');
-      localStorage.removeItem('amigo_game_month');
-      localStorage.removeItem('amigo_bank_deposit');
-      localStorage.removeItem('amigo_bank_loan');
-      localStorage.removeItem('amigo_multi_bank_accounts_v1');
-      localStorage.removeItem('amigo_name_change_timestamps');
-      localStorage.removeItem('amigo_political_violation_count');
-      localStorage.removeItem('amigo_name_freeze_until');
-      localStorage.removeItem('amigo_political_violation_logs');
-      localStorage.removeItem('amigo_owned_properties');
-      localStorage.removeItem('amigo_current_rental');
-      localStorage.removeItem('amigo_permanent_residencies');
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('amigo_') || key.startsWith('aminoac_')) && !KEYS_KEPT_ON_RESET.has(key)) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
     } catch (e) {}
+    // 显式写入重置后的初始值：若数值本来就等于初始值，持久化 effect 不会再次触发
+    saveStored('amigo_coins', 10000);
+    saveStored('amigo_health', 100);
+    saveStored('amigo_equipped_clothing', 'default');
+    saveStored('amigo_owned_clothes', ['default']);
+    saveStored('amigo_free_draw_used', false);
 
     showToast('✨ 人生已重置！角色与所有状态已恢复初始状态');
   };
@@ -2983,7 +3008,7 @@ export default function App() {
     }
     return <CartoonCharacter clothing={equippedClothing} />;
   };
-  const [ownedClothes, setOwnedClothes] = useState(['default']);
+  const [ownedClothes, setOwnedClothes] = useState<string[]>(() => loadStored('amigo_owned_clothes', ['default']));
 
   const [bankDeposit, setBankDeposit] = useState<number>(() => {
     try {
@@ -3003,7 +3028,14 @@ export default function App() {
     }
   });
 
-  const [freeDrawUsed, setFreeDrawUsed] = useState(false);
+  const [freeDrawUsed, setFreeDrawUsed] = useState<boolean>(() => loadStored('amigo_free_draw_used', false));
+
+  // 核心状态持久化（刷新页面后保留）
+  React.useEffect(() => saveStored('amigo_coins', coins), [coins]);
+  React.useEffect(() => saveStored('amigo_health', health), [health]);
+  React.useEffect(() => saveStored('amigo_equipped_clothing', equippedClothing), [equippedClothing]);
+  React.useEffect(() => saveStored('amigo_owned_clothes', ownedClothes), [ownedClothes]);
+  React.useEffect(() => saveStored('amigo_free_draw_used', freeDrawUsed), [freeDrawUsed]);
 
   if (authLoading) {
     return (
@@ -3021,6 +3053,8 @@ export default function App() {
     return (
       <AuthScreen
         onLoginSuccess={(user) => {
+          // 直接写入登录态：B 站登录在匿名 Firebase 登录失败时不会触发 onAuthStateChanged
+          if (user) setAuthUser(user);
           if (user && (user.displayName || user.email)) {
             setPlayerName(user.displayName || user.email?.split('@')[0] || 'AmiGo·玩家');
           }

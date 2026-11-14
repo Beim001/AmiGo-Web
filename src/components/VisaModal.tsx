@@ -1916,7 +1916,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                 <div className="bg-[#181a26] p-2 rounded-xl border border-black/50">
                   <span className="text-gray-400 text-[10px] block font-bold">有效期限与签发</span>
                   <span className="text-emerald-300 font-mono font-bold">
-                    {awardedVisaCertificate.issuedVisa.durationMonths} 个月 (至 {awardedVisaCertificate.issuedVisa.expireYear}.{awardedVisaCertificate.issuedVisa.expireMonth < 10 ? '0' + awardedVisaCertificate.issuedVisa.expireMonth : awardedVisaCertificate.issuedVisa.expireMonth})
+                    {awardedVisaCertificate.visa.durationMonths} 个月 (至 {awardedVisaCertificate.issuedVisa.expireYear}.{awardedVisaCertificate.issuedVisa.expireMonth < 10 ? '0' + awardedVisaCertificate.issuedVisa.expireMonth : awardedVisaCertificate.issuedVisa.expireMonth})
                   </span>
                 </div>
                 <div className="bg-[#181a26] p-2 rounded-xl border border-black/50">

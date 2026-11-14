@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Mail, CheckCircle2, RefreshCw, LogOut, Send, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { auth, sendEmailVerification, FirebaseUser } from '../firebase';
+import type { AppUser } from '../lib/bilibiliToy';
 
 interface Props {
-  user: FirebaseUser;
+  user: FirebaseUser | AppUser;
   onVerified: () => void;
   onLogout: () => void;
 }

@@ -336,15 +336,13 @@ export const HousingModal: React.FC<HousingModalProps> = ({
   const handleSellProperty = (owned: OwnedProperty) => {
     const refund = Math.floor(owned.currentValue * 0.96); // 扣除4%交易税费
     setCoins((prev) => prev + refund);
-    setOwnedProperties((prev) => prev.filter((p) => p.id !== owned.id));
-
-    // 如果卖掉的是主居所，重置主居所
-    if (owned.isPrimaryResidence) {
-      const remaining = ownedProperties.filter((p) => p.id !== owned.id);
-      if (remaining.length > 0) {
-        remaining[0].isPrimaryResidence = true;
-      }
-    }
+    setOwnedProperties((prev) => {
+      const remaining = prev.filter((p) => p.id !== owned.id);
+      // 如果卖掉的是主居所，迁入剩余房产中第一套未出租的住宅（返回新对象，不直接修改 state）
+      if (!owned.isPrimaryResidence) return remaining;
+      const nextPrimaryId = remaining.find((p) => !p.isRentedOut)?.id;
+      return remaining.map((p) => (p.id === nextPrimaryId ? { ...p, isPrimaryResidence: true } : p));
+    });
 
     showToast(`成功出售【${owned.title}】，扣除4%交易税费后到账 +${refund.toLocaleString()} ₽`);
   };

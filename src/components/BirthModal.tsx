@@ -69,8 +69,18 @@ export const BirthModal: React.FC<BirthModalProps> = ({
   const [isCopied, setIsCopied] = useState(false);
   const [stampedEffect, setStampedEffect] = useState(false);
 
-  // 公民身份认证编号
-  const citizenId = 'AMN-1870-88204910';
+  // 公民身份认证编号：每位玩家首次生成后持久化（重置人生时随 amigo_* 存档一起清除）
+  const [citizenId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('amigo_citizen_id');
+      if (saved) return saved;
+      const generated = `AMN-${gameYear}-${Math.floor(10000000 + Math.random() * 90000000)}`;
+      localStorage.setItem('amigo_citizen_id', generated);
+      return generated;
+    } catch (e) {
+      return `AMN-${gameYear}-${Math.floor(10000000 + Math.random() * 90000000)}`;
+    }
+  });
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
