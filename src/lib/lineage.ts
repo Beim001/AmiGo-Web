@@ -1,6 +1,8 @@
 // 家族出身：阶层、起始资产、父母家条件与童工（undefined.md 第 18、19 题）
 
-import { FamilyMemberDef, FamilyOrigin, Gender, Kin, MALE_NAMES, FEMALE_NAMES, VALENTINE_MEMBERS, pick, relationFor } from './family';
+import { FamilyMemberDef, FamilyOrigin, Gender, Kin, VALENTINE_MEMBERS, pick, relationFor } from './family';
+import { randomFullName } from './names';
+import { familiesActiveIn } from '../data/fixedFamilies';
 
 export type ClassId = 'beggar' | 'commoner' | 'modest' | 'middle' | 'merchant' | 'noble' | 'royal';
 
@@ -87,6 +89,34 @@ export const SOCIAL_CLASSES: SocialClass[] = [
   },
 ];
 
+/**
+ * 阶层提升（undefined.md 第 32 题，默认值）：家族资产净值与当家人声望同时达到门槛时，每月最多晋升一级。
+ * 皇族不能通过晋升获得；贵族需要「受封爵位」，门槛最高。
+ */
+export interface Promotion {
+  from: ClassId;
+  to: ClassId;
+  minNetWorth: number;
+  minReputation: number;
+  reason: string;
+}
+
+export const PROMOTIONS: Promotion[] = [
+  { from: 'beggar', to: 'commoner', minNetWorth: 5_000, minReputation: 0, reason: '告别流浪，有了安身之所。' },
+  { from: 'commoner', to: 'modest', minNetWorth: 50_000, minReputation: 10, reason: '家境日渐殷实。' },
+  { from: 'modest', to: 'middle', minNetWorth: 500_000, minReputation: 20, reason: '置下体面产业，跻身城中中产。' },
+  { from: 'middle', to: 'merchant', minNetWorth: 5_000_000, minReputation: 30, reason: '生意兴隆，成为一方富商。' },
+  { from: 'merchant', to: 'noble', minNetWorth: 100_000_000, minReputation: 60, reason: '家财万贯、声名远扬，蒙帝皇恩准受封爵位。' },
+];
+
+export const nextPromotion = (classId: string): Promotion | undefined => PROMOTIONS.find((p) => p.from === classId);
+
+/** 满足门槛时返回晋升信息，否则 undefined */
+export const checkPromotion = (classId: string, netWorth: number, reputation: number): Promotion | undefined => {
+  const p = nextPromotion(classId);
+  return p && netWorth >= p.minNetWorth && reputation >= p.minReputation ? p : undefined;
+};
+
 export const classById = (id: string | undefined): SocialClass =>
   SOCIAL_CLASSES.find((c) => c.id === id) ?? SOCIAL_CLASSES.find((c) => c.id === 'noble')!;
 
@@ -104,25 +134,32 @@ const between = (min: number, max: number, rng: () => number) => min + Math.floo
 const AVATAR_COLORS = ['#525a66', '#3d6185', '#a64245', '#8a6538', '#a1476b', '#3d7a63', '#684a85'];
 
 /** 生成出生登记时的家族：祖父母、父母、0–3 个兄弟姐妹（年龄差相对于 8 岁登记的主角） */
-export const generateOrigin = (cls: SocialClass, rng: () => number = Math.random): FamilyOrigin => {
-  // 贵族有四成概率抽到瓦伦丁家族（沿用原有设定、传家宝与大事记）
-  if (cls.id === 'noble' && rng() < 0.4) {
-    return { classId: cls.id, classLabel: cls.label, surname: '瓦伦丁', members: VALENTINE_MEMBERS, isValentine: true };
+/**
+ * 本阶层可出生的姓氏：固定家族列表（src/data/fixedFamilies.ts）中当年存在、可出生的同阶层家族；
+ * 皇族与贵族只从固定家族中抽取，其余阶层再加上本阶层的普通姓氏。
+ */
+export const surnamePoolFor = (cls: SocialClass, year: number): string[] => {
+  const fixed = familiesActiveIn(year)
+    .filter((f) => f.classId === cls.id && f.playable !== false)
+    .map((f) => f.surname);
+  if ((cls.id === 'royal' || cls.id === 'noble') && fixed.length > 0) return fixed;
+  return [...new Set([...fixed, ...cls.surnames])];
+};
+
+export const generateOrigin = (cls: SocialClass, rng: () => number = Math.random, year = 1870): FamilyOrigin => {
+  const surname = pick(surnamePoolFor(cls, year), rng);
+  // 瓦伦丁家族沿用原有成员设定、传家宝与大事记
+  if (surname === '瓦伦丁') {
+    return { classId: cls.id, classLabel: cls.label, surname, members: VALENTINE_MEMBERS, isValentine: true };
   }
 
-  const surname = pick(cls.surnames, rng);
   const [fatherJob, motherJob] = pick(cls.parentJobs, rng);
   const lifespan = () => between(cls.lifespanRange[0], cls.lifespanRange[1], rng);
   const usedNames = new Set<string>();
   const nameFor = (gender: Gender) => {
-    for (let i = 0; i < 20; i++) {
-      const n = `${pick(gender === '男' ? MALE_NAMES : FEMALE_NAMES, rng)}·${surname}`;
-      if (!usedNames.has(n)) {
-        usedNames.add(n);
-        return n;
-      }
-    }
-    return `${pick(gender === '男' ? MALE_NAMES : FEMALE_NAMES, rng)}·${surname}`;
+    const n = randomFullName(gender, surname, rng, usedNames);
+    usedNames.add(n);
+    return n;
   };
   let seq = 0;
   const member = (kin: Kin, gender: Gender, ageOffset: number, stages: Array<[number, string]>, desc: string): FamilyMemberDef => ({

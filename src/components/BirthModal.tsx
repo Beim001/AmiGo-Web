@@ -1,3 +1,4 @@
+import { randomPlayerName } from '../lib/names';
 import React, { useState } from 'react';
 import {
   ChevronLeft,
@@ -30,25 +31,13 @@ export interface BirthModalProps {
   setCoins?: React.Dispatch<React.SetStateAction<number>>;
   health?: number;
   setHealth?: React.Dispatch<React.SetStateAction<number>>;
-  onRegisterBirth: (name: string) => { gender: string; age: number; classLabel?: string; surname?: string };
+  onRegisterBirth: (name: string) => { gender: string; age: number; classLabel?: string; surname?: string; name?: string };
   onOpenGender?: () => void;
   onOpenHousing?: () => void;
   onOpenVisa?: () => void;
 }
 
 // 推荐备选姓名
-const PRESET_NAMES = [
-  '亚历山大·诺曼',
-  '维多利亚·陈',
-  '阿列克谢·伊凡',
-  '林德曼·威廉',
-  '海伦娜·罗斯',
-  '弗朗茨·约瑟夫',
-  '安东·契诃夫',
-  '伊丽莎白·温莎',
-  '查理·巴贝奇',
-  '奥斯卡·王尔德',
-];
 
 export const BirthModal: React.FC<BirthModalProps> = ({
   onClose,
@@ -90,7 +79,7 @@ export const BirthModal: React.FC<BirthModalProps> = ({
   };
 
   const handleRandomName = () => {
-    const rName = PRESET_NAMES[Math.floor(Math.random() * PRESET_NAMES.length)];
+    const rName = randomPlayerName();
     setInputName(rName);
     setErrorMsg(null);
   };
@@ -130,7 +119,8 @@ export const BirthModal: React.FC<BirthModalProps> = ({
     // 首次登记完全随机确定性别
     if (!isRegistered) {
       const regRes = onRegisterBirth(trimmed);
-      showToast(`已完成出生登记：${regRes.classLabel ?? ''}之家 · ${regRes.surname ?? ''}家族，性别【${regRes.gender}】，初始年龄 8 岁`);
+      if (regRes.name) setInputName(regRes.name);
+      showToast(`已完成出生登记：${regRes.name ?? trimmed}，${regRes.classLabel ?? ''}之家 · ${regRes.surname ?? ''}家族，性别【${regRes.gender}】`);
     } else {
       showToast(`已更新公民姓名【${trimmed}】`);
     }

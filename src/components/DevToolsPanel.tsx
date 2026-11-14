@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wrench, X, CircleDollarSign, FastForward, Baby, Cake, Square } from 'lucide-react';
+import { Wrench, X, CircleDollarSign, FastForward, Baby, Cake, Square, Trophy } from 'lucide-react';
 
 // 开发测试工具：仅在 `npm run dev` 下由 App 渲染（import.meta.env.DEV），生产构建中不存在。
 // 悬浮在所有界面之上：调整现金、一键快进月份、编辑年龄、新增子嗣。
@@ -17,6 +17,10 @@ interface DevToolsPanelProps {
   onStopFastForward: () => void;
   onSetAge: (age: number) => void;
   onAddChild: (twins: boolean) => void;
+  /** 已解锁 / 全部成就数 */
+  achievementProgress: [number, number];
+  onUnlockAllAchievements: () => void;
+  onClearAchievements: () => void;
 }
 
 const QUICK_ADD = [10_000, 100_000, 1_000_000];
@@ -28,7 +32,7 @@ const MAX_FAST_FORWARD_MONTHS = 1200;
 
 const clampCoins = (value: number) => Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(value)));
 
-type Tab = 'money' | 'time' | 'age' | 'child';
+type Tab = 'money' | 'time' | 'age' | 'child' | 'achievement';
 
 export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
   coins,
@@ -42,6 +46,9 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
   onStopFastForward,
   onSetAge,
   onAddChild,
+  achievementProgress,
+  onUnlockAllAchievements,
+  onClearAchievements,
 }) => {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('money');
@@ -96,12 +103,13 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
         </button>
       </div>
 
-      <div className="grid grid-cols-4 gap-1 mb-2">
+      <div className="grid grid-cols-5 gap-1 mb-2">
         {([
           ['money', '金钱', CircleDollarSign],
           ['time', '快进', FastForward],
           ['age', '年龄', Cake],
           ['child', '子嗣', Baby],
+          ['achievement', '成就', Trophy],
         ] as const).map(([id, text, Icon]) => (
           <button
             key={id}
@@ -246,6 +254,23 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
             </button>
           </div>
           <div className="text-[9px] text-gray-500 font-bold mt-1.5">测试用：忽略婚姻、年龄与 6 人上限。想测试传承，可新增后再快进 16 年以上。</div>
+        </>
+      )}
+
+      {tab === 'achievement' && (
+        <>
+          <div className={label}>
+            已解锁 {achievementProgress[0]} / {achievementProgress[1]} 项（成就跨人生保留，解锁时间记为当前现实时间）
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button onClick={onUnlockAllAchievements} className={btn}>
+              一键解锁全部
+            </button>
+            <button onClick={onClearAchievements} className={btn}>
+              清空全部成就
+            </button>
+          </div>
+          <div className="text-[9px] text-gray-500 font-bold mt-1.5">可用于测试「集齐全部成就」后的致谢名单。</div>
         </>
       )}
 

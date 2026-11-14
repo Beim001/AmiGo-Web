@@ -8,6 +8,7 @@
 // - 主角去世后可由年满 HEIR_MIN_AGE 岁的子嗣或兄弟姐妹继承，家族世系以继承人为「你」重新排列
 
 import { randomTraits, inheritTraits, fertilityMultiplier, twinChanceFor } from './traits';
+import { randomFullName, MALE_GIVEN_NAMES, FEMALE_GIVEN_NAMES } from './names';
 
 export type Gender = '男' | '女';
 export type InteractionKind = 'spar' | 'consult' | 'gift';
@@ -396,8 +397,9 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
 
 // ---------- 结婚 ----------
 
-export const MALE_NAMES = ['亚瑟', '卢卡斯', '奥斯卡', '塞巴斯蒂安', '尼古拉', '费利克斯', '雷昂', '马克西姆', '伊万', '阿列克谢'];
-export const FEMALE_NAMES = ['索菲亚', '伊莎贝拉', '克拉拉', '安娜', '艾米莉亚', '奥尔加', '薇拉', '娜塔莎', '玛丽娜', '叶莲娜'];
+/** 兼容旧引用：名字池已统一到 names.ts */
+export const MALE_NAMES = MALE_GIVEN_NAMES;
+export const FEMALE_NAMES = FEMALE_GIVEN_NAMES;
 const SPOUSE_SURNAMES = ['彼得罗夫', '卡里莫夫', '霍夫曼', '杜邦', '罗西', '诺维科夫', '施密特', '拉希多夫'];
 const SPOUSE_OCCUPATIONS = ['学堂教师', '裁缝铺店主', '医院护理员', '商行账房', '邮局书记员', '钟表匠', '画师', '药剂师', '纺织厂工头', '报社编辑'];
 
@@ -421,7 +423,7 @@ export const generateSpouseCandidates = (
   // 名字组合共 (10+10)×8 = 160 种；限制尝试次数，防止极端随机数下死循环
   for (let attempt = 0; candidates.length < count && attempt < count * 20; attempt++) {
     const gender: Gender = rng() < 0.5 ? '男' : '女';
-    const name = `${pick(gender === '男' ? MALE_NAMES : FEMALE_NAMES, rng)}·${pick(SPOUSE_SURNAMES, rng)}`;
+    const name = randomFullName(gender, pick(SPOUSE_SURNAMES, rng), rng, usedNames);
     if (usedNames.has(name)) continue;
     usedNames.add(name);
     const age = Math.max(MARRIAGE_MIN_AGE, playerAge + Math.floor(rng() * 11) - 5);
@@ -493,9 +495,8 @@ const giveBirth = (
   const born: Child[] = [];
   for (let k = 0; k < count; k++) {
     const gender: Gender = rng() < 0.5 ? '男' : '女';
-    const pool = (gender === '男' ? MALE_NAMES : FEMALE_NAMES).map((n) => `${n}·${surname}`).filter((n) => !usedNames.has(n));
     const index = state.children.length + born.length + 1;
-    const name = pool.length > 0 ? pick(pool, rng) : `${pick(gender === '男' ? MALE_NAMES : FEMALE_NAMES, rng)}·${surname} ${index} 世`;
+    const name = randomFullName(gender, surname, rng, usedNames);
     usedNames.add(name);
     born.push({
       id: `child_${year}_${month}_${index}`,
@@ -576,6 +577,24 @@ export const tryIllegitimateChild = (
   if (!l || playerAge > BIRTH_MAX_AGE || year - l.birthYear > BIRTH_MAX_AGE || state.children.length >= MAX_CHILDREN) return none;
   if (rng() >= ILLEGITIMATE_CHANCE * fertilityMultiplier(playerTraits, l.traits)) return none;
   return giveBirth(state, year, month, 1, rng, l, playerTraits, true);
+};
+
+// ---------- 子嗣取名 ----------
+
+export const renameChild = (state: FamilyState, childId: string, name: string): FamilyState => ({
+  ...state,
+  children: state.children.map((c) => (c.id === childId ? { ...c, name } : c)),
+});
+
+// ---------- 阶层提升 ----------
+
+export const promoteFamily = (state: FamilyState, classId: string, classLabel: string, year: number, month: number, reason: string): FamilyState => {
+  const origin = getOrigin(state);
+  return {
+    ...state,
+    origin: { ...origin, classId, classLabel },
+    events: [...state.events, { year, month, title: `跻身${classLabel}`, desc: `${origin.surname}家族由${origin.classLabel}晋升为${classLabel}。${reason}` }],
+  };
 };
 
 // ---------- 好感度衰减与分家 ----------

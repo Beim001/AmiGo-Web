@@ -4,6 +4,9 @@ import type { RankedFamily } from '../lib/familyRank';
 import { wealthScore } from '../lib/familyRank';
 import type { Guardianship } from '../lib/guardianship';
 import { reputationLevel } from '../lib/reputation';
+import { nextPromotion, classById } from '../lib/lineage';
+import { applySurname } from '../lib/names';
+import { validatePlayerName } from '../utils/sensitiveWords';
 import { ShieldCheck, GitFork, Crown, Building2, Shield, Sparkles, Heart, Baby } from 'lucide-react';
 import {
   FamilyState,
@@ -17,6 +20,7 @@ import {
   AFFINITY_GAIN,
   buildFamilyMembers,
   getOrigin,
+  renameChild,
   DISCONTENT_THRESHOLD,
   SPLIT_AFTER_MONTHS,
   buildChronicles,
@@ -108,6 +112,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   const [subTab, setSubTab] = useState<'tree' | 'ranking' | 'heirlooms' | 'chronicles'>('tree');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [nameDraft, setNameDraft] = useState('');
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -313,7 +318,10 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                     .map((member) => (
                       <div
                         key={member.id}
-                        onClick={() => setSelectedId(member.id)}
+                        onClick={() => {
+                          setSelectedId(member.id);
+                          setNameDraft('');
+                        }}
                         className={`bg-[#21232e] border-2 rounded-lg p-2.5 flex items-center justify-between cursor-pointer hover:border-yellow-400 transition-all shadow-[0_2px_0_#000] active:translate-y-0.5 ${member.isPlayer ? 'border-yellow-500/70' : 'border-black'}`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
@@ -359,6 +367,30 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
         {/* 家族排行：凝聚力 30% + 财力 40% + 影响力 30% */}
         {subTab === 'ranking' && (
           <div className="space-y-3">
+            {(() => {
+              const promo = nextPromotion(origin.classId);
+              if (!promo) {
+                return (
+                  <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] text-xs font-bold text-gray-300">
+                    🎖️ {origin.classLabel}已是可晋升的最高阶层{origin.classId === 'noble' ? '（皇族无法通过晋升获得）' : ''}。
+                  </div>
+                );
+              }
+              const toLabel = classById(promo.to).label;
+              const wealthOk = wealth >= promo.minNetWorth;
+              const repOk = reputation >= promo.minReputation;
+              return (
+                <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] space-y-1.5 text-xs font-bold">
+                  <div className="text-white font-black">🎖️ 晋升为{toLabel}的条件（每月推进时自动检查）</div>
+                  <div className={wealthOk ? 'text-emerald-300' : 'text-gray-400'}>
+                    {wealthOk ? '✔' : '✘'} 家族资产 ≥ {promo.minNetWorth.toLocaleString()} ₽（当前 {wealth.toLocaleString()} ₽）
+                  </div>
+                  <div className={repOk ? 'text-emerald-300' : 'text-gray-400'}>
+                    {repOk ? '✔' : '✘'} 当家人声望 ≥ {promo.minReputation}（当前 {reputation}）
+                  </div>
+                </div>
+              );
+            })()}
             <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] grid grid-cols-3 gap-2 text-center">
               <div className="bg-[#21232e] rounded-lg border border-black p-1.5">
                 <div className="text-[10px] text-gray-400 font-bold">凝聚力</div>
@@ -533,6 +565,41 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                 </span>
               ))}
             </div>
+
+            {selectedMember.isChild && (
+              <div className="bg-[#21232e] border-2 border-black rounded-xl p-2.5 mb-3 space-y-1.5">
+                <div className="text-[11px] text-gray-300 font-bold">为孩子取名（只填名字即可，会自动加上家族姓「{origin.surname}」）</div>
+                <div className="flex gap-1.5">
+                  <input
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    placeholder={selectedMember.name.split('·')[0]}
+                    maxLength={10}
+                    className="flex-1 min-w-0 bg-[#181a24] text-white text-xs font-bold px-2 py-1.5 rounded-lg border border-black focus:outline-none focus:border-yellow-400"
+                  />
+                  <button
+                    onClick={() => {
+                      const full = applySurname(nameDraft, origin.surname);
+                      const check = validatePlayerName(full);
+                      if (!nameDraft.trim() || !check.valid) {
+                        showToast(`❌ ${check.reason || '请输入名字'}`);
+                        return;
+                      }
+                      if (members.some((m) => m.name === full && m.id !== selectedMember.id)) {
+                        showToast('❌ 家族里已经有人叫这个名字了');
+                        return;
+                      }
+                      setFamily((prev) => renameChild(prev, selectedMember.id, full));
+                      showToast(`👶 孩子从此名叫 ${full}`);
+                      setNameDraft('');
+                    }}
+                    className="bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black px-3 rounded-lg border-2 border-black cursor-pointer shrink-0"
+                  >
+                    取名
+                  </button>
+                </div>
+              </div>
+            )}
 
             {!selectedMember.isPlayer && selectedMember.status !== '已故' && (
               <>

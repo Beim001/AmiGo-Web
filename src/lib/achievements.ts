@@ -64,3 +64,28 @@ export const formatRealTime = (ms: number) => {
   const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
+
+/** 开发测试工具：一次解锁全部成就（不逐条弹提示），返回本次新解锁的数量 */
+export const unlockAllForTesting = (now: number = Date.now()): number => {
+  try {
+    const record = readAchievements();
+    let added = 0;
+    for (const a of ACHIEVEMENTS) {
+      if (!record[a.id]) {
+        record[a.id] = now;
+        added++;
+      }
+    }
+    localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(record));
+    return added;
+  } catch {
+    return 0;
+  }
+};
+
+/** 开发测试工具：清空全部成就 */
+export const clearAchievementsForTesting = () => {
+  try {
+    localStorage.removeItem(ACHIEVEMENTS_KEY);
+  } catch {}
+};

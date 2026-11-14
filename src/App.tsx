@@ -13,13 +13,14 @@ import { SimTab } from './components/SimTab';
 import { LogTab } from './components/LogTab';
 import { FamilyTab } from './components/FamilyTab';
 import { MarriageModal } from './components/MarriageModal';
-import { FamilyState, INITIAL_FAMILY_STATE, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
+import { FamilyState, INITIAL_FAMILY_STATE, promoteFamily, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
 import { randomTraits, PLAYER_TRAITS_KEY, diseaseTraitMultiplier, decayReduction, salaryMultiplier, depositInterestMultiplier, traitNames, traitById } from './lib/traits';
 import { REPUTATION_KEY, REP, HIGH_SALARY, clampReputation, reputationLevel, CHARITY_KEY, CHARITY_UNIT, charityRemaining } from './lib/reputation';
-import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, formatRealTime } from './lib/achievements';
+import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, formatRealTime, unlockAllForTesting, clearAchievementsForTesting } from './lib/achievements';
 import { GUARDIANSHIP_KEY, Guardianship, takeCustody, monthlyGuardianship, ORPHANAGE_NAME, ADULT_AGE as GUARDIAN_ADULT_AGE } from './lib/guardianship';
 import { rankFamilies, familyNetWorth } from './lib/familyRank';
-import { rollClass, generateOrigin, classById, readChildJob, CHILD_JOB_KEY, CHILD_LABOR_MAX_AGE } from './lib/lineage';
+import { rollClass, generateOrigin, classById, readChildJob, CHILD_JOB_KEY, CHILD_LABOR_MAX_AGE, checkPromotion } from './lib/lineage';
+import { applySurname } from './lib/names';
 import { progressDisease, diseaseInfo, DISEASE_KEY, ActiveDisease } from './lib/disease';
 import { SuccessionModal } from './components/SuccessionModal';
 import { SimEventInstance, rollMonthlyEvent, eventDef, resolveOption, optionBlocked, SIM_EVENTS_KEY, SIM_SCORE_KEY, SIM_QUIET_KEY } from './lib/simEvents';
@@ -3008,8 +3009,8 @@ export default function App() {
         repDelta += REP.child * birth.children.length;
         notes.push(
           birth.children.length === 2
-            ? `👶👶 双胞胎 ${birth.children.map((c) => c.name).join('、')} 降生`
-            : `👶 ${birth.child.name} 降生`,
+            ? `👶👶 双胞胎 ${birth.children.map((c) => c.name).join('、')} 降生（可在家族页取名）`
+            : `👶 ${birth.child.name} 降生（可在家族页取名）`,
         );
         addLifeLog(
           '大事',
@@ -3067,6 +3068,22 @@ export default function App() {
       // 声望：高薪岗位每年 +1
       if (nextM === 1 && salary >= HIGH_SALARY) repDelta += REP.highSalaryYearly;
     }
+    // 阶层提升（第 32 题）：家族资产净值与声望达到门槛时晋升一级
+    if (isRegistered && newHealth > 0) {
+      const netWorthNow = familyNetWorth(
+        Math.max(0, coins + netChange + familyCash),
+        bankTotals.deposit,
+        bankTotals.loan,
+        guardianship?.held ?? 0,
+      );
+      const promo = checkPromotion(getOrigin(fam).classId, netWorthNow, clampReputation(reputation + repDelta));
+      if (promo) {
+        const toCls = classById(promo.to);
+        fam = promoteFamily(fam, toCls.id, toCls.label, nextY, nextM, promo.reason);
+        notes.push(`🎖️ 家族晋升为${toCls.label}`);
+        addLifeLog('大事', `家族跻身${toCls.label}`, promo.reason, logWhenFamily);
+      }
+    }
     if (fam !== family) setFamily(fam);
     if (familyCash !== 0) setCoins((prev) => Math.max(0, prev + familyCash));
     if (repDelta !== 0) changeReputation(repDelta);
@@ -3120,7 +3137,7 @@ export default function App() {
     const generatedGender = Math.random() > 0.5 ? '男' : '女';
     // 随机家族出身（undefined.md 第 18 题）：决定起始资产、父母家条件与家族成员
     const cls = rollClass();
-    const origin = generateOrigin(cls);
+    const origin = generateOrigin(cls, Math.random, gameYear);
     setFamily({ ...INITIAL_FAMILY_STATE, origin });
     setCoins(cls.startCash);
     const bankTotals = persistBankAccounts(buildDefaultAccounts(cls.startDeposit, 0));
@@ -3133,12 +3150,14 @@ export default function App() {
     setIsRegistered(true);
     setGender(generatedGender);
     setBirthRegisteredYear(gameYear);
-    setPlayerName(name);
+    // 登记后把名字里的姓换成出身家族的姓
+    const finalName = applySurname(name, origin.surname);
+    setPlayerName(finalName);
     try {
       localStorage.setItem('amigo_is_registered', 'true');
       localStorage.setItem('amigo_gender', generatedGender);
       localStorage.setItem('amigo_birth_registered_year', gameYear.toString());
-      localStorage.setItem('amigo_player_name', name);
+      localStorage.setItem('amigo_player_name', finalName);
     } catch (e) {}
     clearLifeLog();
     setSimEvents([]);
@@ -3148,8 +3167,8 @@ export default function App() {
     setGuardianship(null);
     addLifeLog('成长', '出生登记', `出生于${cls.label}之家（${origin.surname}家族），性别${generatedGender}，特质：${traitNames(traits).join('、')}。`, { year: gameYear, month: gameMonth, age: 8 });
     unlockAchievement('born');
-    showToast(`🎉 出生登记成功！你出生在${cls.label}之家（${origin.surname}家族），性别：${generatedGender}，初始年龄：8岁`);
-    return { gender: generatedGender, age: 8, classLabel: cls.label, surname: origin.surname };
+    showToast(`🎉 出生登记成功！${finalName}，出生在${cls.label}之家（${origin.surname}家族），性别：${generatedGender}，初始年龄：8岁`);
+    return { gender: generatedGender, age: 8, classLabel: cls.label, surname: origin.surname, name: finalName };
   };
 
   /** 由子嗣或兄弟姐妹继承：资产保留，身份、年龄、家族世系换成继承人（undefined.md 第 21 题） */
@@ -3509,7 +3528,7 @@ export default function App() {
     cohesion: familyCohesion,
     wealth: familyWealth,
     influence: reputation,
-  });
+  }, gameYear);
 
   if (authLoading) {
     return (
@@ -4006,6 +4025,15 @@ export default function App() {
              onStopFastForward={() => setFastForwardRemaining(0)}
              onSetAge={handleDevSetAge}
              onAddChild={handleDevAddChild}
+             achievementProgress={[ACHIEVEMENTS.filter((a) => readAchievements()[a.id]).length, ACHIEVEMENTS.length]}
+             onUnlockAllAchievements={() => {
+               const added = unlockAllForTesting();
+               showToast(`🛠️ 已解锁全部 ${ACHIEVEMENTS.length} 项成就（新增 ${added} 项）`);
+             }}
+             onClearAchievements={() => {
+               clearAchievementsForTesting();
+               showToast('🛠️ 已清空全部成就');
+             }}
            />
          )}
 

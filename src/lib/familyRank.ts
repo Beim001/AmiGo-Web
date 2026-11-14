@@ -3,6 +3,8 @@
 // - 财力：家族资产净值（现金 + 存款 − 贷款 + 房产 + 股票 + 监护托管），按对数折算为 0–100
 // - 影响力：当家人的声望
 
+import { familiesActiveIn, CLASS_LABELS } from '../data/fixedFamilies';
+
 export const WEIGHTS = { cohesion: 0.3, wealth: 0.4, influence: 0.3 };
 /** 财力满分对应的资产（10 亿 ₽） */
 export const WEALTH_FULL_SCORE = 1e9;
@@ -16,19 +18,15 @@ export interface FamilyStanding {
   isPlayer?: boolean;
 }
 
-export const NPC_FAMILIES: FamilyStanding[] = [
-  { surname: '纳海', classLabel: '皇族', cohesion: 88, wealth: 5e9, influence: 100 },
-  { surname: '伊马达', classLabel: '贵族', cohesion: 75, wealth: 3e8, influence: 82 },
-  { surname: '洪图拉颜', classLabel: '贵族', cohesion: 70, wealth: 2e8, influence: 76 },
-  { surname: '鄂登禾萨穆', classLabel: '贵族', cohesion: 72, wealth: 1.5e8, influence: 70 },
-  { surname: '瓦伦丁', classLabel: '贵族', cohesion: 78, wealth: 1.2e8, influence: 66 },
-  { surname: '扎哈罗夫', classLabel: '富商', cohesion: 65, wealth: 6e7, influence: 52 },
-  { surname: '彼得罗夫', classLabel: '富商', cohesion: 60, wealth: 4e7, influence: 46 },
-  { surname: '费佘', classLabel: '中产', cohesion: 70, wealth: 5e6, influence: 30 },
-  { surname: '阿加德斯', classLabel: '小康', cohesion: 72, wealth: 8e5, influence: 18 },
-  { surname: '阿布灭', classLabel: '平民', cohesion: 75, wealth: 5e4, influence: 8 },
-  { surname: '伊体什', classLabel: '乞丐', cohesion: 80, wealth: 0, influence: 1 },
-];
+/** 指定年份参与排名的 NPC 家族（来自 src/data/fixedFamilies.ts） */
+export const npcFamiliesIn = (year: number): FamilyStanding[] =>
+  familiesActiveIn(year).map((f) => ({
+    surname: f.surname,
+    classLabel: CLASS_LABELS[f.classId],
+    cohesion: f.cohesion,
+    wealth: f.wealth,
+    influence: f.influence,
+  }));
 
 export const wealthScore = (wealth: number) =>
   Math.max(0, Math.min(100, (Math.log10(Math.max(1, wealth)) / Math.log10(WEALTH_FULL_SCORE)) * 100));
@@ -42,8 +40,8 @@ export interface RankedFamily extends FamilyStanding {
 }
 
 /** 玩家家族与 NPC 家族一起排名；与玩家同姓的 NPC 家族不重复列出 */
-export const rankFamilies = (player: FamilyStanding): RankedFamily[] =>
-  [...NPC_FAMILIES.filter((f) => f.surname !== player.surname), { ...player, isPlayer: true }]
+export const rankFamilies = (player: FamilyStanding, year = 1870): RankedFamily[] =>
+  [...npcFamiliesIn(year).filter((f) => f.surname !== player.surname), { ...player, isPlayer: true }]
     .map((f) => ({ ...f, score: Math.round(familyScore(f) * 10) / 10 }))
     .sort((a, b) => b.score - a.score)
     .map((f, i) => ({ ...f, rank: i + 1 }));
