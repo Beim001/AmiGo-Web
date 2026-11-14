@@ -1,7 +1,10 @@
 // 限定宝箱抽卡逻辑（纯函数，便于测试）
 //
+import { rollGift, type GiftQuality } from './gifts';
+
 // 规则：
-// - 每抽按概率出一个品质：限定 1%、稀有 6%、高级 13%，其余 80% 为金币（总出服饰概率 20%，与旧版一致）
+// - 每抽按概率出一个品质：限定 1%、稀有 6%、高级 13%（总出服饰概率 20%，与旧版一致）；
+//   其余 30% 为家族礼物（见 gifts.ts，undefined.md 第 35 题）、50% 为金币
 // - 稀有保底：连续 9 抽未出「稀有或更高」时，第 9 抽必出稀有（宝箱文案「9 次内必得稀有服饰」）
 // - 限定保底：连续 99 抽未出「限定」时，第 99 抽必出限定（宝箱文案「99 次内必得限定皮肤」）
 // - 出到限定会同时重置稀有保底计数
@@ -20,6 +23,9 @@ export const GACHA_RATES: Record<Rarity, number> = {
   rare: 0.06,
   advanced: 0.13,
 };
+
+/** 未出服饰时得到家族礼物的概率（占总抽数） */
+export const GIFT_RATE = 0.3;
 
 export const PITY_RARE = 9;
 export const PITY_LIMITED = 99;
@@ -44,7 +50,8 @@ export interface GachaPoolItem {
 
 export type DrawReward =
   | { type: 'clothing'; id: string; name: string; rarity: Rarity; isPity: boolean }
-  | { type: 'coin'; amount: number; name: string; rarity?: Rarity; isPity: boolean };
+  | { type: 'coin'; amount: number; name: string; rarity?: Rarity; isPity: boolean }
+  | { type: 'gift'; id: string; name: string; quality: GiftQuality; isPity: false };
 
 export const drawGacha = (
   times: number,
@@ -84,6 +91,12 @@ export const drawGacha = (
       sinceRare = 0;
     } else if (tier === 'rare') {
       sinceRare = 0;
+    }
+
+    if (!tier && r < GACHA_RATES.limited + GACHA_RATES.rare + GACHA_RATES.advanced + GIFT_RATE) {
+      const gift = rollGift(rng);
+      rewards.push({ type: 'gift', id: gift.id, name: gift.name, quality: gift.quality, isPity: false });
+      continue;
     }
 
     if (!tier) {

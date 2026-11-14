@@ -1,5 +1,6 @@
 import React from 'react';
 import { ExternalLink, Info } from 'lucide-react';
+import { APP_VERSION } from '../version';
 import { siFandom, siMiraheze, siDiscord, siReddit, siQq, siBilibili, type SimpleIcon } from 'simple-icons';
 
 interface CommunityLink {
@@ -64,5 +65,6 @@ export const AboutUs: React.FC = () => (
         <ExternalLink size={16} className="text-gray-400 flex-shrink-0" />
       </a>
     ))}
+    <p className="text-center text-gray-500 text-[10px] font-bold font-mono pt-1">版本 {APP_VERSION}</p>
   </div>
 );

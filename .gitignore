@@ -12,3 +12,7 @@ CLAUDE.md
 # Cloudflare Workers 本地文件
 .dev.vars
 .wrangler/
+
+wiki-contributors.md
+
+list.md

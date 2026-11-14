@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { X, RotateCcw } from 'lucide-react';
 import { CREDIT_SECTIONS, CREDITS_INTRO, creditsHeadline } from '../data/credits';
+import { APP_VERSION } from '../version';
 
 export interface CreditsRollProps {
   /** 全成就名次；null 表示未知（显示不带名次的祝贺语） */
@@ -102,7 +103,7 @@ export const CreditsRoll: React.FC<CreditsRollProps> = ({ rank, loading, onClose
                 ))}
               </div>
             ))}
-            <p className="text-gray-500 text-xs font-bold pt-8">AmiGO Lite</p>
+            <p className="text-gray-500 text-xs font-bold pt-8">AmiGO Lite · {APP_VERSION}</p>
           </div>
         )}
       </div>

@@ -8,6 +8,7 @@ import { OwnedHeirloom, heirloomById, QUALITY_STYLE, HeirloomDef } from '../lib/
 import { Medal, Watch, Gem, BookOpen, Swords, ScrollText, Amphora, Map as MapIcon2, Gavel } from 'lucide-react';
 import { nextPromotion, classById } from '../lib/lineage';
 import { applySurname } from '../lib/names';
+import { GiftInventory, giftById, giftAffinityGain, removeGift, tasteOf, GIFT_QUALITY_STYLE, GIFT_TASTE_LABEL } from '../lib/gifts';
 import { validatePlayerName } from '../utils/sensitiveWords';
 import { ShieldCheck, GitFork, Crown, Building2, Shield, Sparkles, Heart, Baby } from 'lucide-react';
 import {
@@ -58,6 +59,9 @@ export interface FamilyTabProps {
   /** 本月有拍卖会 */
   auctionOpen?: boolean;
   onOpenAuction?: () => void;
+  /** 抽奖得到的礼物背包 */
+  giftInventory?: GiftInventory;
+  setGiftInventory?: React.Dispatch<React.SetStateAction<GiftInventory>>;
 }
 
 export const FamilyTab: React.FC<FamilyTabProps> = ({
@@ -84,6 +88,8 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   heirlooms = [],
   auctionOpen = false,
   onOpenAuction,
+  giftInventory = {},
+  setGiftInventory,
 }) => {
   const [subTab, setSubTab] = useState<'tree' | 'ranking' | 'heirlooms' | 'chronicles'>('tree');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -139,6 +145,29 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
     } else {
       showToast(`送给 ${member.name} 一份礼物（-${GIFT_COST.toLocaleString()} ₽），好感度 ${newAffinity}%`);
     }
+    setSelectedId(null);
+  };
+
+  // 送出背包里的礼物（第 35 题）：按品质与喜好增加好感，算作本月互动
+  const handleGiveGift = (member: FamilyMemberView, giftId: string) => {
+    const blocked = canInteract(family, member, gameYear, gameMonth);
+    if (blocked) {
+      showToast(blocked);
+      return;
+    }
+    const gift = giftById(giftId);
+    const remaining = removeGift(giftInventory, giftId);
+    if (!gift || !remaining || !setGiftInventory) {
+      showToast('背包里没有这件礼物');
+      return;
+    }
+    const gain = giftAffinityGain(gift, member, family.giftTastes);
+    const bonus = affinityBonus(playerTraits);
+    setGiftInventory(remaining);
+    setFamily((prev) => applyInteraction(prev, member, 'gift', gameYear, gameMonth, bonus, gain));
+    const newAffinity = Math.min(100, member.affinity + gain + bonus);
+    const liked = tasteOf(member, family.giftTastes) === gift.taste;
+    showToast(`送给 ${member.name}「${gift.name}」${liked ? '，对方非常喜欢！' : '，'}好感 +${gain + bonus}（${newAffinity}%）`);
     setSelectedId(null);
   };
 
@@ -599,6 +628,10 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
 
             {!selectedMember.isPlayer && selectedMember.status !== '已故' && (
               <>
+                <div className="text-[11px] text-gray-300 font-bold mb-2">
+                  礼物喜好：<span className="text-rose-300 font-black">{GIFT_TASTE_LABEL[tasteOf(selectedMember, family.giftTastes) ?? 'toy']}</span>
+                  <span className="text-gray-500">（送对喜好好感翻倍）</span>
+                </div>
                 <div className="grid grid-cols-3 gap-2">
                   {actionBtn('spar', '切磋交流', 'bg-yellow-400 hover:bg-yellow-300')}
                   {actionBtn('consult', '家族请教', 'bg-sky-400 hover:bg-sky-300')}
@@ -607,6 +640,33 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                 <p className="text-[10px] text-gray-400 font-bold mt-2 text-center">
                   {blockedThisMonth || '每位家人每月可互动 1 次'}
                 </p>
+                {Object.keys(giftInventory).length > 0 && (
+                  <div className="mt-3 border-t border-gray-700 pt-2">
+                    <div className="text-[10px] text-gray-400 font-black mb-1.5">背包礼物（宝箱抽得，点击赠送）</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(giftInventory).map(([id, count]) => {
+                        const gift = giftById(id);
+                        if (!gift) return null;
+                        const liked = tasteOf(selectedMember, family.giftTastes) === gift.taste;
+                        return (
+                          <button
+                            key={id}
+                            onClick={() => handleGiveGift(selectedMember, id)}
+                            disabled={!!blockedThisMonth}
+                            title={`${gift.desc}（${GIFT_TASTE_LABEL[gift.taste]}）`}
+                            className={`flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-lg border border-black ${blockedThisMonth ? 'bg-gray-700 text-gray-400' : 'bg-[#21232e] text-white hover:bg-[#2d2f3d] cursor-pointer'}`}
+                          >
+                            <span className={`px-1 rounded ${GIFT_QUALITY_STYLE[gift.quality]}`}>{gift.quality}</span>
+                            {gift.name} ×{count}
+                            <span className={liked ? 'text-rose-300' : 'text-gray-400'}>
+                              {liked ? '♥' : ''}+{giftAffinityGain(gift, selectedMember, family.giftTastes)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>

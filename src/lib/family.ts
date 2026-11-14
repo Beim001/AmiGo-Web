@@ -148,6 +148,8 @@ export interface FamilyState {
   /** 成员 id → 好感度连续低于阈值的月数 */
   discontent?: Record<string, number>;
   splitBranches?: SplitBranch[];
+  /** 成年家人改变后的礼物喜好（未记录时用出生喜好，见 gifts.ts） */
+  giftTastes?: Record<string, 'toy' | 'jewelry' | 'antique'>;
   /** 家族传家宝；旧存档没有此字段时，瓦伦丁家族默认持有三件祖传宝物 */
   heirlooms?: OwnedHeirloom[];
 }
@@ -694,9 +696,11 @@ export const applyInteraction = (
   year: number,
   month: number,
   bonus = 0,
+  /** 本次互动的基础好感增加；默认按互动类型（送礼物时按礼物品质与喜好计算） */
+  gain: number = AFFINITY_GAIN[kind],
 ): FamilyState => ({
   ...state,
-  affinity: { ...state.affinity, [member.id]: Math.min(100, member.affinity + AFFINITY_GAIN[kind] + bonus) },
+  affinity: { ...state.affinity, [member.id]: Math.min(100, member.affinity + gain + bonus) },
   lastInteraction: { ...state.lastInteraction, [member.id]: yearMonthKey(year, month) },
 });
 

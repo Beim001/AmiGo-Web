@@ -18,6 +18,7 @@ import { randomTraits, PLAYER_TRAITS_KEY, diseaseTraitMultiplier, decayReduction
 import { REPUTATION_KEY, REP, HIGH_SALARY, clampReputation, reputationLevel, CHARITY_KEY, CHARITY_UNIT, charityRemaining } from './lib/reputation';
 import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, formatRealTime, unlockAllForTesting, clearAchievementsForTesting, hasAllAchievements, CREDITS_SEEN_KEY, CREDITS_RANK_KEY } from './lib/achievements';
 import { CreditsRoll } from './components/CreditsRoll';
+import { GiftInventory, GIFT_INVENTORY_KEY, GIFT_QUALITY_STYLE, GIFT_TASTE_LABEL, CHILD_AGE as GIFT_CHILD_AGE, addGifts, driftGiftTastes } from './lib/gifts';
 import { AboutUs } from './components/AboutUs';
 import { claimCompletionRank } from './lib/authClient';
 import { GUARDIANSHIP_KEY, Guardianship, takeCustody, monthlyGuardianship, ORPHANAGE_NAME, ADULT_AGE as GUARDIAN_ADULT_AGE } from './lib/guardianship';
@@ -269,10 +270,17 @@ const ChestAnimation = ({ isDrawing, result, onComplete }: any) => {
                      <div className={`${result.length > 1 ? 'w-14 h-14 border-2' : 'w-24 h-24 border-4'} bg-gradient-to-b from-yellow-100 to-yellow-400 rounded-xl flex items-center justify-center border-white shadow-[0_0_15px_#fde047] relative overflow-hidden`}>
                         {item.type === 'coin' ? (
                           <CircleDollarSign size={result.length > 1 ? 32 : 50} className="text-yellow-600 drop-shadow-md" strokeWidth={2.5} />
+                        ) : item.type === 'gift' ? (
+                          <Gift size={result.length > 1 ? 32 : 50} className="text-rose-600 drop-shadow-md" strokeWidth={2.5} />
                         ) : (
                           <Shirt size={result.length > 1 ? 32 : 50} className="text-purple-600 drop-shadow-md" strokeWidth={2.5} />
                         )}
                         {item.type !== 'coin' && <div className="absolute -top-1 -right-1 text-xs">✨</div>}
+                     {item.type === 'gift' && (
+                       <div className={`absolute bottom-0 inset-x-0 text-center font-black ${result.length > 1 ? 'text-[7px]' : 'text-[10px]'} ${GIFT_QUALITY_STYLE[item.quality as keyof typeof GIFT_QUALITY_STYLE]}`}>
+                         礼物·{item.quality}
+                       </div>
+                     )}
                      {item.rarity && (
                        <div className={`absolute bottom-0 inset-x-0 text-center font-black ${result.length > 1 ? 'text-[7px]' : 'text-[10px]'} ${RARITY_STYLE[item.rarity as Rarity].badge}`}>
                          {RARITY_LABEL[item.rarity as Rarity]}{item.isPity ? '·保底' : ''}
@@ -285,7 +293,7 @@ const ChestAnimation = ({ isDrawing, result, onComplete }: any) => {
                        </div>
                      )}
                      {result.length > 1 && item.type !== 'coin' && (
-                       <div className="text-white font-bold text-[9px] mt-1 text-center bg-purple-600/80 px-1 py-0.5 rounded shadow-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                       <div className={`text-white font-bold text-[9px] mt-1 text-center ${item.type === 'gift' ? 'bg-rose-600/80' : 'bg-purple-600/80'} px-1 py-0.5 rounded shadow-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-full`}>
                          {item.name}
                        </div>
                      )}
@@ -336,7 +344,8 @@ const ShopModal = ({
   equippedClothing,
   setEquippedClothing,
   freeDrawUsed,
-  setFreeDrawUsed
+  setFreeDrawUsed,
+  setGiftInventory,
 }: any) => {
 
 
@@ -382,6 +391,11 @@ const ShopModal = ({
       const newClothes = rewards.flatMap((r) => (r.type === 'clothing' ? [r.id] : []));
       if (newClothes.length > 0) {
         setOwnedClothes((prev: string[]) => [...prev, ...newClothes]);
+      }
+
+      const newGifts = rewards.flatMap((r) => (r.type === 'gift' ? [r.id] : []));
+      if (newGifts.length > 0) {
+        setGiftInventory((prev: GiftInventory) => addGifts(prev, newGifts));
       }
 
       const totalCoins = rewards.reduce((sum, r) => sum + (r.type === 'coin' ? r.amount : 0), 0);
@@ -449,7 +463,7 @@ const ShopModal = ({
                <div className="flex-1 pt-1 z-10">
                  <h3 className="text-white text-3xl font-black drop-shadow-[0_2px_0_#000] leading-none mb-2 text-right tracking-wider">限定宝箱</h3>
                  <p className="text-white text-[10px] text-right font-extrabold drop-shadow-[0_1px_0_#000] leading-tight mt-1">
-                   每抽获得 1,000 金币，或<br/><span className="text-blue-300">高级</span>、<span className="text-purple-300">稀有</span>、<span className="text-orange-300">限定</span>服饰
+                   每抽获得 1,000 金币、<span className="text-rose-200">家族礼物</span>，或<br/><span className="text-blue-300">高级</span>、<span className="text-purple-300">稀有</span>、<span className="text-orange-300">限定</span>服饰
                  </p>
                  <div className="flex flex-col items-end mt-2 gap-1.5">
                    <div className="bg-[#c85ce6] border-2 border-[#9438ad] text-white text-[10px] px-3 py-0.5 rounded-full font-bold shadow-sm">
@@ -2770,6 +2784,10 @@ export default function App() {
   const [showMarriage, setShowMarriage] = useState(false);
   const [showAuction, setShowAuction] = useState(false);
 
+  // 礼物背包：宝箱抽得，在家族页送给家人（第 35 题）
+  const [giftInventory, setGiftInventory] = useState<GiftInventory>(() => loadStored<GiftInventory>(GIFT_INVENTORY_KEY, {}));
+  React.useEffect(() => saveStored(GIFT_INVENTORY_KEY, giftInventory), [giftInventory]);
+
   // 致谢名单：名次来自服务器（第几个集齐全部成就的账号）；未登录或请求失败时显示不带名次的祝贺语
   const [showCredits, setShowCredits] = useState(false);
   const [creditsLoading, setCreditsLoading] = useState(false);
@@ -3106,6 +3124,19 @@ export default function App() {
       const membersNow = buildFamilyMembers(fam, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth });
       const drift = monthlyFamilyDrift(fam, membersNow, gameYear, gameMonth);
       fam = drift.state;
+
+      // 礼物喜好：成年家人每月有小概率改变喜好（第 35 题）
+      const tasteDrift = driftGiftTastes(
+        fam.giftTastes ?? {},
+        membersNow.filter((m) => !m.isPlayer && m.status !== '已故' && m.age >= GIFT_CHILD_AGE),
+      );
+      if (tasteDrift.changed.length > 0) {
+        fam = { ...fam, giftTastes: tasteDrift.tastes };
+        tasteDrift.changed.forEach((c) => {
+          const m = membersNow.find((x) => x.id === c.id);
+          if (m) notes.push(`💝 ${m.relation} ${m.name} 的喜好从${GIFT_TASTE_LABEL[c.from]}变成了${GIFT_TASTE_LABEL[c.to]}`);
+        });
+      }
       drift.splits.forEach((b) => {
         const share = Math.round(Math.max(0, coins + netChange + familyCash) * SPLIT_CASH_SHARE);
         familyCash -= share;
@@ -3750,6 +3781,8 @@ export default function App() {
              wealth={familyWealth}
              guardianship={guardianship}
              heirlooms={getHeirlooms(family)}
+             giftInventory={giftInventory}
+             setGiftInventory={setGiftInventory}
              auctionOpen={!!auction && auction.year === gameYear && auction.month === gameMonth}
              onOpenAuction={() => setShowAuction(true)}
            />
@@ -3949,6 +3982,7 @@ export default function App() {
              setEquippedClothing={setEquippedClothing}
              freeDrawUsed={freeDrawUsed}
              setFreeDrawUsed={setFreeDrawUsed}
+             setGiftInventory={setGiftInventory}
            />
          )}
 
