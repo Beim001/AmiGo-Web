@@ -9,6 +9,7 @@
 
 import { randomTraits, inheritTraits, fertilityMultiplier, twinChanceFor } from './traits';
 import { randomFullName, MALE_GIVEN_NAMES, FEMALE_GIVEN_NAMES } from './names';
+import { OwnedHeirloom, VALENTINE_DEFAULT_HEIRLOOMS } from './heirlooms';
 
 export type Gender = '男' | '女';
 export type InteractionKind = 'spar' | 'consult' | 'gift';
@@ -147,6 +148,8 @@ export interface FamilyState {
   /** 成员 id → 好感度连续低于阈值的月数 */
   discontent?: Record<string, number>;
   splitBranches?: SplitBranch[];
+  /** 家族传家宝；旧存档没有此字段时，瓦伦丁家族默认持有三件祖传宝物 */
+  heirlooms?: OwnedHeirloom[];
 }
 
 export const INITIAL_FAMILY_STATE: FamilyState = {
@@ -579,6 +582,18 @@ export const tryIllegitimateChild = (
   return giveBirth(state, year, month, 1, rng, l, playerTraits, true);
 };
 
+// ---------- 传家宝 ----------
+
+export const getHeirlooms = (state: FamilyState): OwnedHeirloom[] =>
+  state.heirlooms ?? (getOrigin(state).isValentine ? VALENTINE_DEFAULT_HEIRLOOMS : []);
+
+/** 获得传家宝（同一件不会重复获得） */
+export const addHeirloom = (state: FamilyState, item: OwnedHeirloom): FamilyState => {
+  const current = getHeirlooms(state);
+  if (current.some((h) => h.id === item.id)) return state;
+  return { ...state, heirlooms: [...current, item] };
+};
+
 // ---------- 子嗣取名 ----------
 
 export const renameChild = (state: FamilyState, childId: string, name: string): FamilyState => ({
@@ -845,6 +860,7 @@ export const succeed = (
       lover: null,
       discontent: {},
       splitBranches: state.splitBranches ?? [],
+      heirlooms: getHeirlooms(state),
       origin: { ...origin, members: members2 },
       events: [
         ...state.events,

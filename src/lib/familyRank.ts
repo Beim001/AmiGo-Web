@@ -56,7 +56,7 @@ const readJson = <T,>(key: string, fallback: T): T => {
 };
 
 /** 家族资产净值 */
-export const familyNetWorth = (cash: number, deposit: number, loan: number, held = 0): number => {
+export const familyNetWorth = (cash: number, deposit: number, loan: number, held = 0, heirloomValue = 0): number => {
   const props = readJson<any[]>('amigo_owned_properties', []);
   const propertyValue = Array.isArray(props) ? props.reduce((s, p) => s + (p.currentValue || p.purchasePrice || 0), 0) : 0;
   const stocks = readJson<any[]>('amigo_stocks', []);
@@ -64,5 +64,5 @@ export const familyNetWorth = (cash: number, deposit: number, loan: number, held
   const stockValue = Array.isArray(holdings)
     ? holdings.reduce((s, h) => s + (h.shares || 0) * ((Array.isArray(stocks) ? stocks.find((x) => x.id === h.stockId)?.price : undefined) ?? h.avgCost ?? 0), 0)
     : 0;
-  return Math.max(0, cash + deposit - loan + propertyValue + stockValue + held);
+  return Math.max(0, cash + deposit - loan + propertyValue + stockValue + held + heirloomValue);
 };

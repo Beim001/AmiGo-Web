@@ -27,6 +27,10 @@ import {
   Pill,
   Baby,
   Trophy,
+  Medal,
+  Gem,
+  Watch,
+  Gavel,
 } from 'lucide-react';
 
 const EVENT_ICONS: Record<SimEventDef['icon'], React.ElementType> = {
@@ -46,6 +50,9 @@ const EVENT_ICONS: Record<SimEventDef['icon'], React.ElementType> = {
   store: Store,
   pill: Pill,
   baby: Baby,
+  medal: Medal,
+  ring: Gem,
+  watch: Watch,
 };
 
 export interface SimTabProps {
@@ -67,6 +74,9 @@ export interface SimTabProps {
   quietMessage?: string | null;
   /** 选择选项，返回结算结果 */
   onResolve?: (uid: string, optionIndex: number) => Resolution | null;
+  /** 本月有拍卖会 */
+  auctionOpen?: boolean;
+  onOpenAuction?: () => void;
 }
 
 export const SimTab: React.FC<SimTabProps> = ({
@@ -84,6 +94,8 @@ export const SimTab: React.FC<SimTabProps> = ({
   simScore = 0,
   quietMessage = null,
   onResolve,
+  auctionOpen = false,
+  onOpenAuction,
 }) => {
   const [activeUid, setActiveUid] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<{ title: string; result: Resolution } | null>(null);
@@ -330,6 +342,14 @@ export const SimTab: React.FC<SimTabProps> = ({
         </span>
         <span className="text-gray-400">待处理 {events.length} 件</span>
       </div>
+      {auctionOpen && onOpenAuction && (
+        <button
+          onClick={onOpenAuction}
+          className="mx-4 mt-2 z-10 bg-amber-700 hover:bg-amber-600 border-2 border-black rounded-xl px-3 py-2 text-xs font-black text-amber-50 flex items-center justify-center gap-1.5 cursor-pointer"
+        >
+          <Gavel size={14} /> 本月北城拍卖会开幕，前往竞拍
+        </button>
+      )}
       {quietMessage && (
         <div className="mx-4 mt-2 z-10 bg-[#1b1c25] border-2 border-black rounded-xl px-3 py-2 text-xs font-bold text-gray-300 text-center">
           🍃 {quietMessage}

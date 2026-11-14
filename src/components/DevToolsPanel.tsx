@@ -20,6 +20,8 @@ interface DevToolsPanelProps {
   /** 已解锁 / 全部成就数 */
   achievementProgress: [number, number];
   onUnlockAllAchievements: () => void;
+  /** 立即在本月开办一场拍卖会 */
+  onOpenAuctionNow: () => void;
   onClearAchievements: () => void;
 }
 
@@ -48,6 +50,7 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
   onAddChild,
   achievementProgress,
   onUnlockAllAchievements,
+  onOpenAuctionNow,
   onClearAchievements,
 }) => {
   const [open, setOpen] = useState(false);
@@ -211,6 +214,9 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
                 快进
               </button>
               <div className="text-[9px] text-gray-500 font-bold mt-1.5">角色去世时会自动停止。</div>
+              <button disabled={!isRegistered} onClick={onOpenAuctionNow} className={`${btn} w-full mt-2`}>
+                立即开办本月拍卖会
+              </button>
             </>
           )}
         </>

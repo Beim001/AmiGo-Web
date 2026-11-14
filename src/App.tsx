@@ -13,7 +13,7 @@ import { SimTab } from './components/SimTab';
 import { LogTab } from './components/LogTab';
 import { FamilyTab } from './components/FamilyTab';
 import { MarriageModal } from './components/MarriageModal';
-import { FamilyState, INITIAL_FAMILY_STATE, promoteFamily, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
+import { FamilyState, INITIAL_FAMILY_STATE, promoteFamily, getHeirlooms, addHeirloom, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
 import { randomTraits, PLAYER_TRAITS_KEY, diseaseTraitMultiplier, decayReduction, salaryMultiplier, depositInterestMultiplier, traitNames, traitById } from './lib/traits';
 import { REPUTATION_KEY, REP, HIGH_SALARY, clampReputation, reputationLevel, CHARITY_KEY, CHARITY_UNIT, charityRemaining } from './lib/reputation';
 import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, formatRealTime, unlockAllForTesting, clearAchievementsForTesting } from './lib/achievements';
@@ -21,6 +21,8 @@ import { GUARDIANSHIP_KEY, Guardianship, takeCustody, monthlyGuardianship, ORPHA
 import { rankFamilies, familyNetWorth } from './lib/familyRank';
 import { rollClass, generateOrigin, classById, readChildJob, CHILD_JOB_KEY, CHILD_LABOR_MAX_AGE, checkPromotion } from './lib/lineage';
 import { applySurname } from './lib/names';
+import { Auction, AUCTION_KEY, AUCTION_CHANCE, TICKET_PRICE, generateAuction, placeBid, isInvited, heirloomById, heirloomsValue } from './lib/heirlooms';
+import { AuctionModal } from './components/AuctionModal';
 import { progressDisease, diseaseInfo, DISEASE_KEY, ActiveDisease } from './lib/disease';
 import { SuccessionModal } from './components/SuccessionModal';
 import { SimEventInstance, rollMonthlyEvent, eventDef, resolveOption, optionBlocked, SIM_EVENTS_KEY, SIM_SCORE_KEY, SIM_QUIET_KEY } from './lib/simEvents';
@@ -2738,6 +2740,7 @@ export default function App() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showMarriage, setShowMarriage] = useState(false);
+  const [showAuction, setShowAuction] = useState(false);
 
   const [isRegistered, setIsRegistered] = useState<boolean>(() => {
     try {
@@ -3075,6 +3078,7 @@ export default function App() {
         bankTotals.deposit,
         bankTotals.loan,
         guardianship?.held ?? 0,
+        heirloomsValue(getHeirlooms(fam)),
       );
       const promo = checkPromotion(getOrigin(fam).classId, netWorthNow, clampReputation(reputation + repDelta));
       if (promo) {
@@ -3097,7 +3101,7 @@ export default function App() {
     // 8. 推演事件：每月 50% 概率出现一张（第 8 题 A）
     if (isRegistered && newHealth > 0) {
       const inst = rollMonthlyEvent(
-        { age: ageNextMonth, classId: familyClass.id, employed: !!job, coins, hasChildren: fam.children.length > 0 },
+        { age: ageNextMonth, classId: familyClass.id, employed: !!job, coins, hasChildren: fam.children.length > 0, ownedHeirlooms: getHeirlooms(fam).map((h) => h.id) },
         nextY,
         nextM,
       );
@@ -3109,6 +3113,16 @@ export default function App() {
         setSimQuiet(`${nextY}.${mStr} 本月无事发生`);
         notes.push('本月无事发生');
       }
+    }
+
+    // 8b. 拍卖会：每月随机开办（第 33 题）；上个月的拍卖会到期结束
+    if (isRegistered && newHealth > 0 && Math.random() < AUCTION_CHANCE) {
+      const invited = isInvited(getOrigin(fam).classId, reputation);
+      const next = generateAuction(nextY, nextM, getHeirlooms(fam).map((h) => h.id), invited);
+      setAuction(next);
+      if (next) notes.push(invited ? '📜 收到拍卖会邀请函' : '📜 北城拍卖会开幕（需购票入场）');
+    } else if (auction) {
+      setAuction(null);
     }
 
     // 9. 人生日志：整十岁生日、健康告急、时局剧变、辞世
@@ -3415,6 +3429,10 @@ export default function App() {
   React.useEffect(() => saveStored(SIM_SCORE_KEY, simScore), [simScore]);
   React.useEffect(() => saveStored(SIM_QUIET_KEY, simQuiet), [simQuiet]);
 
+  // 拍卖会（每月随机开办，只在开办当月有效）
+  const [auction, setAuction] = useState<Auction | null>(() => loadStored<Auction | null>(AUCTION_KEY, null));
+  React.useEffect(() => saveStored(AUCTION_KEY, auction), [auction]);
+
   /** 处理推演事件的选项（只结算金币与健康） */
   const handleSimResolve = (uid: string, optionIndex: number) => {
     const inst = simEvents.find((e) => e.uid === uid);
@@ -3428,6 +3446,12 @@ export default function App() {
     setSimScore((n) => n + result.score);
     setSimEvents((prev) => prev.filter((e) => e.uid !== uid));
     addLifeLog('大事', def.headline, `${option.label}：${result.text}`);
+    if (result.heirloom) {
+      const h = heirloomById(result.heirloom);
+      const SOURCE: Record<string, string> = { army: '参军', rescue: '见义勇为', antique: '旧货摊' };
+      setFamily((prev) => addHeirloom(prev, { id: result.heirloom!, source: SOURCE[def.id] ?? def.title, year: gameYear, month: gameMonth, keeper: '当家人' }));
+      if (h) addLifeLog('大事', `获得传家宝：${h.name}`, h.desc);
+    }
     if (isRegistered && newHealth <= 0) {
       addLifeLog('大事', '辞世', `${playerName} 离开了人世，享年 ${currentAge} 岁。`);
       setShowSuccession(true);
@@ -3521,7 +3545,7 @@ export default function App() {
   const familyMembersView = buildFamilyMembers(family, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth });
   const livingRelatives = familyMembersView.filter((m) => !m.isPlayer && m.status !== '已故');
   const familyCohesion = livingRelatives.length > 0 ? Math.round(livingRelatives.reduce((sum, m) => sum + m.affinity, 0) / livingRelatives.length) : 50;
-  const familyWealth = familyNetWorth(coins, bankDeposit, bankLoan, guardianship?.held ?? 0);
+  const familyWealth = familyNetWorth(coins, bankDeposit, bankLoan, guardianship?.held ?? 0, heirloomsValue(getHeirlooms(family)));
   const familyRanking = rankFamilies({
     surname: familyOrigin.surname,
     classLabel: familyOrigin.classLabel,
@@ -3636,6 +3660,8 @@ export default function App() {
              simScore={simScore}
              quietMessage={simQuiet}
              onResolve={handleSimResolve}
+             auctionOpen={!!auction && auction.year === gameYear && auction.month === gameMonth}
+             onOpenAuction={() => setShowAuction(true)}
            />
          )}
          {activeTab === 'log' && <LogTab isRegistered={isRegistered} />}
@@ -3661,6 +3687,9 @@ export default function App() {
              cohesion={familyCohesion}
              wealth={familyWealth}
              guardianship={guardianship}
+             heirlooms={getHeirlooms(family)}
+             auctionOpen={!!auction && auction.year === gameYear && auction.month === gameMonth}
+             onOpenAuction={() => setShowAuction(true)}
            />
          )}
          
@@ -3955,6 +3984,37 @@ export default function App() {
            />
          )}
 
+         {/* 拍卖会 */}
+         {showAuction && auction && (
+           <AuctionModal
+             auction={auction}
+             coins={coins}
+             onClose={() => setShowAuction(false)}
+             onBuyTicket={() => {
+               if (auction.admitted) return '你已经可以入场了';
+               if (coins < TICKET_PRICE) return `现金不足，门票需要 ${TICKET_PRICE.toLocaleString()} ₽`;
+               setCoins((c) => c - TICKET_PRICE);
+               setAuction({ ...auction, admitted: true });
+               return `🎟️ 已购买门票（-${TICKET_PRICE.toLocaleString()} ₽），欢迎入场`;
+             }}
+             onBid={(i, amount) => {
+               const lot = auction.lots[i];
+               if (!lot) return '拍品不存在';
+               if (!Number.isFinite(amount) || amount <= 0) return '请输入出价';
+               if (amount > coins) return `现金不足（出价 ${amount.toLocaleString()} ₽，现金 ${coins.toLocaleString()} ₽）`;
+               const res = placeBid(lot, amount);
+               if (res.error) return res.error;
+               setAuction({ ...auction, lots: auction.lots.map((l, idx) => (idx === i ? res.lot : l)) });
+               const h = heirloomById(lot.heirloomId);
+               if (!res.won) return `落败：${h?.name ?? '拍品'} 被其他买家以更高价拍走`;
+               setCoins((c) => c - amount);
+               setFamily((prev) => addHeirloom(prev, { id: lot.heirloomId, source: '拍卖会', year: gameYear, month: gameMonth, keeper: '当家人' }));
+               addLifeLog('财富', `拍得传家宝：${h?.name ?? ''}`, `在北城拍卖会以 ${amount.toLocaleString()} ₽ 拍得。`);
+               return `🎉 以 ${amount.toLocaleString()} ₽ 拍得「${h?.name ?? ''}」，已收入家族传家宝`;
+             }}
+           />
+         )}
+
          {/* 传承：角色去世后由子嗣/兄弟姐妹继承或重开 */}
          {showSuccession && isRegistered && health <= 0 && (
            <SuccessionModal
@@ -4029,6 +4089,15 @@ export default function App() {
              onUnlockAllAchievements={() => {
                const added = unlockAllForTesting();
                showToast(`🛠️ 已解锁全部 ${ACHIEVEMENTS.length} 项成就（新增 ${added} 项）`);
+             }}
+             onOpenAuctionNow={() => {
+               const next = generateAuction(gameYear, gameMonth, getHeirlooms(family).map((h) => h.id), isInvited(familyClass.id, reputation));
+               if (!next) {
+                 showToast('🛠️ 已拥有全部可拍卖的传家宝');
+                 return;
+               }
+               setAuction(next);
+               setShowAuction(true);
              }}
              onClearAchievements={() => {
                clearAchievementsForTesting();

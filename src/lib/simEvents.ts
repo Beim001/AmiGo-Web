@@ -20,12 +20,16 @@ export interface SimContext {
   employed: boolean;
   coins: number;
   hasChildren: boolean;
+  /** 已拥有的传家宝（机遇事件不会重复给同一件） */
+  ownedHeirlooms?: string[];
 }
 
 export interface Outcome {
   coins?: number;
   health?: number;
   text: string;
+  /** 获得的传家宝（见 heirlooms.ts） */
+  heirloom?: string;
 }
 
 export interface SimOption {
@@ -48,7 +52,7 @@ export interface SimEventDef {
   title: string;
   headline: string;
   desc: string;
-  icon: 'wallet' | 'snow' | 'herb' | 'alert' | 'water' | 'box' | 'bowl' | 'hand' | 'dice' | 'clock' | 'factory' | 'users' | 'bandage' | 'store' | 'pill' | 'baby';
+  icon: 'medal' | 'ring' | 'watch' | 'wallet' | 'snow' | 'herb' | 'alert' | 'water' | 'box' | 'bowl' | 'hand' | 'dice' | 'clock' | 'factory' | 'users' | 'bandage' | 'store' | 'pill' | 'baby';
   when: (ctx: SimContext) => boolean;
   options: [SimOption, SimOption];
 }
@@ -189,6 +193,34 @@ export const SIM_EVENTS: SimEventDef[] = [
       { label: '买一颗', hint: '有风险 · 可能延寿', kind: 'risky', requires: 5000, chance: 0.3, success: { coins: -5000, health: 10, text: '居然真的精神矍铄起来。' }, failure: { coins: -5000, health: -5, text: '丹药里掺了铅粉，身体更差了。' } },
     ],
   },
+  // ---------- 机遇：可能获得传家宝（第 34 题） ----------
+  {
+    id: 'army', title: '机遇', headline: '帝国军征兵告示贴满街头', icon: 'medal',
+    desc: '南方边境局势紧张，帝国军正在招募志愿兵，服役期满者可获犒赏，作战英勇者更有勋章。',
+    when: (c) => c.age >= 18 && c.age <= 35 && !c.ownedHeirlooms?.includes('army_medal'),
+    options: [
+      { label: '不报名', hint: '稳妥', kind: 'safe', result: { text: '你继续过着平静的日子。' } },
+      { label: '应征入伍', hint: '高风险 · 可能获得勋章', kind: 'risky', chance: 0.6, success: { coins: 3000, heirloom: 'army_medal', text: '你在边境立下战功，荣获帝国军功勋章，退役时领到 3,000 ₽ 犒赏。' }, failure: { health: -20, text: '你在一次冲突中负伤，提前退役。' } },
+    ],
+  },
+  {
+    id: 'rescue', title: '机遇', headline: '有人在河边落水了！', icon: 'ring',
+    desc: '一位衣着华贵的小姐失足落入湍急的河水，岸边围观的人群一阵惊呼。',
+    when: (c) => c.age >= 16 && !c.ownedHeirlooms?.includes('rescue_ring'),
+    options: [
+      { label: '大声呼救', hint: '稳妥', kind: 'safe', result: { text: '巡捕赶来把人救了上来。' } },
+      { label: '跳下去救人', hint: '有风险 · 可能结下贵人', kind: 'risky', chance: 0.5, success: { coins: 2000, heirloom: 'rescue_ring', text: '你把人救上了岸。她的家族登门道谢，赠予家徽戒指与 2,000 ₽。' }, failure: { health: -10, text: '水流太急，你被冲出好远才爬上岸，大病一场。' } },
+    ],
+  },
+  {
+    id: 'antique', title: '机遇', headline: '旧货摊上有一只蒙尘的怀表', icon: 'watch',
+    desc: '摊主说这是从一位破落贵族家里收来的，要价 3,000 ₽，真假难辨。',
+    when: (c) => c.age >= 16 && c.coins >= 3000 && !c.ownedHeirlooms?.includes('antique_watch'),
+    options: [
+      { label: '不买', hint: '稳妥', kind: 'safe', result: { text: '你摇摇头走开了。' } },
+      { label: '花 3,000 ₽ 买下', hint: '有风险 · 可能是真古董', kind: 'risky', requires: 3000, chance: 0.4, success: { coins: -3000, heirloom: 'antique_watch', text: '经鉴定是真正的古董航海怀表！' }, failure: { coins: -3000, text: '拿去一验，原来是仿品。' } },
+    ],
+  },
   {
     id: 'grandkids', title: '天伦', headline: '孙辈们来看望你了', icon: 'baby',
     desc: '孩子们带着小孙子小孙女回家，一屋子热热闹闹。',
@@ -225,16 +257,17 @@ export interface Resolution {
   text: string;
   /** 冒险选项是否成功（稳妥选项为 null） */
   succeeded: boolean | null;
+  heirloom?: string;
 }
 
 export const resolveOption = (option: SimOption, rng: () => number = Math.random): Resolution => {
   if (option.kind === 'safe') {
     const r = option.result ?? { text: '' };
-    return { coins: r.coins ?? 0, health: r.health ?? 0, score: SCORE_SAFE, text: r.text, succeeded: null };
+    return { coins: r.coins ?? 0, health: r.health ?? 0, score: SCORE_SAFE, text: r.text, succeeded: null, heirloom: r.heirloom };
   }
   const ok = rng() < (option.chance ?? 0.5);
   const r = (ok ? option.success : option.failure) ?? { text: '' };
-  return { coins: r.coins ?? 0, health: r.health ?? 0, score: ok ? SCORE_RISK_SUCCESS : SCORE_RISK_FAILURE, text: r.text, succeeded: ok };
+  return { coins: r.coins ?? 0, health: r.health ?? 0, score: ok ? SCORE_RISK_SUCCESS : SCORE_RISK_FAILURE, text: r.text, succeeded: ok, heirloom: r.heirloom };
 };
 
 /** 选项是否因现金不足而不可选 */

@@ -4,6 +4,8 @@ import type { RankedFamily } from '../lib/familyRank';
 import { wealthScore } from '../lib/familyRank';
 import type { Guardianship } from '../lib/guardianship';
 import { reputationLevel } from '../lib/reputation';
+import { OwnedHeirloom, heirloomById, QUALITY_STYLE, HeirloomDef } from '../lib/heirlooms';
+import { Medal, Watch, Gem, BookOpen, Swords, ScrollText, Amphora, Map as MapIcon2, Gavel } from 'lucide-react';
 import { nextPromotion, classById } from '../lib/lineage';
 import { applySurname } from '../lib/names';
 import { validatePlayerName } from '../utils/sensitiveWords';
@@ -29,39 +31,6 @@ import {
   applyInteraction,
 } from '../lib/family';
 
-// 传家宝：目前仅为展示，不提供数值加成
-const FAMILY_HEIRLOOMS = [
-  {
-    id: 'h1',
-    name: '皇家工匠怀表',
-    quality: '史诗',
-    qualityTag: 'bg-purple-900/80 text-purple-300 border-purple-500',
-    icon: Crown,
-    desc: '祖父传承下来的金质双齿轮怀表，刻有皇家徽章。',
-    meaning: '瓦伦丁匠艺传承的信物',
-    owner: '维克多 (父亲)',
-  },
-  {
-    id: 'h2',
-    name: '瓦伦丁工坊地契',
-    quality: '稀有',
-    qualityTag: 'bg-blue-900/80 text-blue-300 border-blue-500',
-    icon: Building2,
-    desc: '首都中央大街7号机械工坊的地契与产权文书。',
-    meaning: '家族产业的根基',
-    owner: '家族共有',
-  },
-  {
-    id: 'h3',
-    name: '名流社交勋章',
-    quality: '罕见',
-    qualityTag: 'bg-amber-900/80 text-amber-300 border-amber-500',
-    icon: Shield,
-    desc: '帝国皇室授予瓦伦丁家族的勋章，象征名门荣誉。',
-    meaning: '名门荣誉的象征',
-    owner: '你 (玩家)',
-  },
-];
 
 export interface FamilyTabProps {
   isRegistered: boolean;
@@ -85,6 +54,10 @@ export interface FamilyTabProps {
   cohesion?: number;
   wealth?: number;
   guardianship?: Guardianship | null;
+  heirlooms?: OwnedHeirloom[];
+  /** 本月有拍卖会 */
+  auctionOpen?: boolean;
+  onOpenAuction?: () => void;
 }
 
 export const FamilyTab: React.FC<FamilyTabProps> = ({
@@ -108,6 +81,9 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   cohesion = 0,
   wealth = 0,
   guardianship = null,
+  heirlooms = [],
+  auctionOpen = false,
+  onOpenAuction,
 }) => {
   const [subTab, setSubTab] = useState<'tree' | 'ranking' | 'heirlooms' | 'chronicles'>('tree');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -442,33 +418,53 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
         )}
 
         {/* Tab 2: 传家宝（仅展示） */}
-        {subTab === 'heirlooms' && !origin.isValentine && (
-          <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-4 shadow-[0_4px_0_#000] text-center text-gray-400 text-xs font-bold">
-            {origin.surname}家族尚无传家之宝。
-          </div>
-        )}
-        {subTab === 'heirlooms' && origin.isValentine && (
+        {subTab === 'heirlooms' && (
           <div className="space-y-3">
-            {FAMILY_HEIRLOOMS.map((item) => (
-              <div key={item.id} className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] flex items-start gap-3">
-                <div className="w-12 h-12 rounded-xl bg-[#3b3c4d] border-2 border-black flex items-center justify-center flex-shrink-0 shadow-[0_2px_0_#000]">
-                  <item.icon size={26} className="text-yellow-400 drop-shadow-[0_1px_0_#000]" strokeWidth={2} />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-white font-black text-sm">{item.name}</h3>
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${item.qualityTag}`}>{item.quality}</span>
-                  </div>
-                  <p className="text-gray-300 text-xs font-bold mt-1 leading-tight">{item.desc}</p>
-                  <div className="mt-2 pt-2 border-t border-gray-700/70 flex items-center justify-between">
-                    <span className="text-emerald-400 text-xs font-black flex items-center gap-1">
-                      <Sparkles size={12} /> {item.meaning}
-                    </span>
-                    <span className="text-[10px] text-gray-400 font-bold">保管: {item.owner}</span>
-                  </div>
-                </div>
+            {auctionOpen && onOpenAuction && (
+              <button
+                onClick={onOpenAuction}
+                className="w-full bg-amber-700 hover:bg-amber-600 text-amber-50 text-xs font-black py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Gavel size={14} /> 本月北城拍卖会开幕，前往竞拍
+              </button>
+            )}
+            <p className="text-[10px] text-gray-500 font-bold text-center">传家宝可在拍卖会拍得，也可能在「机遇」推演事件中获得（如参军获授勋章）。估价计入家族财力。</p>
+            {heirlooms.length === 0 && (
+              <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-4 shadow-[0_4px_0_#000] text-center text-gray-400 text-xs font-bold">
+                {origin.surname}家族尚无传家之宝。
               </div>
-            ))}
+            )}
+            {heirlooms.map((owned) => {
+              const item = heirloomById(owned.id);
+              if (!item) return null;
+              const ICONS: Record<HeirloomDef['icon'], React.ElementType> = {
+                crown: Crown, building: Building2, shield: Shield, medal: Medal, watch: Watch, ring: Gem, book: BookOpen,
+                sword: Swords, gem: Gem, scroll: ScrollText, vase: Amphora, map: MapIcon2,
+              };
+              const Icon = ICONS[item.icon] ?? Sparkles;
+              return (
+                <div key={owned.id} className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] flex items-start gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-[#3b3c4d] border-2 border-black flex items-center justify-center flex-shrink-0 shadow-[0_2px_0_#000]">
+                    <Icon size={26} className="text-yellow-400 drop-shadow-[0_1px_0_#000]" strokeWidth={2} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-white font-black text-sm">{item.name}</h3>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${QUALITY_STYLE[item.quality]}`}>{item.quality}</span>
+                    </div>
+                    <p className="text-gray-300 text-xs font-bold mt-1 leading-tight">{item.desc}</p>
+                    <div className="mt-2 pt-2 border-t border-gray-700/70 flex items-center justify-between gap-2">
+                      <span className="text-emerald-400 text-xs font-black flex items-center gap-1">
+                        <Sparkles size={12} /> {item.meaning}
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-bold text-right">
+                        {owned.source} · {owned.year} 年 · 估价 {item.value.toLocaleString()} ₽
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
