@@ -295,11 +295,11 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
                 <div className="flex items-center gap-1.5">
                   <span className="text-white font-black text-xs truncate">{f.name}</span>
                   <span className="text-[9px] font-black px-1 rounded border border-black bg-gray-700 text-gray-200 shrink-0">
-                    {f.gender === '女' ? '前妻' : '前夫'}
+                    {f.widowed ? (f.gender === '女' ? '亡妻' : '亡夫') : f.gender === '女' ? '前妻' : '前夫'}
                   </span>
                 </div>
                 <div className="text-gray-400 text-[10px] font-bold mt-0.5">
-                  {f.occupation} · {f.marriedYear}.{f.marriedMonth} 结婚 → {f.divorcedYear}.{f.divorcedMonth} 离婚（{duration}）
+                  {f.occupation} · {f.marriedYear}.{f.marriedMonth} 结婚 → {f.divorcedYear}.{f.divorcedMonth} {f.widowed ? '丧偶' : '离婚'}（{duration}）
                 </div>
                 {childCount > 0 && <div className="text-amber-300 text-[10px] font-bold mt-0.5">共育有 {childCount} 个孩子</div>}
               </div>

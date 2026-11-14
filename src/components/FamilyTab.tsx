@@ -59,6 +59,8 @@ export interface FamilyTabProps {
   heirlooms?: OwnedHeirloom[];
   /** 本月有拍卖会 */
   auctionOpen?: boolean;
+  /** 这一世用过简洁模式：排行榜上标「偷懒」 */
+  lazy?: boolean;
   onOpenAuction?: () => void;
   /** 抽奖得到的礼物背包 */
   giftInventory?: GiftInventory;
@@ -90,6 +92,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   auctionOpen = false,
   onOpenAuction,
   giftInventory = {},
+  lazy = false,
   setGiftInventory,
 }) => {
   const [subTab, setSubTab] = useState<'tree' | 'ranking' | 'heirlooms' | 'chronicles'>('tree');
@@ -427,6 +430,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                     <div className="min-w-0">
                       <div className={`font-black text-xs truncate ${f.isPlayer ? 'text-yellow-300' : 'text-white'}`}>
                         {f.surname}家族{f.isPlayer ? '（你）' : ''}
+                        {f.isPlayer && lazy && <span className="ml-1 text-[9px] font-black px-1 rounded border border-black bg-gray-500 text-white align-middle">偷懒</span>}
                       </div>
                       <div className="text-[10px] text-gray-400 font-bold">
                         {f.classLabel} · 凝聚 {Math.round(f.cohesion)} · 财力 {Math.round(wealthScore(f.wealth))} · 影响 {Math.round(f.influence)}

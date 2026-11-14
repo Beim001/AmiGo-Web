@@ -13,8 +13,8 @@ import { SimTab } from './components/SimTab';
 import { LogTab } from './components/LogTab';
 import { FamilyTab } from './components/FamilyTab';
 import { MarriageModal } from './components/MarriageModal';
-import { FamilyState, INITIAL_FAMILY_STATE, demoteFamily, generateSpouseCandidates, marry, MARRIAGE_FEE, MARRIAGE_MIN_AGE, SPOUSE_MEMBER_ID, canInteract, applyInteraction, GIFT_COST, promoteFamily, getHeirlooms, addHeirloom, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
-import { randomTraits, affinityBonus, withBirthPrivilege, rollMaintenance, fertileMaxAge, MAINTENANCE_COST, FERTILITY_TRAITS, PLAYER_TRAITS_KEY, diseaseTraitMultiplier, decayReduction, salaryMultiplier, depositInterestMultiplier, traitNames, traitById } from './lib/traits';
+import { FamilyState, INITIAL_FAMILY_STATE, demoteFamily, monthlyFamilyLife, childLifespan, ageAt, generateSpouseCandidates, marry, MARRIAGE_FEE, MARRIAGE_MIN_AGE, SPOUSE_MEMBER_ID, canInteract, applyInteraction, GIFT_COST, promoteFamily, getHeirlooms, addHeirloom, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
+import { randomTraits, affinityBonus, withBirthPrivilege, rollMaintenance, fertileMaxAge, MAINTENANCE_COST, FERTILITY_TRAITS, SIMPLE_MAINTENANCE_CHANCE, SIMPLE_MAINTENANCE_RESERVE, PLAYER_TRAITS_KEY, diseaseTraitMultiplier, decayReduction, salaryMultiplier, depositInterestMultiplier, traitNames, traitById } from './lib/traits';
 import { REPUTATION_KEY, REP, HIGH_SALARY, clampReputation, reputationLevel, CHARITY_KEY, CHARITY_UNIT, charityRemaining } from './lib/reputation';
 import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, formatRealTime, unlockAllForTesting, clearAchievementsForTesting, hasAllAchievements, CREDITS_SEEN_KEY, CREDITS_RANK_KEY, readGiftsGiven, recordGiftsGiven } from './lib/achievements';
 import { CreditsRoll } from './components/CreditsRoll';
@@ -103,6 +103,8 @@ const saveStored = (key: string, value: unknown) => {
 
 // 重置人生时保留的存档键（账号级数据，不属于某一段人生）
 const SIMPLE_SNOOZE_KEY = 'amigo_simple_snooze';
+const USED_SIMPLE_KEY = 'amigo_used_simple_mode';
+const MAINTENANCE_LOG_KEY = 'amigo_maintenance_log';
 const KEYS_KEPT_ON_RESET = new Set(['amigo_simple_mode', 'amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements', 'amigo_credits_seen', 'amigo_credits_rank', 'amigo_gifts_given']);
 
 
@@ -724,6 +726,8 @@ interface ProfileModalProps {
   /** 简洁模式（第 49 题） */
   simpleMode: boolean;
   onToggleSimpleMode: () => void;
+  /** 这一世用过简洁模式：排行榜上标「偷懒」 */
+  lazy?: boolean;
 }
 
 const ProfileModal = ({
@@ -756,6 +760,7 @@ const ProfileModal = ({
   onPlayCredits,
   simpleMode,
   onToggleSimpleMode,
+  lazy = false,
 }: ProfileModalProps) => {
   // 名片资料：读取真实游戏状态（岗位、房产、服装）
   const currentJob = (() => {
@@ -1614,6 +1619,7 @@ const ProfileModal = ({
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-white font-black text-xs">{playerName}</span>
+                    {lazy && <span className="text-[9px] font-black px-1 rounded border border-black bg-gray-500 text-white" title="这一世用过简洁模式">偷懒</span>}
                     <span className="bg-yellow-400 text-black text-[9px] font-black px-1.5 rounded border border-black">
                       我
                     </span>
@@ -3163,6 +3169,14 @@ export default function App() {
         }
       }
 
+      // 家人的生老病死与成家（第 52 题）：配偶寿终则丧偶；成年子女成家、生育孙辈
+      const life = monthlyFamilyLife(fam, nextY, nextM);
+      fam = life.state;
+      life.notes.forEach((n) => {
+        notes.push(`👪 ${n.title}`);
+        addLifeLog('大事', n.title, n.desc, logWhenFamily);
+      });
+
       // 好感度衰减与分家（按推进前的月份判断本月是否互动过）
       const membersNow = buildFamilyMembers(fam, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth });
       const drift = monthlyFamilyDrift(fam, membersNow, gameYear, gameMonth);
@@ -3439,6 +3453,8 @@ export default function App() {
     setSimScore(0);
     setPlayerTraits([]);
     setPlayerLifespan(null);
+    setUsedSimpleMode(false);
+    setMaintenanceLog({});
     setReputation(0);
     setGuardianship(null);
     setCharity(null);
@@ -3676,6 +3692,15 @@ export default function App() {
   // ---------- 简洁模式（第 49 题）：面向 7 岁儿童的一屏界面，与完整模式共用存档 ----------
   const [simpleMode, setSimpleMode] = useState<boolean>(() => loadStored<boolean>(SIMPLE_MODE_KEY, false));
   React.useEffect(() => saveStored(SIMPLE_MODE_KEY, simpleMode), [simpleMode]);
+  /** 这一世用过简洁模式：排行榜上标「偷懒」，重开人生后清除 */
+  const [usedSimpleMode, setUsedSimpleMode] = useState<boolean>(() => loadStored<boolean>(USED_SIMPLE_KEY, false));
+  React.useEffect(() => saveStored(USED_SIMPLE_KEY, usedSimpleMode), [usedSimpleMode]);
+  React.useEffect(() => {
+    if (simpleMode && isRegistered && !usedSimpleMode) setUsedSimpleMode(true);
+  }, [simpleMode, isRegistered, usedSimpleMode]);
+  /** 保养记录：对象（self / spouse / 子嗣 id）→ 最近一次保养的月份（年 × 12 + 月），每人每月最多一次 */
+  const [maintenanceLog, setMaintenanceLog] = useState<Record<string, number>>(() => loadStored<Record<string, number>>(MAINTENANCE_LOG_KEY, {}));
+  React.useEffect(() => saveStored(MAINTENANCE_LOG_KEY, maintenanceLog), [maintenanceLog]);
   /** 人生节点卡片「以后再说」：卡片类型 → 到哪个月（年 × 12 + 月）之前不再弹出 */
   const [simpleSnooze, setSimpleSnooze] = useState<Record<string, number>>(() => loadStored<Record<string, number>>(SIMPLE_SNOOZE_KEY, {}));
   React.useEffect(() => saveStored(SIMPLE_SNOOZE_KEY, simpleSnooze), [simpleSnooze]);
@@ -3777,6 +3802,50 @@ export default function App() {
     if (given > 0) {
       setGiftInventory(inv);
       recordGiftsGiven(given);
+    }
+
+    // 自动保养：自己、配偶、16 岁以上的子女与孙辈，每人每月一次，概率低于手动保养；至少保留一笔现金
+    const monthKey = gameYear * 12 + gameMonth;
+    const maintained: Record<string, number> = {};
+    let maintainCount = 0;
+    const canMaintain = (key: string, traits: string[]) =>
+      (maintenanceLog[key] ?? 0) !== monthKey && FERTILITY_TRAITS.some((id) => !traits.includes(id)) && cash >= MAINTENANCE_COST + SIMPLE_MAINTENANCE_RESERVE;
+    const doMaintain = (key: string, traits: string[], who: string): string[] => {
+      cash -= MAINTENANCE_COST;
+      maintained[key] = monthKey;
+      maintainCount++;
+      const r = rollMaintenance(traits, Math.random, SIMPLE_MAINTENANCE_CHANCE);
+      if (r.gained) {
+        const name = traitById(r.gained)?.name ?? r.gained;
+        out.push(`✨ ${who}保养后获得了「${name}」`);
+        addLifeLog('健康', `${who}保养获得「${name}」`, '简洁模式自动保养。');
+      }
+      return r.traits;
+    };
+    if (canMaintain('self', playerTraits)) {
+      const t = doMaintain('self', playerTraits, '你');
+      if (t !== playerTraits) setPlayerTraits(t);
+    }
+    if (fam.spouse && canMaintain('spouse', fam.spouse.traits ?? [])) {
+      const t = doMaintain('spouse', fam.spouse.traits ?? [], fam.spouse.name);
+      fam = { ...fam, spouse: { ...fam.spouse, traits: t } };
+    }
+    const aliveAdult = (c: Parameters<typeof childLifespan>[0]) => {
+      const age = ageAt(c.birthYear, c.birthMonth, gameYear, gameMonth);
+      return age >= 16 && age < childLifespan(c);
+    };
+    fam = {
+      ...fam,
+      children: fam.children.map((c) => {
+        let child = c;
+        if (aliveAdult(c) && canMaintain(c.id, c.traits ?? [])) child = { ...child, traits: doMaintain(c.id, c.traits ?? [], c.name) };
+        const kids = (child.kids ?? []).map((k) => (aliveAdult(k) && canMaintain(k.id, k.traits ?? []) ? { ...k, traits: doMaintain(k.id, k.traits ?? [], k.name) } : k));
+        return kids.some((k, i) => k !== (child.kids ?? [])[i]) ? { ...child, kids } : child;
+      }),
+    };
+    if (maintainCount > 0) {
+      out.push(`💆 为 ${maintainCount} 位家人做了保养（-${(maintainCount * MAINTENANCE_COST).toLocaleString()} ₽）`);
+      setMaintenanceLog((prev) => ({ ...prev, ...maintained }));
     }
     if (fam !== family) setFamily(fam);
     setCoins(cash);
@@ -3996,8 +4065,10 @@ export default function App() {
     if (target === 'spouse' && !spouse) return '还没有配偶';
     const current = target === 'self' ? playerTraits : spouse?.traits ?? [];
     if (FERTILITY_TRAITS.every((id) => current.includes(id))) return '已经同时拥有「精力旺盛」和「富养」，不需要再保养';
+    if ((maintenanceLog[target] ?? 0) === gameYear * 12 + gameMonth) return `${target === 'self' ? '你' : spouse!.name}这个月已经保养过了，下个月再来吧`;
     if (coins < MAINTENANCE_COST) return `钱不够，保养一次要 ${MAINTENANCE_COST.toLocaleString()} ₽`;
     setCoins((prev) => prev - MAINTENANCE_COST);
+    setMaintenanceLog((prev) => ({ ...prev, [target]: gameYear * 12 + gameMonth }));
     const who = target === 'self' ? '你' : spouse!.name;
     const r = rollMaintenance(current);
     if (!r.gained) {
@@ -4280,6 +4351,7 @@ export default function App() {
              guardianship={guardianship}
              heirlooms={getHeirlooms(family)}
              giftInventory={giftInventory}
+             lazy={usedSimpleMode}
              setGiftInventory={setGiftInventory}
              auctionOpen={!!auction && auction.year === gameYear && auction.month === gameMonth}
              onOpenAuction={() => setShowAuction(true)}
@@ -4475,6 +4547,7 @@ export default function App() {
                setSimpleMode((v) => !v);
                setShowProfile(false);
              }}
+             lazy={usedSimpleMode}
            />
          )}
 

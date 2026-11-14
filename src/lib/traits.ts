@@ -90,10 +90,18 @@ export const fertileMaxAge = (gender: string | null | undefined, traits?: string
 /** 保养：每次花费 MAINTENANCE_COST，有 MAINTENANCE_CHANCE 概率获得一项还没有的「精力旺盛」或「富养」 */
 export const MAINTENANCE_COST = 20000;
 export const MAINTENANCE_CHANCE = 0.25;
+/** 简洁模式每月自动保养时的概率（低于手动保养） */
+export const SIMPLE_MAINTENANCE_CHANCE = 0.1;
+/** 自动保养时至少保留的现金 */
+export const SIMPLE_MAINTENANCE_RESERVE = 50000;
 
-export const rollMaintenance = (traits: string[], rng: () => number = Math.random): { traits: string[]; gained: string | null } => {
+export const rollMaintenance = (
+  traits: string[],
+  rng: () => number = Math.random,
+  chance: number = MAINTENANCE_CHANCE,
+): { traits: string[]; gained: string | null } => {
   const missing = FERTILITY_TRAITS.filter((id) => !traits.includes(id));
-  if (missing.length === 0 || rng() >= MAINTENANCE_CHANCE) return { traits, gained: null };
+  if (missing.length === 0 || rng() >= chance) return { traits, gained: null };
   const gained = missing[Math.floor(rng() * missing.length)];
   return { traits: [...traits, gained], gained };
 };

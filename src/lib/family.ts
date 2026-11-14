@@ -51,6 +51,8 @@ export interface Spouse {
   marriedYear: number;
   marriedMonth: number;
   traits?: string[];
+  /** 寿命（第 52 题）；旧存档缺失时按 id 稳定推算 */
+  lifespan?: number;
 }
 
 /** 情人（贵族、皇族已婚者可结识） */
@@ -75,6 +77,8 @@ export interface SplitBranch {
 export interface FormerSpouse extends Spouse {
   divorcedYear: number;
   divorcedMonth: number;
+  /** 配偶去世（丧偶）而非离婚 */
+  widowed?: boolean;
 }
 
 export interface Child {
@@ -89,6 +93,12 @@ export interface Child {
   traits?: string[];
   /** 私生子女（与情人所生） */
   illegitimate?: boolean;
+  /** 寿命（第 52 题）；旧存档缺失时按 id 稳定推算 */
+  lifespan?: number;
+  /** 成年后自己成家（第 52 题） */
+  spouse?: Spouse;
+  /** 自己的孩子（主角的孙辈） */
+  kids?: Child[];
 }
 
 export interface FamilyEvent {
@@ -99,7 +109,7 @@ export interface FamilyEvent {
 }
 
 /** 亲属类型（相对于当前主角），决定称谓与辈分 */
-export type Kin = 'ancestor' | 'grandparent' | 'granduncle' | 'parent' | 'uncle' | 'sibling' | 'cousin' | 'nephew' | 'other';
+export type Kin = 'ancestor' | 'grandparent' | 'granduncle' | 'parent' | 'uncle' | 'sibling' | 'cousin' | 'nephew' | 'grandchild' | 'other';
 
 export interface FamilyMemberDef {
   id: string;
@@ -173,7 +183,7 @@ export const getFormerSpouses = (state: FamilyState): FormerSpouse[] => state.fo
 
 // ---------- 称谓与辈分 ----------
 
-export const GENERATIONS = ['曾祖辈', '祖辈', '父辈', '平辈', '子辈'];
+export const GENERATIONS = ['曾祖辈', '祖辈', '父辈', '平辈', '子辈', '孙辈'];
 
 const KIN_GENERATION: Record<Kin, string> = {
   ancestor: '曾祖辈',
@@ -184,6 +194,7 @@ const KIN_GENERATION: Record<Kin, string> = {
   sibling: '平辈',
   cousin: '平辈',
   nephew: '子辈',
+  grandchild: '孙辈',
   other: '父辈',
 };
 
@@ -197,6 +208,7 @@ export const relationFor = (kin: Kin, gender: Gender, ageOffset: number, fallbac
     case 'parent': return f ? '母亲' : '父亲';
     case 'uncle': return f ? '姑姑' : '叔叔';
     case 'sibling': return ageOffset > 0 ? (f ? '姐姐' : '哥哥') : (f ? '妹妹' : '弟弟');
+    case 'grandchild': return f ? '孙女' : '孙子';
     case 'cousin': return ageOffset > 0 ? (f ? '堂姐' : '堂兄') : (f ? '堂妹' : '堂弟');
     case 'nephew': return f ? '侄女' : '侄子';
     default: return fallback;
@@ -383,7 +395,11 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
   }
 
   state.children.forEach((c) => {
-    const age = ageAt(c.birthYear, c.birthMonth, gameYear, gameMonth);
+    const rawAge = ageAt(c.birthYear, c.birthMonth, gameYear, gameMonth);
+    const life = childLifespan(c);
+    const dead = rawAge >= life;
+    const age = dead ? life : rawAge;
+    const kids = c.kids ?? [];
     members.push({
       id: c.id,
       name: c.name,
@@ -391,11 +407,11 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
       relation: c.illegitimate ? (c.gender === '女' ? '私生女' : '私生子') : c.gender === '女' ? '女儿' : '儿子',
       generation: '子辈',
       age,
-      status: '在世',
-      occupation: occupationFor(CHILD_STAGES, age),
+      status: dead ? '已故' : '在世',
+      occupation: c.spouse ? `已成家 · 配偶 ${c.spouse.name}` : occupationFor(CHILD_STAGES, age),
       affinity: affinityOf(c.id, CHILD_INITIAL_AFFINITY),
       avatarBg: c.gender === '女' ? '#c06a8a' : '#4a7aa8',
-      desc: `生于 ${c.birthYear} 年 ${c.birthMonth} 月，${origin.surname}家族的新一代。`,
+      desc: `生于 ${c.birthYear} 年 ${c.birthMonth} 月，${origin.surname}家族的新一代。${c.spouse ? `${c.spouse.marriedYear} 年与 ${c.spouse.name} 成婚。` : ''}${kids.length ? `育有 ${kids.length} 个孩子。` : ''}`,
       traits: ['家族新生代'],
       isChild: true,
       parents: describeParents(c, playerName, playerGender),
@@ -403,7 +419,141 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
     });
   });
 
+  // 孙辈：子女成家后所生（第 52 题）
+  state.children.forEach((c) => {
+    (c.kids ?? []).forEach((k) => {
+      const rawAge = ageAt(k.birthYear, k.birthMonth, gameYear, gameMonth);
+      const life = childLifespan(k);
+      const dead = rawAge >= life;
+      const age = dead ? life : rawAge;
+      members.push({
+        id: k.id,
+        name: k.name,
+        gender: k.gender,
+        kin: 'grandchild',
+        relation: k.gender === '女' ? '孙女' : '孙子',
+        generation: '孙辈',
+        age,
+        status: dead ? '已故' : '在世',
+        occupation: occupationFor(CHILD_STAGES, age),
+        affinity: affinityOf(k.id, CHILD_INITIAL_AFFINITY),
+        avatarBg: k.gender === '女' ? '#c06a8a' : '#4a7aa8',
+        desc: `生于 ${k.birthYear} 年 ${k.birthMonth} 月，${c.name} 的孩子。`,
+        traits: ['家族新生代'],
+        parents: `${c.name}（${c.gender === '女' ? '母' : '父'}）${k.otherParentName ? `、${k.otherParentName}（${k.otherParentGender === '女' ? '母' : '父'}）` : ''}`,
+        traitIds: k.traits,
+      });
+    });
+  });
+
   return members;
+};
+
+// ---------- 家人的寿命与成家（第 52 题，默认值） ----------
+// 子女、孙辈、配偶都有寿命，到期显示已故（配偶去世则主角丧偶，可再婚）；
+// 成年子女每月有概率成家、生育，孩子成为主角的孙辈；子女继承时连同其配偶、孩子一起继承。
+
+export const KIN_LIFESPAN_MIN = 60;
+export const KIN_LIFESPAN_MAX = 85;
+/** 子女成家的年龄段与每月概率 */
+export const CHILD_MARRY_MIN_AGE = 20;
+export const CHILD_MARRY_MAX_AGE = 40;
+export const CHILD_MARRY_CHANCE = 0.02;
+/** 每对子女夫妻最多生几个孩子 */
+export const MAX_GRANDCHILDREN_PER_CHILD = 4;
+
+export const rollKinLifespan = (rng: () => number = Math.random) => KIN_LIFESPAN_MIN + Math.floor(rng() * (KIN_LIFESPAN_MAX - KIN_LIFESPAN_MIN + 1));
+
+/** 按 id 稳定推算寿命（旧存档没有记录寿命时使用） */
+const stableLifespan = (id: string) => {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  return KIN_LIFESPAN_MIN + ((h >>> 0) % (KIN_LIFESPAN_MAX - KIN_LIFESPAN_MIN + 1));
+};
+export const childLifespan = (c: Child) => c.lifespan ?? stableLifespan(c.id);
+export const spouseLifespan = (s: Spouse) => s.lifespan ?? stableLifespan(`spouse_${s.name}_${s.birthYear}`);
+
+export interface FamilyLifeResult {
+  state: FamilyState;
+  /** 本月家族里发生的事（用于提示与日志） */
+  notes: Array<{ title: string; desc: string }>;
+}
+
+/** 每月：配偶寿终则丧偶；成年子女成家、生育孙辈 */
+export const monthlyFamilyLife = (state: FamilyState, year: number, month: number, rng: () => number = Math.random): FamilyLifeResult => {
+  const notes: Array<{ title: string; desc: string }> = [];
+  let next = state;
+  const surname = getOrigin(state).surname;
+
+  const s = state.spouse;
+  if (s && year - s.birthYear >= spouseLifespan(s)) {
+    next = {
+      ...next,
+      spouse: null,
+      formerSpouses: [...getFormerSpouses(next), { ...s, divorcedYear: year, divorcedMonth: month, widowed: true }],
+      events: [...next.events, { year, month, title: '丧偶', desc: `${s.name} 离开了人世，享年 ${year - s.birthYear} 岁。` }],
+    };
+    notes.push({ title: `${s.name} 离世`, desc: `配偶 ${s.name} 享年 ${year - s.birthYear} 岁。` });
+  }
+
+  let changed = false;
+  const usedNames = new Set<string>(state.children.flatMap((c) => [c.name, ...(c.kids ?? []).map((k) => k.name)]));
+  const children = next.children.map((c) => {
+    const age = ageAt(c.birthYear, c.birthMonth, year, month);
+    if (age >= childLifespan(c)) return c;
+    let child = c;
+    if (!child.spouse && age >= CHILD_MARRY_MIN_AGE && age < CHILD_MARRY_MAX_AGE && rng() < CHILD_MARRY_CHANCE) {
+      const cand = generateSpouseCandidates(age, rng, 1, child.gender)[0];
+      if (cand) {
+        child = {
+          ...child,
+          spouse: { name: cand.name, gender: cand.gender, birthYear: year - cand.age, occupation: cand.occupation, marriedYear: year, marriedMonth: month, traits: cand.traits ?? [], lifespan: rollKinLifespan(rng) },
+        };
+        notes.push({ title: `${c.name} 成家`, desc: `${c.name} 与 ${cand.name}（${cand.occupation}）结为夫妻。` });
+      }
+    }
+    const sp = child.spouse;
+    const kids = child.kids ?? [];
+    if (
+      sp &&
+      kids.length < MAX_GRANDCHILDREN_PER_CHILD &&
+      age <= fertileMaxAge(child.gender, child.traits) &&
+      year - sp.birthYear <= fertileMaxAge(sp.gender, sp.traits) &&
+      year - sp.birthYear < spouseLifespan(sp) &&
+      rng() < BIRTH_CHANCE * fertilityMultiplier(child.traits, sp.traits)
+    ) {
+      const twins = rng() < twinChanceFor(TWIN_CHANCE, child.traits, sp.traits) && kids.length + 2 <= MAX_GRANDCHILDREN_PER_CHILD;
+      const born: Child[] = [];
+      for (let k = 0; k < (twins ? 2 : 1); k++) {
+        const gender: Gender = rng() < 0.5 ? '男' : '女';
+        const name = randomFullName(gender, surname, rng, usedNames);
+        usedNames.add(name);
+        born.push({
+          id: `gc_${child.id}_${year}_${month}_${kids.length + k + 1}`,
+          name,
+          gender,
+          birthYear: year,
+          birthMonth: month,
+          otherParentName: sp.name,
+          otherParentGender: sp.gender,
+          traits: inheritTraits(child.traits ?? [], sp.traits ?? [], rng),
+          lifespan: rollKinLifespan(rng),
+        });
+      }
+      child = { ...child, kids: [...kids, ...born] };
+      notes.push({ title: `${c.name} 喜得${twins ? '双胞胎' : born[0].gender === '女' ? '千金' : '麟儿'}`, desc: `${born.map((b) => b.name).join('、')} 降生，是你的${born.map((b) => (b.gender === '女' ? '孙女' : '孙子')).join('、')}。` });
+    }
+    if (child !== c) changed = true;
+    return child;
+  });
+  if (changed) {
+    next = {
+      ...next,
+      children,
+      events: [...next.events, ...notes.filter((n) => !n.title.includes('离世')).map((n) => ({ year, month, title: n.title, desc: n.desc }))],
+    };
+  }
+  return { state: next, notes };
 };
 
 // ---------- 结婚 ----------
@@ -451,6 +601,7 @@ export const generateSpouseCandidates = (
 export const marry = (state: FamilyState, candidate: SpouseCandidate, year: number, month: number): FamilyState => ({
   ...state,
   spouse: {
+    lifespan: candidate.age + 30 + Math.floor(Math.random() * 30) > KIN_LIFESPAN_MAX ? KIN_LIFESPAN_MAX : Math.max(KIN_LIFESPAN_MIN, candidate.age + 30 + Math.floor(Math.random() * 30)),
     name: candidate.name,
     gender: candidate.gender,
     birthYear: year - candidate.age,
@@ -523,6 +674,7 @@ const giveBirth = (
       ...(other ? { otherParentName: other.name, otherParentGender: other.gender } : {}),
       traits: inheritTraits(playerTraits, other?.traits ?? [], rng),
       ...(illegitimate ? { illegitimate: true } : {}),
+      lifespan: rollKinLifespan(rng),
     });
   }
   const title = illegitimate ? '私生子女降生' : count === 2 ? '喜得双胞胎' : `喜得${born[0].gender === '女' ? '千金' : '麟儿'}`;
@@ -743,24 +895,30 @@ export interface HeirCandidate {
   gender: Gender;
   age: number;
   relation: string;
-  /** 子嗣继承或兄弟姐妹继承 */
-  kind: 'child' | 'sibling';
+  /** 子嗣、孙辈（无在世子嗣时）或兄弟姐妹继承 */
+  kind: 'child' | 'grandchild' | 'sibling';
   traits?: string[];
 }
 
-/** 可继承的人选：所有在世子嗣（不限年龄），以及年满 HEIR_MIN_AGE 岁的兄弟姐妹 */
-export const listHeirs = (members: FamilyMemberView[]): HeirCandidate[] =>
-  members
-    .filter((m) => !m.isPlayer && m.status !== '已故' && m.gender && (m.isChild || (m.kin === 'sibling' && m.age >= HEIR_MIN_AGE)))
-    .map((m) => ({
-      id: m.id,
-      name: m.name,
-      gender: m.gender as Gender,
-      age: m.age,
-      relation: m.relation,
-      kind: m.isChild ? 'child' : 'sibling',
-      traits: m.traitIds,
-    }));
+/**
+ * 可继承的人选：所有在世子嗣（不限年龄），以及年满 HEIR_MIN_AGE 岁的兄弟姐妹；
+ * 没有在世子嗣时，在世的孙辈也可以继承（第 52 题）。
+ */
+export const listHeirs = (members: FamilyMemberView[]): HeirCandidate[] => {
+  const alive = members.filter((m) => !m.isPlayer && m.status !== '已故' && m.gender);
+  const children = alive.filter((m) => m.isChild);
+  const siblings = alive.filter((m) => m.kin === 'sibling' && m.age >= HEIR_MIN_AGE);
+  const grandchildren = children.length === 0 ? alive.filter((m) => m.kin === 'grandchild') : [];
+  return [...children, ...grandchildren, ...siblings].map((m) => ({
+    id: m.id,
+    name: m.name,
+    gender: m.gender as Gender,
+    age: m.age,
+    relation: m.relation,
+    kind: m.isChild ? 'child' : m.kin === 'grandchild' ? 'grandchild' : 'sibling',
+    traits: m.traitIds,
+  }));
+};
 
 export interface Predecessor {
   name: string;
@@ -779,6 +937,7 @@ const CHILD_SUCCESSION_KIN: Record<Kin, Kin> = {
   sibling: 'uncle',
   cousin: 'other',
   nephew: 'cousin',
+  grandchild: 'nephew',
   other: 'other',
 };
 
@@ -792,7 +951,7 @@ const childToDef = (c: Child, ageNow: number, heirAge: number, kin: Kin): Family
     relation: relationFor(kin, c.gender, ageOffset),
     generation: KIN_GENERATION[kin],
     ageOffset,
-    lifespan: DEFAULT_LIFESPAN,
+    lifespan: childLifespan(c),
     occupationByAge: CHILD_STAGES,
     defaultAffinity: CHILD_INITIAL_AFFINITY,
     avatarBg: c.gender === '女' ? '#c06a8a' : '#4a7aa8',
@@ -873,26 +1032,68 @@ export const succeed = (
           },
         ]
       : [];
-    const siblings = state.children.filter((c) => c.id !== heir.id).map((c) => childToDef(c, ageOf(c), H, 'sibling'));
-    members2 = [...shifted, predecessorDef('parent'), ...spouseDefs, ...siblings];
+    const otherChildren = state.children.filter((c) => c.id !== heir.id);
+    const siblings = otherChildren.map((c) => childToDef(c, ageOf(c), H, 'sibling'));
+    const nephews = otherChildren.flatMap((c) => (c.kids ?? []).map((k) => childToDef(k, ageOf(k), H, 'nephew')));
+    members2 = [...shifted, predecessorDef('parent'), ...spouseDefs, ...siblings, ...nephews];
+  } else if (heir.kind === 'grandchild') {
+    // 孙辈继承：已故的子女成为父母；其他子女成为叔伯姑姑，他们的孩子成为堂亲
+    const parentChild = state.children.find((c) => (c.kids ?? []).some((k) => k.id === heir.id));
+    const twice = (k: Kin) => CHILD_SUCCESSION_KIN[CHILD_SUCCESSION_KIN[k]];
+    const shifted = origin.members.map((d) => withKin(d, twice(d.kin), d.ageOffset + shift, twice(d.kin) === 'other' ? d.relation : undefined));
+    const spouseDef = (sp: Spouse, kin: Kin, relation: string, desc: string): FamilyMemberDef => ({
+      id: `sp_${sp.name}_${sp.birthYear}`,
+      name: sp.name,
+      gender: sp.gender,
+      kin,
+      relation,
+      generation: KIN_GENERATION[kin],
+      ageOffset: year - sp.birthYear - H,
+      lifespan: spouseLifespan(sp),
+      occupationByAge: [[0, sp.occupation]],
+      defaultAffinity: SPOUSE_INITIAL_AFFINITY,
+      avatarBg: '#b2586a',
+      desc,
+      traits: ['长辈'],
+    });
+    const grandSpouse = state.spouse ? [spouseDef(state.spouse, 'grandparent', state.spouse.gender === '女' ? '祖母' : '祖父', `${predecessor.name} 的配偶。`)] : [];
+    const parents = parentChild
+      ? [
+          childToDef(parentChild, ageOf(parentChild), H, 'parent'),
+          ...(parentChild.spouse ? [spouseDef(parentChild.spouse, 'parent', parentChild.spouse.gender === '女' ? '母亲' : '父亲', `${parentChild.name} 的配偶。`)] : []),
+        ]
+      : [];
+    const others = state.children.filter((c) => c.id !== parentChild?.id);
+    const uncles = others.map((c) => childToDef(c, ageOf(c), H, 'uncle'));
+    const cousins = others.flatMap((c) => (c.kids ?? []).map((k) => childToDef(k, ageOf(k), H, 'cousin')));
+    const siblings = (parentChild?.kids ?? []).filter((k) => k.id !== heir.id).map((k) => childToDef(k, ageOf(k), H, 'sibling'));
+    members2 = [...shifted, predecessorDef('grandparent'), ...grandSpouse, ...parents, ...uncles, ...cousins, ...siblings];
   } else {
     // 兄弟姐妹继承：辈分不变，只重算称谓；前任主角的子嗣成为侄子/侄女；前任配偶不再计入族谱
     const others = origin.members
       .filter((d) => d.id !== heir.id)
       .map((d) => withKin(d, d.kin, d.ageOffset + shift, d.kin === 'other' ? d.relation : undefined));
     const nephews = state.children.map((c) => childToDef(c, ageOf(c), H, 'nephew'));
-    members2 = [...others, predecessorDef('sibling'), ...nephews];
+    const grandNephews = state.children.flatMap((c) =>
+      (c.kids ?? []).map((k) => ({ ...childToDef(k, ageOf(k), H, 'other'), generation: '孙辈', relation: k.gender === '女' ? '侄孙女' : '侄孙' })),
+    );
+    members2 = [...others, predecessorDef('sibling'), ...nephews, ...grandNephews];
   }
 
+  // 子女继承：继承人自己的配偶与孩子随之成为新当家人的配偶与子嗣
+  const heirChild = heir.kind === 'child' ? state.children.find((c) => c.id === heir.id) : undefined;
+  const heirSpouse = heirChild?.spouse && year - heirChild.spouse.birthYear < spouseLifespan(heirChild.spouse) ? heirChild.spouse : null;
+  const heirKids = (heirChild?.kids ?? []).map((k) => ({ ...k, otherParentName: heirChild?.spouse?.name ?? k.otherParentName, otherParentGender: heirChild?.spouse?.gender ?? k.otherParentGender }));
   return {
     heir,
     state: {
-      playerIllegitimate: heir.kind === 'child' && !!state.children.find((c) => c.id === heir.id)?.illegitimate,
+      playerIllegitimate: heir.kind === 'child' && !!heirChild?.illegitimate,
+      baseClassId: state.baseClassId,
       affinity: {},
       lastInteraction: {},
-      spouse: null,
+      spouse: heirSpouse,
       formerSpouses: [],
-      children: [],
+      children: heirKids,
       lover: null,
       discontent: {},
       splitBranches: state.splitBranches ?? [],

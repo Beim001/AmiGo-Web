@@ -232,7 +232,8 @@ export const SimpleModeView: React.FC<SimpleModeViewProps> = (p) => {
           {!dead && (
             <div className="bg-white border-4 border-[#3b2a1a] rounded-3xl p-4 shadow-[0_5px_0_#3b2a1a]">
               <div className="text-xl font-black mb-1">💆 保养身体</div>
-              <p className="text-sm font-bold text-[#8a6d4b] mb-3">{p.fertilityText}</p>
+              <p className="text-sm font-bold text-[#8a6d4b] mb-1">{p.fertilityText}</p>
+              <p className="text-xs font-bold text-[#8a6d4b] mb-3">每个月会自动给你、爱人和长大的孩子保养（每人每月一次，钱够才做，自动保养效果比手动差一些）。</p>
               <button
                 onClick={p.onMaintenance}
                 className="w-full bg-violet-400 text-white border-4 border-[#3b2a1a] rounded-2xl py-3 text-xl font-black shadow-[0_4px_0_#3b2a1a] active:translate-y-1 active:shadow-none cursor-pointer"
