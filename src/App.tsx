@@ -417,7 +417,7 @@ const ShopModal = ({
                <div className="flex-1 pt-1 z-10">
                  <h3 className="text-white text-3xl font-black drop-shadow-[0_2px_0_#000] leading-none mb-2 text-right tracking-wider">限定宝箱</h3>
                  <p className="text-white text-[10px] text-right font-extrabold drop-shadow-[0_1px_0_#000] leading-tight mt-1">
-                   获得10金币，赠送<span className="text-blue-300">高级</span>、<br/><span className="text-purple-300">稀有</span>、<span className="text-orange-300">限定</span>的服饰与皮肤
+                   每抽获得 1,000 金币，或<br/><span className="text-blue-300">高级</span>、<span className="text-purple-300">稀有</span>、<span className="text-orange-300">限定</span>服饰
                  </p>
                  <div className="flex flex-col items-end mt-2 gap-1.5">
                    <div className="bg-[#c85ce6] border-2 border-[#9438ad] text-white text-[10px] px-3 py-0.5 rounded-full font-bold shadow-sm">
@@ -425,7 +425,7 @@ const ShopModal = ({
                      <span className="ml-1 text-yellow-200">· 还剩 {PITY_RARE - pity.sinceRare} 次</span>
                    </div>
                    <div className="bg-[#c85ce6] border-2 border-[#9438ad] text-white text-[10px] px-3 py-0.5 rounded-full font-bold shadow-sm">
-                     99次内必得<span className="text-orange-300 ml-1">限定</span>皮肤
+                     99次内必得<span className="text-orange-300 ml-1">限定</span>服饰
                      <span className="ml-1 text-yellow-200">· 还剩 {PITY_LIMITED - pity.sinceLimited} 次</span>
                    </div>
                  </div>
