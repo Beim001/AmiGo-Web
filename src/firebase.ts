@@ -31,7 +31,9 @@ export const googleProvider = new GoogleAuthProvider();
 
 // Safe Analytics initialization
 export let analytics: ReturnType<typeof getAnalytics> | null = null;
-if (typeof window !== "undefined") {
+// 本地跳过登录测试时，不向 Firebase Analytics 上报数据
+const skipAuthInDev = import.meta.env.DEV && import.meta.env.VITE_SKIP_AUTH === 'true';
+if (typeof window !== "undefined" && !skipAuthInDev) {
   isSupported().then((supported) => {
     if (supported) {
       analytics = getAnalytics(app);

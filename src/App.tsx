@@ -35,6 +35,19 @@ import {
 } from './lib/bilibiliToy';
 import { validatePlayerName, SENSITIVE_WORDS_CONFIG } from './utils/sensitiveWords';
 
+// 本地测试开关：仅在 `npm run dev` 且 .env.local 设置 VITE_SKIP_AUTH=true 时生效，
+// 跳过 Firebase 登录门禁，使用本地测试账号。生产构建 (npm run build) 中永远为 false。
+const DEV_SKIP_AUTH = import.meta.env.DEV && import.meta.env.VITE_SKIP_AUTH === 'true';
+const DEV_MOCK_USER: AppUser = {
+  uid: 'dev-local-user',
+  displayName: '本地测试玩家',
+  photoURL: null,
+  email: null,
+  emailVerified: true,
+  providerData: [{ providerId: 'dev' }],
+  isMock: true,
+};
+
 
 
 const AgeIcon = () => (
@@ -2708,13 +2721,14 @@ export default function App() {
   });
 
   const [authUser, setAuthUser] = useState<FirebaseUser | AppUser | null>(() => {
+    if (DEV_SKIP_AUTH) return DEV_MOCK_USER;
     try {
       const stored = localStorage.getItem('amigo_active_user');
       if (stored) return JSON.parse(stored);
     } catch (e) {}
     return null;
   });
-  const [authLoading, setAuthLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(!DEV_SKIP_AUTH);
   const [playerName, setPlayerName] = useState(() => {
     try {
       const stored = localStorage.getItem('amigo_active_user');
@@ -2727,6 +2741,10 @@ export default function App() {
   });
 
   React.useEffect(() => {
+    if (DEV_SKIP_AUTH) {
+      console.info('[DEV] VITE_SKIP_AUTH=true，已跳过 Firebase 登录，使用本地测试账号');
+      return;
+    }
     let resolved = false;
 
     // Protection timer: ensure authLoading is set to false within 2.5s (GFW network protection)
