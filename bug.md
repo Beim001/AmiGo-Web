@@ -114,3 +114,14 @@
 ### 15. "重置人生"可绕过改名冻结
 - **原因**：重置会清除 `amigo_political_violation_count`、`amigo_name_freeze_until` 等违规记录（原代码就是如此，本次保留了这一行为）。玩家被冻结改名 90 天后，可通过重置人生立即解封。
 - **待定**：是否把违规记录也归为账号级数据、重置时保留，需要产品决定。
+
+### 16. B 站登录用户的 UID 不稳定，会被 Firebase 匿名用户覆盖
+- **位置**：[src/App.tsx:2800-2803](src/App.tsx#L2800-L2803)（`onAuthStateChanged` 回调）、[src/components/AuthScreen.tsx:178](src/components/AuthScreen.tsx#L178)、[src/components/AuthModal.tsx:208](src/components/AuthModal.tsx#L208)、[src/App.tsx:3400](src/App.tsx#L3400)（`AuthModal` 的 `onUserChange`）
+- **原因**：B 站登录时会先匿名登录 Firebase，再组装 `AppUser`（`uid` 取 B 站 `toyOpenId`，`providerData` 标记为 `bilibili`）写入 `authUser` 和 `amigo_active_user`。但只要匿名登录成功，`onAuthStateChanged` 随后会用 Firebase 匿名用户覆盖 `authUser`；刷新页面时同样先读到 `AppUser`，又被 Firebase 回调覆盖。
+- **影响**：
+  - 同一个 B 站玩家的 UID 会在 `toyOpenId` 与 Firebase 匿名 UID 之间变化，个人中心显示的 UID 不一致；
+  - 覆盖后 `providerData` 变为匿名用户，丢失"B 站登录"标记（`isBilibili`）；
+  - 匿名登录失败且 SDK 未返回 `toyOpenId` 时，`uid` 退化为 `bilibili_${Date.now()}`，每次登录都不同；
+  - 将来按账号隔离存档（#7）时，同一玩家可能对应多份存档。
+- **备注**：原代码就存在，与 #5 的修复无关。#5 修复只保证匿名登录失败时也能进入游戏，未在真实 B 站环境测试（本地没有 Toy SDK）。
+- **修复思路**：以 `toyOpenId` 作为 B 站玩家的唯一身份；`onAuthStateChanged` 收到匿名用户时，若当前 `authUser` 是 B 站用户则保留 `AppUser`（只记录对应的 Firebase UID），不直接覆盖。
