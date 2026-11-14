@@ -184,8 +184,8 @@
   - [ ] 「保存进度」按钮目前仅提示成功，尚未真正接入云端存档接口。
 - [ ] **商城与宝箱 (`ShopModal`)**：
   - [ ] 宝箱文案提示的「9 次内必得稀有、99 次内必得限定」尚未实现真实抽卡保底计数器；
-  - [ ] 已购服饰 `ownedClothes`、穿戴状态 `equippedClothing` 与首抽状态 `freeDrawUsed` 仅保存在内存 `useState` 中，刷新页面后会丢失（尚未持久化至 `localStorage`）；
-  - [ ] 余额不足时仍使用原生 `alert()`，需统一替换为应用内 Toast 提示以符合内嵌 iFrame 规范。
+  - [x] ~~已购服饰 `ownedClothes`、穿戴状态 `equippedClothing` 与首抽状态 `freeDrawUsed` 仅保存在内存 `useState` 中，刷新页面后会丢失~~（已持久化至 `localStorage`，见 bug.md #2）；
+  - [x] ~~余额不足时仍使用原生 `alert()`~~（已替换为应用内 Toast 提示，见 bug.md #12）。
 
 ### 3. 全局持久化、月度结算联动与账号隔离
 - [ ] **云端数据库存档**：项目目前仅使用 Firebase Authentication，尚未配置 Firestore / 云存储或 B 站 `setCloudStorage` 来跨设备保存玩家人生档案。
