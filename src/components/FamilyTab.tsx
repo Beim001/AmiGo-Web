@@ -8,6 +8,7 @@ import { OwnedHeirloom, heirloomById, QUALITY_STYLE, HeirloomDef } from '../lib/
 import { Medal, Watch, Gem, BookOpen, Swords, ScrollText, Amphora, Map as MapIcon2, Gavel } from 'lucide-react';
 import { nextPromotion, classById } from '../lib/lineage';
 import { applySurname } from '../lib/names';
+import { recordGiftsGiven } from '../lib/achievements';
 import { GiftInventory, giftById, giftAffinityGain, removeGift, tasteOf, GIFT_QUALITY_STYLE, GIFT_TASTE_LABEL } from '../lib/gifts';
 import { validatePlayerName } from '../utils/sensitiveWords';
 import { ShieldCheck, GitFork, Crown, Building2, Shield, Sparkles, Heart, Baby } from 'lucide-react';
@@ -130,6 +131,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
         return;
       }
       setCoins((prev) => prev - GIFT_COST);
+      recordGiftsGiven(1);
     }
 
     setFamily((prev) => applyInteraction(prev, member, kind, gameYear, gameMonth, affinityBonus(playerTraits)));
@@ -164,6 +166,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
     const gain = giftAffinityGain(gift, member, family.giftTastes);
     const bonus = affinityBonus(playerTraits);
     setGiftInventory(remaining);
+    recordGiftsGiven(1);
     setFamily((prev) => applyInteraction(prev, member, 'gift', gameYear, gameMonth, bonus, gain));
     const newAffinity = Math.min(100, member.affinity + gain + bonus);
     const liked = tasteOf(member, family.giftTastes) === gift.taste;

@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { User, Newspaper, CheckCircle, Store, BookOpen, Swords, Map as MapIcon, CircleDollarSign, Gem, MonitorPlay, Briefcase, Zap, ChevronLeft, Shirt, Crown, Car, Plane, Globe, Baby, Scale, Hospital, Lock, Receipt, Landmark, Wallet, Building, Building2, TrendingUp, TrendingDown, HeartHandshake, Home, Heart, GraduationCap, Users, Megaphone, UserCog, Gamepad2, Shield, Award, Sparkles, Scroll, GitFork, ShieldCheck, ChevronRight, Settings, Volume2, VolumeX, Copy, Check, Edit2, RotateCcw, Save, KeyRound, Gift, Trophy, Flame, Star, RefreshCw, Upload, Medal, UserCheck, X, Info, ShieldAlert, AlertTriangle, History, FileText, BarChart2, ArrowUpRight, ArrowDownRight, Percent, LogOut, Mail, Camera } from 'lucide-react';
+import { User, Newspaper, CheckCircle, Store, BookOpen, Swords, Map as MapIcon, CircleDollarSign, Gem, MonitorPlay, Briefcase, Zap, ChevronLeft, Shirt, Crown, Car, Plane, Globe, Baby, Scale, Hospital, Lock, Receipt, Landmark, Wallet, Building, Building2, TrendingUp, TrendingDown, HeartHandshake, Home, Heart, GraduationCap, Users, Megaphone, UserCog, Gamepad2, Shield, Award, Sparkles, Scroll, GitFork, ShieldCheck, ChevronRight, Settings, Volume2, VolumeX, Copy, Check, Edit2, RotateCcw, Save, KeyRound, Gift, Trophy, Flame, Star, RefreshCw, Upload, Medal, UserCheck, X, Info, Flower2, HandHeart, ShieldAlert, AlertTriangle, History, FileText, BarChart2, ArrowUpRight, ArrowDownRight, Percent, LogOut, Mail, Camera } from 'lucide-react';
 import { RoleTab, CartoonCharacter } from './components/RoleTab';
 import { CalendarModal } from './components/CalendarModal';
 import { AvatarSelectModal, PRESET_AVATARS } from './components/AvatarSelectModal';
@@ -16,9 +16,9 @@ import { MarriageModal } from './components/MarriageModal';
 import { FamilyState, INITIAL_FAMILY_STATE, promoteFamily, getHeirlooms, addHeirloom, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
 import { randomTraits, PLAYER_TRAITS_KEY, diseaseTraitMultiplier, decayReduction, salaryMultiplier, depositInterestMultiplier, traitNames, traitById } from './lib/traits';
 import { REPUTATION_KEY, REP, HIGH_SALARY, clampReputation, reputationLevel, CHARITY_KEY, CHARITY_UNIT, charityRemaining } from './lib/reputation';
-import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, formatRealTime, unlockAllForTesting, clearAchievementsForTesting, hasAllAchievements, CREDITS_SEEN_KEY, CREDITS_RANK_KEY } from './lib/achievements';
+import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, formatRealTime, unlockAllForTesting, clearAchievementsForTesting, hasAllAchievements, CREDITS_SEEN_KEY, CREDITS_RANK_KEY, readGiftsGiven, recordGiftsGiven } from './lib/achievements';
 import { CreditsRoll } from './components/CreditsRoll';
-import { GiftInventory, GIFT_INVENTORY_KEY, GIFT_QUALITY_STYLE, GIFT_TASTE_LABEL, CHILD_AGE as GIFT_CHILD_AGE, addGifts, driftGiftTastes } from './lib/gifts';
+import { GiftInventory, GIFT_INVENTORY_KEY, GIFT_QUALITY_STYLE, GIFT_TASTE_LABEL, CHILD_AGE as GIFT_CHILD_AGE, addGifts, driftGiftTastes, giftCount } from './lib/gifts';
 import { AboutUs } from './components/AboutUs';
 import { claimCompletionRank } from './lib/authClient';
 import { GUARDIANSHIP_KEY, Guardianship, takeCustody, monthlyGuardianship, ORPHANAGE_NAME, ADULT_AGE as GUARDIAN_ADULT_AGE } from './lib/guardianship';
@@ -32,6 +32,7 @@ import { SuccessionModal } from './components/SuccessionModal';
 import { SimEventInstance, rollMonthlyEvent, eventDef, resolveOption, optionBlocked, SIM_EVENTS_KEY, SIM_SCORE_KEY, SIM_QUIET_KEY } from './lib/simEvents';
 import { addLifeLog, readLifeLog, clearLifeLog } from './lib/lifeLog';
 import { BASE_STIPEND, monthlySalary, nextHealth, effectiveComfort, isMinor } from './lib/monthly';
+import { computeAllowance } from './lib/allowance';
 import {
   BANK_LIST,
   BankAccounts,
@@ -99,7 +100,7 @@ const saveStored = (key: string, value: unknown) => {
 };
 
 // 重置人生时保留的存档键（账号级数据，不属于某一段人生）
-const KEYS_KEPT_ON_RESET = new Set(['amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements', 'amigo_credits_seen', 'amigo_credits_rank']);
+const KEYS_KEPT_ON_RESET = new Set(['amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements', 'amigo_credits_seen', 'amigo_credits_rank', 'amigo_gifts_given']);
 
 
 
@@ -1708,6 +1709,7 @@ const ProfileModal = ({
           const icons: Record<string, React.ElementType> = {
             baby: Baby, coins: CircleDollarSign, home: Home, heart: Heart, users: Users, gift: Gift, gem: Gem, crown: Crown,
             chart: TrendingUp, plane: Plane, globe: Globe, hospital: Hospital, cake: Star, tree: GitFork, trophy: Trophy, scroll: Scroll,
+            handheart: HandHeart, flower: Flower2,
           };
           const done = ACHIEVEMENTS.filter((a) => record[a.id]).length;
           return (
@@ -2956,7 +2958,7 @@ export default function App() {
     } catch (e) {}
 
     const ageNextMonth = isRegistered ? Math.max(0, 8 + nextY - birthRegisteredYear) : 8;
-    const notes: string[] = [`俸禄 +${BASE_STIPEND.toLocaleString()}`];
+    const notes: string[] = [];
 
     // 1. 名下出租房产租金收益与自住舒适度
     let propertyRentIncome = 0;
@@ -3031,8 +3033,19 @@ export default function App() {
       } catch (e) {}
     }
 
+    // 3c. 俸禄与零花（第 36 题）：在职（正式工作或童工）的月份发俸禄，否则由父母按收入、年龄与好感度给零花
+    let baseIncome = 0;
+    if (isRegistered && salary > 0) {
+      baseIncome = BASE_STIPEND;
+      notes.unshift(`俸禄 +${BASE_STIPEND.toLocaleString()}`);
+    } else if (isRegistered) {
+      const allowance = allowanceFor(ageNextMonth);
+      baseIncome = allowance.total;
+      notes.unshift(allowance.total > 0 ? `零花 +${allowance.total.toLocaleString()}` : '没有零花（父母已故或好感度不足 30%）');
+    }
+
     // 4. 银行存贷款利息（第 5 题：贷款利率随历史大事件上浮）
-    const cashBeforeInterest = Math.max(0, coins + BASE_STIPEND + propertyRentIncome - rentExpense + salary);
+    const cashBeforeInterest = Math.max(0, coins + baseIncome + propertyRentIncome - rentExpense + salary);
     const interest = settleMonthlyInterest(loadAccounts(bankDeposit, bankLoan), cashBeforeInterest, nextY, nextM, Math.random, depositInterestMultiplier(playerTraits));
     const bankTotals = persistBankAccounts(interest.accounts);
     setBankDeposit(bankTotals.deposit);
@@ -3041,7 +3054,7 @@ export default function App() {
     if (interest.loanInterest > 0) notes.push(`贷款利息 -${interest.loanInterest.toLocaleString()}`);
     if (interest.capitalized > 0) notes.push(`⚠️ ${interest.capitalized.toLocaleString()} ₽ 利息计入本金`);
 
-    const netChange = BASE_STIPEND + propertyRentIncome - rentExpense + salary - interest.cashPaid;
+    const netChange = baseIncome + propertyRentIncome - rentExpense + salary - interest.cashPaid;
     setCoins((prev) => Math.max(0, prev + netChange));
 
     // 5. 股市推进（第 4 题：每月 20 个交易日）
@@ -3597,6 +3610,14 @@ export default function App() {
     if (job) return job.title;
     return currentAge < 18 ? '学堂学生' : '待业';
   })();
+
+  // 父母给的零花（第 36 题）：按当前族谱中在世父母的职业收入、好感度计算
+  const allowanceFor = (age: number) => {
+    const parents = buildFamilyMembers(family, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth })
+      .filter((m) => m.kin === 'parent' && !m.isPlayer)
+      .map((m) => ({ name: m.name, relation: m.relation, occupation: m.occupation, affinity: m.affinity, status: m.status }));
+    return computeAllowance(parents, age, familyClass.id, !!family.playerIllegitimate);
+  };
 
   // 成就：解锁时弹出提示；集齐全部成就时自动播放一次致谢名单；状态类成就随数据变化自动检查
   React.useEffect(() => {
@@ -4199,6 +4220,37 @@ export default function App() {
                }
                setAuction(next);
                setShowAuction(true);
+             }}
+             giftTotal={giftCount(giftInventory)}
+             giftsGiven={readGiftsGiven()}
+             onAddGifts={(ids) => {
+               setGiftInventory((prev) => addGifts(prev, ids));
+               showToast(`🛠️ 已添加 ${ids.length} 件礼物`);
+             }}
+             onClearGifts={() => {
+               setGiftInventory({});
+               showToast('🛠️ 已清空礼物背包');
+             }}
+             onAddGiftsGiven={(n) => {
+               const total = recordGiftsGiven(n);
+               showToast(`🛠️ 累计赠礼次数：${total}`);
+             }}
+             allowancePreview={(() => {
+               if (!isRegistered) return '未登记';
+               const a = allowanceFor(currentAge);
+               const detail = a.parts.map((p) => `${p.relation} ${p.reason ?? `+${p.amount.toLocaleString()}`}`).join('；');
+               return `${a.total.toLocaleString()} ₽${detail ? `（${detail}）` : '（父母都已故）'}`;
+             })()}
+             onSetParentAffinity={(value) => {
+               const parents = buildFamilyMembers(family, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth }).filter(
+                 (m) => m.kin === 'parent' && !m.isPlayer && m.status !== '已故',
+               );
+               if (parents.length === 0) {
+                 showToast('🛠️ 父母都已故');
+                 return;
+               }
+               setFamily((prev) => ({ ...prev, affinity: { ...prev.affinity, ...Object.fromEntries(parents.map((m) => [m.id, value])) } }));
+               showToast(`🛠️ 已把 ${parents.length} 位父母的好感设为 ${value}%`);
              }}
              onClearAchievements={() => {
                clearAchievementsForTesting();

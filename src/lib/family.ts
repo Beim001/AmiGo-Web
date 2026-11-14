@@ -150,6 +150,8 @@ export interface FamilyState {
   splitBranches?: SplitBranch[];
   /** 成年家人改变后的礼物喜好（未记录时用出生喜好，见 gifts.ts） */
   giftTastes?: Record<string, 'toy' | 'jewelry' | 'antique'>;
+  /** 当家人是继承上来的私生子女（父母给的零花减半，见 allowance.ts） */
+  playerIllegitimate?: boolean;
   /** 家族传家宝；旧存档没有此字段时，瓦伦丁家族默认持有三件祖传宝物 */
   heirlooms?: OwnedHeirloom[];
 }
@@ -856,6 +858,7 @@ export const succeed = (
   return {
     heir,
     state: {
+      playerIllegitimate: heir.kind === 'child' && !!state.children.find((c) => c.id === heir.id)?.illegitimate,
       affinity: {},
       lastInteraction: {},
       spouse: null,

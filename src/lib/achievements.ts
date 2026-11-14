@@ -8,7 +8,7 @@ export interface AchievementDef {
   id: string;
   title: string;
   desc: string;
-  icon: 'baby' | 'coins' | 'home' | 'heart' | 'users' | 'gift' | 'gem' | 'crown' | 'chart' | 'plane' | 'globe' | 'hospital' | 'cake' | 'tree' | 'trophy' | 'scroll';
+  icon: 'baby' | 'coins' | 'home' | 'heart' | 'users' | 'gift' | 'gem' | 'crown' | 'chart' | 'plane' | 'globe' | 'hospital' | 'cake' | 'tree' | 'trophy' | 'scroll' | 'handheart' | 'flower';
 }
 
 export const ACHIEVEMENTS: AchievementDef[] = [
@@ -28,6 +28,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'succession', title: '薪火相传', desc: '完成一次家族传承', icon: 'tree' },
   { id: 'sim_master', title: '推演大师', desc: '推演积分达到 100', icon: 'trophy' },
   { id: 'witness', title: '时代见证者', desc: '经历一次历史大事件年份（如 1878 格纳提斯运动）', icon: 'scroll' },
+  { id: 'gift_10', title: '兄友弟恭', desc: '累计向家人赠送 10 次礼物', icon: 'handheart' },
+  { id: 'gift_100', title: '手有余香', desc: '累计向家人赠送 100 次礼物', icon: 'flower' },
 ];
 
 /** 成就 id → 解锁时的现实时间（毫秒） */
@@ -88,7 +90,36 @@ export const clearAchievementsForTesting = () => {
   try {
     localStorage.removeItem(ACHIEVEMENTS_KEY);
     localStorage.removeItem(CREDITS_SEEN_KEY);
+    localStorage.removeItem(GIFTS_GIVEN_KEY);
   } catch {}
+};
+
+// ---------- 赠礼计数（兄友弟恭、手有余香） ----------
+
+/** 累计向家人赠送礼物的次数（背包礼物与现金赠礼都算），跨人生保留 */
+export const GIFTS_GIVEN_KEY = 'amigo_gifts_given';
+export const GIFT_ACHIEVEMENT_STEPS: Array<[number, string]> = [
+  [10, 'gift_10'],
+  [100, 'gift_100'],
+];
+
+export const readGiftsGiven = (): number => {
+  try {
+    const n = Number(localStorage.getItem(GIFTS_GIVEN_KEY));
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  } catch {
+    return 0;
+  }
+};
+
+/** 记录赠礼次数，达到门槛时解锁成就；返回新的累计次数 */
+export const recordGiftsGiven = (count = 1): number => {
+  const total = readGiftsGiven() + Math.max(0, Math.floor(count));
+  try {
+    localStorage.setItem(GIFTS_GIVEN_KEY, String(total));
+  } catch {}
+  for (const [need, id] of GIFT_ACHIEVEMENT_STEPS) if (total >= need) unlockAchievement(id);
+  return total;
 };
 
 // ---------- 致谢名单 ----------

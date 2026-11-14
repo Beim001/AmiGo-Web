@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Wrench, X, CircleDollarSign, FastForward, Baby, Cake, Square, Trophy } from 'lucide-react';
+import { Wrench, X, CircleDollarSign, FastForward, Baby, Cake, Square, Trophy, Gift } from 'lucide-react';
+import { GIFTS, GIFT_QUALITY_STYLE } from '../lib/gifts';
 
 // 开发测试工具：仅在 `npm run dev` 下由 App 渲染（import.meta.env.DEV），生产构建中不存在。
-// 悬浮在所有界面之上：调整现金、一键快进月份、编辑年龄、新增子嗣。
+// 悬浮在所有界面之上：调整现金、一键快进月份、编辑年龄、新增子嗣、发放礼物、成就测试。
+// 约定：新增需要手动测试的功能时，同步在这里加测试入口。
 
 interface DevToolsPanelProps {
   coins: number;
@@ -23,6 +25,17 @@ interface DevToolsPanelProps {
   /** 立即在本月开办一场拍卖会 */
   onOpenAuctionNow: () => void;
   onClearAchievements: () => void;
+  /** 礼物背包件数 */
+  giftTotal: number;
+  /** 累计赠礼次数（成就「兄友弟恭」「手有余香」） */
+  giftsGiven: number;
+  onAddGifts: (ids: string[]) => void;
+  onClearGifts: () => void;
+  onAddGiftsGiven: (count: number) => void;
+  /** 不在职时本月父母会给的零花（含明细） */
+  allowancePreview: string;
+  /** 把在世父母的好感度设为指定值（测试零花的 30% 门槛） */
+  onSetParentAffinity: (value: number) => void;
 }
 
 const QUICK_ADD = [10_000, 100_000, 1_000_000];
@@ -34,7 +47,7 @@ const MAX_FAST_FORWARD_MONTHS = 1200;
 
 const clampCoins = (value: number) => Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(value)));
 
-type Tab = 'money' | 'time' | 'age' | 'child' | 'achievement';
+type Tab = 'money' | 'time' | 'age' | 'child' | 'gift' | 'achievement';
 
 export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
   coins,
@@ -52,6 +65,13 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
   onUnlockAllAchievements,
   onOpenAuctionNow,
   onClearAchievements,
+  giftTotal,
+  giftsGiven,
+  onAddGifts,
+  onClearGifts,
+  onAddGiftsGiven,
+  allowancePreview,
+  onSetParentAffinity,
 }) => {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('money');
@@ -106,12 +126,13 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
         </button>
       </div>
 
-      <div className="grid grid-cols-5 gap-1 mb-2">
+      <div className="grid grid-cols-6 gap-1 mb-2">
         {([
           ['money', '金钱', CircleDollarSign],
           ['time', '快进', FastForward],
           ['age', '年龄', Cake],
-          ['child', '子嗣', Baby],
+          ['child', '家人', Baby],
+          ['gift', '礼物', Gift],
           ['achievement', '成就', Trophy],
         ] as const).map(([id, text, Icon]) => (
           <button
@@ -260,6 +281,48 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
             </button>
           </div>
           <div className="text-[9px] text-gray-500 font-bold mt-1.5">测试用：忽略婚姻、年龄与 6 人上限。想测试传承，可新增后再快进 16 年以上。</div>
+          <div className={`${label} mt-2`}>零花（不在职的月份由父母给）：{allowancePreview}</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button disabled={!isRegistered} onClick={() => onSetParentAffinity(20)} className={btn}>
+              父母好感 20%
+            </button>
+            <button disabled={!isRegistered} onClick={() => onSetParentAffinity(100)} className={btn}>
+              父母好感 100%
+            </button>
+          </div>
+          <div className="text-[9px] text-gray-500 font-bold mt-1.5">好感 ≤30% 的父母不给零花；在职（含童工）时改发俸禄。</div>
+        </>
+      )}
+
+      {tab === 'gift' && (
+        <>
+          <div className={label}>背包 {giftTotal} 件 · 点击添加 1 件（宝箱每抽 30% 出礼物）</div>
+          <div className="grid grid-cols-3 gap-1">
+            {GIFTS.map((g) => (
+              <button key={g.id} onClick={() => onAddGifts([g.id])} title={`${g.name}（${g.quality}）`} className={`${btn} truncate px-1`}>
+                <span className={`px-0.5 rounded mr-0.5 ${GIFT_QUALITY_STYLE[g.quality]}`}>{g.quality[0]}</span>
+                {g.name}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-1.5 mt-1.5">
+            <button onClick={() => onAddGifts(GIFTS.flatMap((g) => Array(5).fill(g.id)))} className={btn}>
+              每种各 +5
+            </button>
+            <button disabled={giftTotal === 0} onClick={onClearGifts} className={btn}>
+              清空背包
+            </button>
+          </div>
+          <div className={`${label} mt-2`}>累计赠礼 {giftsGiven} 次（10 次「兄友弟恭」、100 次「手有余香」）</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button onClick={() => onAddGiftsGiven(9)} className={btn}>
+              赠礼次数 +9
+            </button>
+            <button onClick={() => onAddGiftsGiven(90)} className={btn}>
+              赠礼次数 +90
+            </button>
+          </div>
+          <div className="text-[9px] text-gray-500 font-bold mt-1.5">在家族页点开家人即可赠送礼物；清空全部成就时赠礼次数也会归零。</div>
         </>
       )}
 
