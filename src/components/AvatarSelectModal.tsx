@@ -1,6 +1,5 @@
 import React from 'react';
 import { X, Check, Camera, User, Sparkles } from 'lucide-react';
-import { FirebaseUser } from '../firebase';
 import type { AppUser } from '../lib/bilibiliToy';
 import { CartoonCharacter } from './RoleTab';
 
@@ -9,7 +8,7 @@ interface AvatarSelectModalProps {
   onClose: () => void;
   avatarSource: string; // 'cartoon' | 'social' | 'preset_knight' | 'preset_mage' | 'preset_ranger' | 'preset_artisan'
   onSelectAvatar: (source: string) => void;
-  authUser: FirebaseUser | AppUser | null;
+  authUser: AppUser | null;
   bilibiliAvatar: string | null;
   equippedClothing: string;
 }

@@ -1,6 +1,6 @@
 # AmiGO Lite · 阿米诺斯文明人生模拟器
 
-> 基于 **React 19 + TypeScript + Vite + Tailwind CSS v4** 构建的 19 世纪架空工业帝国（卡罗尼亚帝国 / 阿米诺斯）人生模拟 Web 应用，集成 **Firebase Authentication** 账号体系、**Bilibili Toy SDK** 排行榜/资料同步能力以及本地多模块经济与公民身份模拟系统。
+> 基于 **React 19 + TypeScript + Vite + Tailwind CSS v4** 构建的 19 世纪架空工业帝国（卡罗尼亚帝国 / 阿米诺斯）人生模拟 Web 应用，使用 **Cloudflare Workers + D1** 自建账号体系与云端存档（面向中国大陆玩家，不依赖 Firebase / Google 服务）、**Bilibili Toy SDK** 排行榜/资料同步能力以及本地多模块经济与公民身份模拟系统。
 
 ---
 
@@ -9,15 +9,21 @@
 - **前端框架**：React 19、TypeScript 5.8、Vite 6
 - **样式与动效**：Tailwind CSS v4 (`@tailwindcss/vite`)、`motion`、`lucide-react`
 - **数据可视化**：`recharts`（个人资产全景饼图/占比分析）
-- **身份认证**：Firebase Auth（邮箱密码登录/注册/验证/重置密码、Google OAuth、匿名登录）
+- **账号与存档后端**：Cloudflare Workers（`worker/`，Hono 路由）+ D1 数据库；邮箱密码登录、验证邮件与找回密码（Resend 发信），已验证账号的进度同步到云端
+- **字体**：`@fontsource` 自托管（Google Fonts 在中国大陆无法访问）
 - **平台扩展**：Bilibili Toy SDK (`//s1.hdslb.com/bfs/seed/toy/app/sdk/toy-sdk.js`) 与本地 Fallback 机制
 - **本地运行**：
   ```bash
   npm install
-  npm run dev      # 启动开发服务器（端口 3000）
-  npm run lint     # TypeScript 类型检查 (tsc --noEmit)
-  npm run build    # 构建生产包
+  cp .dev.vars.example .dev.vars   # 后端本地环境变量（开发模式下邮件链接只打印到控制台）
+  npm run db:migrate:local         # 首次运行：在本地 D1 数据库建表
+  npm run build                    # 后端托管 dist/，首次启动前需构建一次
+  npm run worker:dev               # 终端 1：启动后端（端口 8787）
+  npm run dev                      # 终端 2：启动前端（端口 3000，/api 自动转发到 8787）
+  npm run lint                     # 类型检查（前端 + 后端）
   ```
+  - 不想启动后端时，可在 `.env.local` 设置 `VITE_SKIP_AUTH=true` 跳过登录（仅开发模式生效）。
+  - 部署到 Cloudflare 的步骤见 `wrangler.toml` 顶部注释（需要 Cloudflare 账号、自有域名与 Resend 发信密钥；`*.workers.dev` 在中国大陆无法访问）。
 
 ---
 
@@ -25,23 +31,31 @@
 
 ```text
 .
-├── index.html                        # HTML 入口，引入 Google Fonts 与 Bilibili Toy SDK 脚本
+├── index.html                        # HTML 入口，引入 Bilibili Toy SDK 脚本
 ├── metadata.json                     # AI Studio 应用元信息与能力声明
 ├── package.json                      # 依赖与脚本配置 (dev / build / preview / lint)
 ├── tsconfig.json                     # TypeScript 编译配置
 ├── vite.config.ts                    # Vite 配置（base: './'、React 与 Tailwind 插件）
-├── .env.example                      # 环境变量模板
+├── .env.example                      # 前端环境变量模板
+├── .dev.vars.example                 # 后端（wrangler dev）本地环境变量模板
+├── wrangler.toml                     # Cloudflare Workers 部署配置（静态资源 + D1 绑定）
+├── worker/                           # 后端：账号、邮箱验证、找回密码、云存档接口
+│   ├── migrations/0001_init.sql      # D1 建表（用户、会话、邮件令牌、存档、限流）
+│   └── src/
+│       ├── index.ts                  # /api/* 路由（Hono），其余请求交给前端静态文件
+│       └── crypto.ts                 # PBKDF2 密码哈希、随机令牌与 SHA-256
 └── src/
     ├── main.tsx                      # React 根节点挂载入口
     ├── index.css                     # 全局样式与 Tailwind CSS 引入
-    ├── firebase.ts                   # Firebase 初始化、Auth 实例与认证 API 导出
     ├── App.tsx                       # 主应用壳、全局状态管理、顶部/底部导航、商城/个人中心/多银行系统
     ├── lib/
+    │   ├── authClient.ts             # 账号服务客户端（注册/登录/验证/找回密码，错误中文提示）
+    │   ├── cloudSave.ts              # 云端存档：本地快照、首次同步、冲突处理、定时自动保存
     │   └── bilibiliToy.ts            # Bilibili Toy SDK 封装与环境变量检测/本地兜底
     ├── utils/
     │   └── sensitiveWords.ts         # 多分类敏感词库配置与昵称合规校验工具
     └── components/
-        ├── AuthScreen.tsx            # 强制登录门禁首屏（邮箱/Google/B站/游客登录与注册）
+        ├── AuthScreen.tsx            # 强制登录门禁首屏（邮箱登录/注册/找回密码/设置新密码、B站登录）
         ├── AuthModal.tsx             # 游戏内账号管理中心弹窗（绑定/切换/重置密码/退出）
         ├── EmailVerificationScreen.tsx # 邮箱注册账号未验证时的拦截与轮询验证页
         ├── AvatarSelectModal.tsx     # 头像选择弹窗（卡通角色/社交头像/预设徽章头像）
@@ -75,18 +89,20 @@
 | `handleNextMonth()` | 推进游戏时间 1 个月（跨年自动进位），发放月度基本俸禄（1,500 ₽），读取 `localStorage` 中已购房产与租住合约自动结算租金收入/支出与舒适度健康加成，并触发 Toast 提示。 |
 | `handleRegisterBirth(name)` | 办理首次出生登记：随机生成法定性别（男/女），将建档年份绑定当前 `gameYear`（初始年龄 8 岁），持久化写入 `localStorage` 并更新玩家姓名。 |
 | `handleResetLife()` | 重置当前人生：还原注册态、性别、服装、资产（现金 10,000 ₽、存款 500,000 ₽）、时间（1870.01）与健康度（100），并清空 `localStorage` 中所有角色进度与违规冻结记录。 |
-| `handleLogout()` | 调用 Firebase `signOut` 退出登录并清除本地 `amigo_active_user` 缓存，返回认证门禁页。 |
+| `handleLogout()` | 邮箱账号：先把进度同步到云端（失败则不退出），再调用退出接口、清除本地存档并刷新页面；B 站账号：仅清除本地登录缓存。 |
 | `renderAvatarContent()` | 根据 `avatarSource` 动态渲染顶部栏与个人中心的头像内容（社交平台头像 / 预设角色徽章 / 换装卡通角色 SVG）。 |
 | `TopBar` / `BottomNav` | 顶部栏展示玩家头像名片与现金入口；底部 5 栏导航切换 `角色 / 功能 / 推演 / 日志 / 家族`。 |
 | `ShopModal` / `ChestAnimation` | 服饰商城与限定宝箱抽奖界面，`handleDraw(times)` 实现单抽（含首抽免费）与十连抽逻辑及开箱动画。 |
 | `ProfileModal` | 个人中心界面，包含：<br>• `handleSaveName()`：整合敏感词校验、每月最多改名 2 次限制、政治敏感词 3 次违规触发 90 天冻结及日志留档；<br>• `handleSyncBilibiliProfile()`：调用 B 站 SDK 同步昵称头像并执行敏感词校验；<br>• `refreshRankData()` / `handleSubmitScore()`：拉取与上报排行榜数据（含本地 Mock 兜底）；<br>• `handleRedeemCdkey()`：礼包码兑换金币（如 `GIFT2026`、`666666`、`VALENTINE`）。 |
 | `BankModal` | 多银行金融系统（4 家银行开户、存取款、基金申购、信贷借还与账户流水），内部函数 `handleOpenAccount`、`handleDeposit`、`handleWithdraw`、`handleApplyLoan`、`handleRepayLoan` 和 `saveAccounts` 自动汇总各行总额同步至主界面与 `localStorage`。 |
 
-### 2. 工具库与平台适配 (`src/lib/` & `src/utils/` & `src/firebase.ts`)
+### 2. 工具库与平台适配 (`src/lib/` & `src/utils/` & `worker/`)
 
 | 文件 | 函数 / 导出符号 | 作用说明 |
 | :--- | :--- | :--- |
-| `src/firebase.ts` | `auth`, `googleProvider`, `analytics` | 初始化 Firebase 实例并导出邮箱登录、注册、验证、重置密码、Google 弹窗登录及匿名登录方法。 |
+| `src/lib/authClient.ts` | `register`, `login`, `logout`, `getMe`, `resendVerification`, `requestPasswordReset`, `resetPassword`, `translateAuthError` | 调用同域名 `/api/auth/*` 接口（Cookie 会话），并把错误代码翻译为中文提示。 |
+| `src/lib/cloudSave.ts` | `useCloudSave`, `collectSnapshot`, `applySnapshot`, `clearLocalGameData` | 已验证邮箱账号的云端存档：登录后首次同步、两边不一致时让玩家选择、每 30 秒及推进月份后自动上传。 |
+| `worker/src/index.ts` | `/api/auth/*`, `/api/save` | 注册、登录、退出、邮箱验证、找回密码、存档读写（版本号防覆盖）与限流。 |
 | `src/lib/bilibiliToy.ts` | `isRealToySdkAvailable()` | 检测当前运行环境是否挂载了 B 站 `window.toy` 原生 SDK。 |
 | `src/lib/bilibiliToy.ts` | `getBilibiliUserProfile()` | 通过 Toy SDK 获取 B 站玩家头像与昵称，不在 B 站环境时抛出明确提示。 |
 | `src/lib/bilibiliToy.ts` | `getBilibiliRankList()`, `getBilibiliMyRank()`, `submitBilibiliScore()` | 调用 Toy SDK 拉取榜单、查询个人排名与上报分数，不可用时返回默认结构供上层降级处理。 |
@@ -96,7 +112,7 @@
 
 | 组件文件 | 核心函数 / 逻辑说明 |
 | :--- | :--- |
-| `AuthScreen.tsx` / `AuthModal.tsx` | `handleLogin`、`handleRegister`、`handleGoogleSignIn`、`handleBilibiliSignIn`、`handleResetPassword`、`handleLogout`：提供完整的登录、注册、第三方授权及游客体验入口。 |
+| `AuthScreen.tsx` / `AuthModal.tsx` | `handleLogin`、`handleRegister`、`handleBilibiliSignIn`、`handleRequestReset`、`handleSetNewPassword`、`handleLogout`：邮箱登录注册、找回与重置密码、B 站登录。 |
 | `EmailVerificationScreen.tsx` | `handleCheckStatus`（刷新 `user.reload()` 检测邮箱是否已激活）、`handleResendEmail`（重发验证邮件并控制冷却）。 |
 | `AvatarSelectModal.tsx` | 展示并切换卡通换装人物、社交头像及 4 种预设职业头像（`PRESET_AVATARS`）。 |
 | `RoleTab.tsx` | `CartoonCharacter` 根据装备绘制矢量角色；依据 `isRegistered` 与 `health <= 0` 分别展示「公民档案未建档碑」「角色互动主台」或「公民纪念碑」。 |
@@ -122,8 +138,8 @@
 
 ```text
 [1. 启动与认证门禁]
-  App 加载 -> Firebase onAuthStateChanged 检测 (含 2.5s 网络超时保护)
-    ├─ 未登录 ──> AuthScreen (邮箱 / Google / B站 Toy SDK / 游客)
+  App 加载 -> 调用 /api/auth/me 检测登录状态（网络失败时使用本地缓存的登录用户，可离线游玩）
+    ├─ 未登录 ──> AuthScreen (邮箱 / B站 Toy SDK)
     ├─ 密码注册未验证邮箱 ──> EmailVerificationScreen (轮询/手动刷新验证状态)
     └─ 验证通过 ──> 进入游戏主界面 (TopBar + Tab 内容区 + BottomNav)
 
@@ -170,10 +186,11 @@
 - [x] **个人中心名片资料写死**：已完成。头衔改为显示公民身份/年龄与当前岗位；「当前主业」「持有地产」「拥有服装」读取真实状态；「毕业院校」「声望等级」「机械推演」暂无对应系统，显示「暂未开放」；移除写死的 Lv.22 角标。「特权光环」卡片（服装 9 折、推演爆伤）仍为写死展示，折扣并未生效。
 
 ### P2：后续规划
-#### 存档与账号（需与 Firebase 管理者确认）
-- [ ] **多账号存档隔离**：游戏状态存储在全局 `localStorage` Key（如 `amigo_owned_properties`、`amigo_multi_bank_accounts_v1` 等），未按 `authUser.uid` 隔离，同一浏览器切换账号会共享同一份本地存档（见 bug.md #7）。
-- [ ] **云端数据库存档**：项目目前仅使用 Firebase Authentication，尚未配置 Firestore / 云存储或 B 站 `setCloudStorage` 来跨设备保存玩家人生档案。
-- [ ] **个人中心「保存进度」按钮**：目前仅提示成功，尚未真正接入云端存档接口（依赖上一项）。
+#### 存档与账号
+- [x] **多账号存档隔离**：已完成（邮箱账号）。邮箱账号退出登录时会先同步云端再清除本地存档，同一浏览器切换账号不再共用进度；B 站账号仍为本地存档。
+- [x] **云端数据库存档**：已完成（Cloudflare Workers + D1，`worker/`、`src/lib/cloudSave.ts`）。已验证的邮箱账号登录后自动同步，两边进度不一致时让玩家选择保留哪份；每 30 秒及推进月份后自动保存。B 站账号暂未接入（Toy SDK 的身份无法在服务端校验）。
+- [x] **个人中心「保存进度」按钮**：已完成，点击即上传到云端；非邮箱账号会提示仅本机保存。
+- [ ] **上线部署**：需确定域名并在 Cloudflare 绑定；创建远程 D1 数据库并执行迁移；配置 Resend 发信域名（SPF/DKIM），实测 QQ/163 等国内邮箱能否收到验证邮件。
 
 #### 功能中心（`FunctTab`）尚未实现的入口（共 13 项）
 目前在 `src/components/FunctTab.tsx` 的 `FUNC_BENTO` 网格中已展示入口卡片，但点击尚无对应弹窗或业务处理器。**教育学府**可与现有求职系统联动，建议最先实现：

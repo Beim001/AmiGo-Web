@@ -1,0 +1,31 @@
+# Cloudflare Workers 部署配置
+# 一个 Worker 同时托管前端（dist/）和后端接口（/api/*）
+#
+# 首次部署前：
+#   1. npx wrangler login
+#   2. npx wrangler d1 create amigo-web        → 把输出的 database_id 填到下面
+#   3. npx wrangler d1 migrations apply DB --remote
+#   4. npx wrangler secret put RESEND_API_KEY  （发信密钥，不要写进本文件）
+#   5. 填写下方 APP_URL 与 MAIL_FROM（需要先确定域名），并在 Cloudflare 后台绑定自定义域名
+#      注意：*.workers.dev 默认域名在中国大陆无法访问，必须使用自有域名
+#   6. npm run deploy
+
+name = "amigo-web"
+main = "worker/src/index.ts"
+compatibility_date = "2025-06-01"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "amigo-web"
+database_id = "00000000-0000-0000-0000-000000000000" # TODO: 替换为 wrangler d1 create 输出的 ID
+migrations_dir = "worker/migrations"
+
+[vars]
+# 站点地址（邮件链接用），例如 "https://amigo.example.com"；留空时使用请求的来源地址
+APP_URL = ""
+# 发件人，例如 "AmiGO <noreply@amigo.example.com>"；与 RESEND_API_KEY 都配置后才真正发信
+MAIL_FROM = ""

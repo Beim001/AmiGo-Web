@@ -46,7 +46,7 @@
 - **修复思路**：把所有存档键集中定义成常量列表，重置时统一遍历删除。
 
 ### 5. B 站登录在匿名 Firebase 登录失败时卡在登录页
-- **状态**：✅ 已修复：`onLoginSuccess` 中直接 `setAuthUser(user)`。
+- **状态**：✅ 已修复：`onLoginSuccess` 中直接 `setAuthUser(user)`；之后已整体移除 Firebase。
 - **位置**：[src/components/AuthScreen.tsx:148-207](src/components/AuthScreen.tsx#L148-L207)、[src/App.tsx:3005-3009](src/App.tsx#L3005-L3009)
 - **原因**：`onLoginSuccess` 只设置了 `playerName`，没有调用 `setAuthUser`，进入游戏依赖 `onAuthStateChanged` 触发。匿名登录失败时这个回调不会触发，`authUser` 一直是 `null`。
 - **复现**：网络无法访问 Firebase 时用 B 站登录 → 提示成功但停留在登录页，需手动刷新（刷新后从 `amigo_active_user` 读取才进入）。
@@ -62,7 +62,7 @@
 - **修复思路**：短英文词改为整词匹配（或只匹配完整名字），把世界观用词移出政治词库。
 
 ### 7. 存档未按账号隔离
-- **状态**：⏸ 待定：需按 `uid` 给所有存档键加前缀，并处理已有存档迁移，改动面较大。
+- **状态**：✅ 已修复（邮箱账号）：退出登录时先同步云端再清除本地存档；B 站账号仍为本地存档。
 - **位置**：所有 `localStorage` 键（`amigo_*`、`aminoac_*`）
 - **原因**：键名不含 `authUser.uid`。
 - **影响**：同一浏览器切换账号后，新账号会看到上一个账号的房产、银行、股票、签证等存档。
@@ -116,6 +116,7 @@
 - **待定**：是否把违规记录也归为账号级数据、重置时保留，需要产品决定。
 
 ### 16. B 站登录用户的 UID 不稳定，会被 Firebase 匿名用户覆盖
+- **状态**：✅ 已修复：移除 Firebase 后不再有匿名登录覆盖；B 站玩家 UID 取 `toyOpenId`，缺失时用本机持久编号 `bilibili_{amigo_local_uid}`，每次登录一致。
 - **位置**：[src/App.tsx:2800-2803](src/App.tsx#L2800-L2803)（`onAuthStateChanged` 回调）、[src/components/AuthScreen.tsx:178](src/components/AuthScreen.tsx#L178)、[src/components/AuthModal.tsx:208](src/components/AuthModal.tsx#L208)、[src/App.tsx:3400](src/App.tsx#L3400)（`AuthModal` 的 `onUserChange`）
 - **原因**：B 站登录时会先匿名登录 Firebase，再组装 `AppUser`（`uid` 取 B 站 `toyOpenId`，`providerData` 标记为 `bilibili`）写入 `authUser` 和 `amigo_active_user`。但只要匿名登录成功，`onAuthStateChanged` 随后会用 Firebase 匿名用户覆盖 `authUser`；刷新页面时同样先读到 `AppUser`，又被 Firebase 回调覆盖。
 - **影响**：

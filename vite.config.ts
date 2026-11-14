@@ -13,6 +13,10 @@ export default defineConfig(() => {
       },
     },
     server: {
+      // 本地开发：/api 请求转发到 wrangler dev 启动的 Worker（npm run worker:dev）
+      proxy: {
+        '/api': 'http://127.0.0.1:8787',
+      },
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : undefined,
     },

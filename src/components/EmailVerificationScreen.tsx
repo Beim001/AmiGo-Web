@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Mail, CheckCircle2, RefreshCw, LogOut, Send, AlertTriangle, ShieldCheck } from 'lucide-react';
-import { auth, sendEmailVerification, FirebaseUser } from '../firebase';
+import { getMe, resendVerification, AuthError } from '../lib/authClient';
 import type { AppUser } from '../lib/bilibiliToy';
 
 interface Props {
-  user: FirebaseUser | AppUser;
-  onVerified: () => void;
+  user: AppUser;
+  onVerified: (user: AppUser) => void;
   onLogout: () => void;
 }
 
@@ -18,19 +18,17 @@ export const EmailVerificationScreen: React.FC<Props> = ({ user, onVerified, onL
     setChecking(true);
     setMsg(null);
     try {
-      if (auth.currentUser) {
-        await auth.currentUser.reload();
-        if (auth.currentUser.emailVerified) {
-          setMsg({ type: 'success', text: '🎉 邮箱已成功验证！正在进入游戏...' });
-          setTimeout(() => {
-            onVerified();
-          }, 800);
-        } else {
-          setMsg({ type: 'error', text: '❌ 尚未检测到邮箱验证记录。请确认您已在接收到的邮件中点击了验证链接。' });
-        }
+      const latest = await getMe();
+      if (!latest) {
+        setMsg({ type: 'error', text: '登录已失效，请重新登录' });
+      } else if (latest.emailVerified) {
+        setMsg({ type: 'success', text: '🎉 邮箱已成功验证！正在进入游戏...' });
+        setTimeout(() => onVerified(latest), 800);
+      } else {
+        setMsg({ type: 'error', text: '❌ 尚未检测到邮箱验证记录。请确认您已在接收到的邮件中点击了验证链接。' });
       }
-    } catch (err: any) {
-      setMsg({ type: 'error', text: '检查状态失败，请刷新页面重试' });
+    } catch {
+      setMsg({ type: 'error', text: '检查状态失败，请检查网络后重试' });
     } finally {
       setChecking(false);
     }
@@ -40,15 +38,17 @@ export const EmailVerificationScreen: React.FC<Props> = ({ user, onVerified, onL
     setResending(true);
     setMsg(null);
     try {
-      if (auth.currentUser) {
-        await sendEmailVerification(auth.currentUser);
+      const res = await resendVerification();
+      if (res.alreadyVerified) {
+        setMsg({ type: 'success', text: '该邮箱已经验证过了，请点击「我已完成验证」进入游戏。' });
+      } else {
         setMsg({ type: 'info', text: '✉️ 新的验证邮件已成功发送，请查收您的邮箱（含垃圾邮件箱）。' });
       }
-    } catch (err: any) {
-      if (err?.code === 'auth/too-many-requests') {
+    } catch (err) {
+      if (err instanceof AuthError && err.code === 'TOO_MANY_REQUESTS') {
         setMsg({ type: 'error', text: '⚠️ 发送请求过于频繁，请稍等几分钟后再试。' });
       } else {
-        setMsg({ type: 'error', text: '发送验证邮件失败：' + (err.message || '未知错误') });
+        setMsg({ type: 'error', text: '发送验证邮件失败，请检查网络后重试' });
       }
     } finally {
       setResending(false);

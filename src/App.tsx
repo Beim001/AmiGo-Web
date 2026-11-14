@@ -28,7 +28,8 @@ import { AuthScreen } from './components/AuthScreen';
 import { EmailVerificationScreen } from './components/EmailVerificationScreen';
 import { DevToolsPanel } from './components/DevToolsPanel';
 import { drawGacha, INITIAL_PITY, PITY_RARE, PITY_LIMITED, RARITY_LABEL, PityState, Rarity } from './lib/gacha';
-import { auth, onAuthStateChanged, signOut, FirebaseUser } from './firebase';
+import { getMe, logout as logoutRequest, cacheUser, readCachedUser, isPasswordUser } from './lib/authClient';
+import { useCloudSave, clearLocalGameData } from './lib/cloudSave';
 import {
   getBilibiliUserProfile,
   getBilibiliRankList,
@@ -122,7 +123,7 @@ const TopBar = ({
   onOpenBank?: () => void,
   onOpenWealthChart?: () => void,
   onOpenAuth?: () => void,
-  authUser?: FirebaseUser | AppUser | null,
+  authUser?: AppUser | null,
   avatarContent?: React.ReactNode,
 }) => (
   <div className="flex justify-between items-center bg-[#252632] px-3 py-2.5 border-b-2 border-black z-20 shadow-md">
@@ -649,9 +650,11 @@ interface ProfileModalProps {
   setCoins: React.Dispatch<React.SetStateAction<number>>;
   equippedClothing: string;
   onOpenAuth?: () => void;
-  onLogout?: () => void;
+  onLogout?: () => Promise<boolean>;
   onResetLife?: () => void;
-  authUser?: FirebaseUser | AppUser | null;
+  /** 云端存档：返回 true 表示已保存；undefined 表示当前账号不支持云存档 */
+  onSaveProgress?: () => Promise<boolean>;
+  authUser?: AppUser | null;
   avatarSource: string;
   setAvatarSource: (source: string) => void;
   bilibiliAvatar: string | null;
@@ -674,6 +677,7 @@ const ProfileModal = ({
   onOpenAuth,
   onLogout,
   onResetLife,
+  onSaveProgress,
   authUser,
   avatarSource,
   setAvatarSource,
@@ -1724,7 +1728,13 @@ const ProfileModal = ({
               </h3>
               <div className="flex gap-2">
                 <button
-                  onClick={() => showToast('云端存档同步成功！已保存至最新进度')}
+                  onClick={async () => {
+                    if (!onSaveProgress) {
+                      showToast('当前账号仅保存在本机，登录邮箱账号后可使用云端存档');
+                      return;
+                    }
+                    showToast((await onSaveProgress()) ? '☁️ 云端存档同步成功！已保存至最新进度' : '⚠️ 云端存档同步失败，请检查网络后重试');
+                  }}
                   className="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black py-2.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer active:translate-y-0.5 flex items-center justify-center gap-1.5"
                 >
                   <Save size={14} /> 保存进度
@@ -1771,11 +1781,13 @@ const ProfileModal = ({
                       <span className="text-xs text-red-300 font-bold">确认退出当前账号吗？</span>
                       <div className="flex items-center gap-1.5">
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             setConfirmLogout(false);
-                            onLogout();
-                            onClose();
-                            showToast('已安全退出登录');
+                            if (await onLogout()) {
+                              onClose();
+                            } else {
+                              showToast('⚠️ 无法同步存档到云端，请检查网络后再退出');
+                            }
                           }}
                           className="bg-red-600 hover:bg-red-500 text-white text-xs font-black px-3 py-1.5 rounded-lg border border-black cursor-pointer shadow-[0_1px_0_#000] active:scale-95"
                         >
@@ -2806,70 +2818,57 @@ export default function App() {
     }
   });
 
-  const [authUser, setAuthUser] = useState<FirebaseUser | AppUser | null>(() => {
-    if (DEV_SKIP_AUTH) return DEV_MOCK_USER;
-    try {
-      const stored = localStorage.getItem('amigo_active_user');
-      if (stored) return JSON.parse(stored);
-    } catch (e) {}
-    return null;
-  });
+  const [authUser, setAuthUser] = useState<AppUser | null>(() => (DEV_SKIP_AUTH ? DEV_MOCK_USER : readCachedUser()));
   const [authLoading, setAuthLoading] = useState(!DEV_SKIP_AUTH);
-  const [playerName, setPlayerName] = useState(() => {
-    try {
-      const stored = localStorage.getItem('amigo_active_user');
-      if (stored) {
-        const u = JSON.parse(stored);
-        if (u.displayName) return u.displayName;
-      }
-    } catch (e) {}
-    return 'AmiGo·玩家';
-  });
+  const [playerName, setPlayerName] = useState(() => readCachedUser()?.displayName || 'AmiGo·玩家');
 
+  const applySignedInUser = (user: AppUser) => {
+    setAuthUser(user);
+    cacheUser(user);
+    if (user.displayName || user.email) {
+      setPlayerName(user.displayName || user.email?.split('@')[0] || 'AmiGo·玩家');
+    }
+  };
+
+  // 启动时向账号服务确认登录状态
   React.useEffect(() => {
     if (DEV_SKIP_AUTH) {
-      console.info('[DEV] VITE_SKIP_AUTH=true，已跳过 Firebase 登录，使用本地测试账号');
+      console.info('[DEV] VITE_SKIP_AUTH=true，已跳过登录，使用本地测试账号');
       return;
     }
-    let resolved = false;
-
-    // Protection timer: ensure authLoading is set to false within 2.5s (GFW network protection)
-    const timer = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        setAuthLoading(false);
-      }
-    }, 2500);
-
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setAuthUser(user);
-        if (user.displayName || user.email) {
-          setPlayerName(user.displayName || user.email?.split('@')[0] || 'AmiGo·玩家');
+    getMe()
+      .then((user) => {
+        if (user) {
+          applySignedInUser(user);
+        } else if (isPasswordUser(readCachedUser())) {
+          // 邮箱账号的登录已失效；B 站账号不经过账号服务，保留本地登录状态
+          setAuthUser(null);
+          cacheUser(null);
         }
-      }
-      if (!resolved) {
-        resolved = true;
-        setAuthLoading(false);
-      }
-    });
-
-    return () => {
-      clearTimeout(timer);
-      unsub();
-    };
+      })
+      .catch(() => {
+        // 网络不可用：保留本地缓存的登录用户，允许离线游玩
+      })
+      .finally(() => setAuthLoading(false));
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (e) {
-      console.error(e);
+  /** 退出登录。邮箱账号会先把进度同步到云端，失败则不退出并返回 false */
+  const handleLogout = async (): Promise<boolean> => {
+    if (isPasswordUser(authUser)) {
+      if (cloud.enabled && !(await cloud.saveNow())) return false;
+      try {
+        await logoutRequest();
+      } catch (e) {
+        console.error(e);
+      }
+      // 清除本地进度，避免同一浏览器切换账号时共用存档
+      clearLocalGameData();
+      window.location.reload();
+      return true;
     }
     setAuthUser(null);
-    try {
-      localStorage.removeItem('amigo_active_user');
-    } catch (e) {}
+    cacheUser(null);
+    return true;
   };
 
   const [coins, setCoins] = useState<number>(() => loadStored('amigo_coins', 1047650));
@@ -2978,6 +2977,8 @@ export default function App() {
       }
     }
     showToast(`🗓️ 已步入 ${nextY}.${mStr}！月度基本俸禄 +${monthlyStipend} ₽${extraMsg}`);
+    // 等本月结算写入本地存档后再同步到云端
+    setTimeout(() => void cloud.saveNow(), 1500);
   };
 
   const currentAge = isRegistered ? 8 + Math.max(0, gameYear - birthRegisteredYear) : 8;
@@ -3026,7 +3027,7 @@ export default function App() {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith('amigo_') || key.startsWith('aminoac_')) && !KEYS_KEPT_ON_RESET.has(key)) {
+        if (key && (key.startsWith('amigo_') || key.startsWith('aminoac_')) && !KEYS_KEPT_ON_RESET.has(key) && !key.startsWith('amigo_cloud_')) {
           keysToRemove.push(key);
         }
       }
@@ -3108,6 +3109,9 @@ export default function App() {
   const [family, setFamily] = useState<FamilyState>(() => loadStored('amigo_family', INITIAL_FAMILY_STATE));
   React.useEffect(() => saveStored('amigo_family', family), [family]);
 
+  // 云端存档（仅已验证的邮箱账号）
+  const cloud = useCloudSave(authUser);
+
   const playerOccupation = (() => {
     const id = readCurrentJobId();
     const job = id ? JOB_POSITIONS.find((j) => j.id === id) : null;
@@ -3120,7 +3124,7 @@ export default function App() {
       <div className="h-[100dvh] w-full bg-[#0d0e15] flex justify-center items-center text-white font-sans">
         <div className="flex flex-col items-center gap-3">
           <RefreshCw size={28} className="animate-spin text-amber-400" />
-          <span className="text-xs font-black text-gray-300">正在与 Firebase 身份验证中心建立连接...</span>
+          <span className="text-xs font-black text-gray-300">正在连接 AmiGO 账号服务...</span>
         </div>
       </div>
     );
@@ -3130,13 +3134,7 @@ export default function App() {
   if (!authUser) {
     return (
       <AuthScreen
-        onLoginSuccess={(user) => {
-          // 直接写入登录态：B 站登录在匿名 Firebase 登录失败时不会触发 onAuthStateChanged
-          if (user) setAuthUser(user);
-          if (user && (user.displayName || user.email)) {
-            setPlayerName(user.displayName || user.email?.split('@')[0] || 'AmiGo·玩家');
-          }
-        }}
+        onLoginSuccess={applySignedInUser}
       />
     );
   }
@@ -3149,12 +3147,8 @@ export default function App() {
     return (
       <EmailVerificationScreen
         user={authUser}
-        onVerified={() => {
-          if (auth.currentUser) {
-            setAuthUser({ ...auth.currentUser });
-          }
-        }}
-        onLogout={handleLogout}
+        onVerified={applySignedInUser}
+        onLogout={() => void handleLogout()}
       />
     );
   }
@@ -3384,6 +3378,7 @@ export default function App() {
              }}
              onLogout={handleLogout}
              onResetLife={handleResetLife}
+             onSaveProgress={cloud.enabled ? cloud.saveNow : undefined}
              authUser={authUser}
              avatarSource={avatarSource}
              setAvatarSource={setAvatarSource}
@@ -3504,6 +3499,37 @@ export default function App() {
            />
          )}
 
+         {/* 云端存档冲突：本机与云端都有不同的进度 */}
+         {cloud.conflict && (
+           <div className="fixed inset-0 z-[120] bg-black/80 flex items-center justify-center p-4">
+             <div className="bg-[#2d2f3d] border-4 border-black rounded-2xl p-4 max-w-sm w-full shadow-[0_8px_0_#000] space-y-3 text-white">
+               <h3 className="font-black text-base text-center">☁️ 发现两份不同的存档</h3>
+               <p className="text-xs text-gray-300 font-bold leading-relaxed text-center">
+                 这台设备上的进度与云端存档不一致（可能在其他设备上玩过）。请选择要保留哪一份，另一份将被覆盖。
+               </p>
+               {cloud.conflict.remoteUpdatedAt && (
+                 <p className="text-[11px] text-gray-400 font-bold text-center">
+                   云端存档保存于 {new Date(cloud.conflict.remoteUpdatedAt).toLocaleString('zh-CN')}
+                 </p>
+               )}
+               <div className="grid grid-cols-2 gap-2">
+                 <button
+                   onClick={() => void cloud.resolveConflict('cloud')}
+                   className="bg-sky-400 hover:bg-sky-300 text-black text-xs font-black py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
+                 >
+                   使用云端存档
+                 </button>
+                 <button
+                   onClick={() => void cloud.resolveConflict('local')}
+                   className="bg-amber-400 hover:bg-amber-300 text-black text-xs font-black py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
+                 >
+                   使用本机存档
+                 </button>
+               </div>
+             </div>
+           </div>
+         )}
+
          {/* 开发测试工具：仅 npm run dev 下渲染，生产构建中被移除 */}
          {import.meta.env.DEV && <DevToolsPanel coins={coins} setCoins={setCoins} />}
 
@@ -3511,8 +3537,12 @@ export default function App() {
          {showAuthModal && (
            <AuthModal
              onClose={() => setShowAuthModal(false)}
+             currentUser={authUser}
              onUserChange={(user) => setAuthUser(user)}
              setPlayerName={setPlayerName}
+             onLogout={async () => {
+               if (!(await handleLogout())) showToast('⚠️ 无法同步存档到云端，请检查网络后再退出');
+             }}
            />
          )}
       </div>
