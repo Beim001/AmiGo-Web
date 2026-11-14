@@ -87,5 +87,15 @@ export const unlockAllForTesting = (now: number = Date.now()): number => {
 export const clearAchievementsForTesting = () => {
   try {
     localStorage.removeItem(ACHIEVEMENTS_KEY);
+    localStorage.removeItem(CREDITS_SEEN_KEY);
   } catch {}
 };
+
+// ---------- 致谢名单 ----------
+
+/** 是否已自动播放过致谢名单（只自动播放一次，之后在成就页重播） */
+export const CREDITS_SEEN_KEY = 'amigo_credits_seen';
+/** 服务器返回的全成就名次缓存 */
+export const CREDITS_RANK_KEY = 'amigo_credits_rank';
+
+export const hasAllAchievements = (record: AchievementRecord = readAchievements()) => ACHIEVEMENTS.every((a) => !!record[a.id]);

@@ -16,7 +16,9 @@ import { MarriageModal } from './components/MarriageModal';
 import { FamilyState, INITIAL_FAMILY_STATE, promoteFamily, getHeirlooms, addHeirloom, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
 import { randomTraits, PLAYER_TRAITS_KEY, diseaseTraitMultiplier, decayReduction, salaryMultiplier, depositInterestMultiplier, traitNames, traitById } from './lib/traits';
 import { REPUTATION_KEY, REP, HIGH_SALARY, clampReputation, reputationLevel, CHARITY_KEY, CHARITY_UNIT, charityRemaining } from './lib/reputation';
-import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, formatRealTime, unlockAllForTesting, clearAchievementsForTesting } from './lib/achievements';
+import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, formatRealTime, unlockAllForTesting, clearAchievementsForTesting, hasAllAchievements, CREDITS_SEEN_KEY, CREDITS_RANK_KEY } from './lib/achievements';
+import { CreditsRoll } from './components/CreditsRoll';
+import { claimCompletionRank } from './lib/authClient';
 import { GUARDIANSHIP_KEY, Guardianship, takeCustody, monthlyGuardianship, ORPHANAGE_NAME, ADULT_AGE as GUARDIAN_ADULT_AGE } from './lib/guardianship';
 import { rankFamilies, familyNetWorth } from './lib/familyRank';
 import { rollClass, generateOrigin, classById, readChildJob, CHILD_JOB_KEY, CHILD_LABOR_MAX_AGE, checkPromotion } from './lib/lineage';
@@ -95,7 +97,7 @@ const saveStored = (key: string, value: unknown) => {
 };
 
 // 重置人生时保留的存档键（账号级数据，不属于某一段人生）
-const KEYS_KEPT_ON_RESET = new Set(['amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements']);
+const KEYS_KEPT_ON_RESET = new Set(['amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements', 'amigo_credits_seen', 'amigo_credits_rank']);
 
 
 
@@ -698,6 +700,8 @@ interface ProfileModalProps {
   originLabel?: string;
   isRegistered: boolean;
   age: number;
+  /** 播放致谢名单（集齐全部成就后可用） */
+  onPlayCredits: () => void;
 }
 
 const ProfileModal = ({
@@ -727,6 +731,7 @@ const ProfileModal = ({
   onDonate,
   isRegistered,
   age,
+  onPlayCredits,
 }: ProfileModalProps) => {
   // 名片资料：读取真实游戏状态（岗位、房产、服装）
   const currentJob = (() => {
@@ -1684,7 +1689,16 @@ const ProfileModal = ({
             <div className="space-y-3">
               <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3 shadow-[0_3px_0_#000] flex items-center justify-between">
                 <span className="text-white font-black text-xs">已达成 {done} / {ACHIEVEMENTS.length}</span>
-                <span className="text-[10px] text-gray-400 font-bold">{done === ACHIEVEMENTS.length ? '🎉 致谢名单即将开放' : '集齐全部成就将解锁致谢名单'}</span>
+                {done === ACHIEVEMENTS.length ? (
+                  <button
+                    onClick={onPlayCredits}
+                    className="bg-yellow-400 hover:bg-yellow-300 text-black text-[10px] font-black px-2.5 py-1 rounded-lg border-2 border-black cursor-pointer"
+                  >
+                    🎬 播放致谢名单
+                  </button>
+                ) : (
+                  <span className="text-[10px] text-gray-400 font-bold">集齐全部成就将解锁致谢名单</span>
+                )}
               </div>
               {ACHIEVEMENTS.map((ach) => {
                 const at = record[ach.id];
@@ -2742,6 +2756,38 @@ export default function App() {
   const [showMarriage, setShowMarriage] = useState(false);
   const [showAuction, setShowAuction] = useState(false);
 
+  // 致谢名单：名次来自服务器（第几个集齐全部成就的账号）；未登录或请求失败时显示不带名次的祝贺语
+  const [showCredits, setShowCredits] = useState(false);
+  const [creditsLoading, setCreditsLoading] = useState(false);
+  const [creditsRank, setCreditsRank] = useState<number | null>(() => {
+    const n = Number(localStorage.getItem(CREDITS_RANK_KEY));
+    return Number.isInteger(n) && n > 0 ? n : null;
+  });
+  const playCredits = () => {
+    setShowCredits(true);
+    try {
+      localStorage.setItem(CREDITS_SEEN_KEY, 'true');
+    } catch {}
+    const cached = Number(localStorage.getItem(CREDITS_RANK_KEY));
+    if (Number.isInteger(cached) && cached > 0) {
+      setCreditsRank(cached);
+      return;
+    }
+    setCreditsLoading(true);
+    claimCompletionRank()
+      .then((rank) => {
+        setCreditsRank(rank);
+        try {
+          localStorage.setItem(CREDITS_RANK_KEY, String(rank));
+        } catch {}
+      })
+      .catch(() => setCreditsRank(null))
+      .finally(() => setCreditsLoading(false));
+  };
+  const autoPlayCreditsIfComplete = () => {
+    if (hasAllAchievements() && localStorage.getItem(CREDITS_SEEN_KEY) !== 'true') playCredits();
+  };
+
   const [isRegistered, setIsRegistered] = useState<boolean>(() => {
     try {
       return localStorage.getItem('amigo_is_registered') === 'true';
@@ -3507,12 +3553,14 @@ export default function App() {
     return currentAge < 18 ? '学堂学生' : '待业';
   })();
 
-  // 成就：解锁时弹出提示；状态类成就随数据变化自动检查
+  // 成就：解锁时弹出提示；集齐全部成就时自动播放一次致谢名单；状态类成就随数据变化自动检查
   React.useEffect(() => {
     const onUnlock = (e: Event) => {
       const def = ACHIEVEMENTS.find((a) => a.id === (e as CustomEvent).detail);
       if (def) showToast(`🏆 成就达成：${def.title} —— ${def.desc}`);
+      autoPlayCreditsIfComplete();
     };
+    autoPlayCreditsIfComplete();
     window.addEventListener(ACHIEVEMENT_EVENT, onUnlock);
     return () => window.removeEventListener(ACHIEVEMENT_EVENT, onUnlock);
   }, []);
@@ -3871,6 +3919,7 @@ export default function App() {
              reputation={reputation}
              playerTraits={playerTraits}
              onDonate={handleDonate}
+             onPlayCredits={() => playCredits()}
            />
          )}
 
@@ -3984,6 +4033,9 @@ export default function App() {
            />
          )}
 
+         {/* 致谢名单：集齐全部成就后播放 */}
+         {showCredits && <CreditsRoll rank={creditsRank} loading={creditsLoading} onClose={() => setShowCredits(false)} />}
+
          {/* 拍卖会 */}
          {showAuction && auction && (
            <AuctionModal
@@ -4089,6 +4141,7 @@ export default function App() {
              onUnlockAllAchievements={() => {
                const added = unlockAllForTesting();
                showToast(`🛠️ 已解锁全部 ${ACHIEVEMENTS.length} 项成就（新增 ${added} 项）`);
+               autoPlayCreditsIfComplete();
              }}
              onOpenAuctionNow={() => {
                const next = generateAuction(gameYear, gameMonth, getHeirlooms(family).map((h) => h.id), isInvited(familyClass.id, reputation));
@@ -4101,6 +4154,7 @@ export default function App() {
              }}
              onClearAchievements={() => {
                clearAchievementsForTesting();
+               setShowCredits(false);
                showToast('🛠️ 已清空全部成就');
              }}
            />

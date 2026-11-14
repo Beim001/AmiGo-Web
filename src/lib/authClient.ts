@@ -115,6 +115,15 @@ export const resetPassword = async (token: string, password: string): Promise<vo
   await post('/auth/reset-password', { token, password });
 };
 
+// ---------- 全成就名次 ----------
+
+/** 登记当前账号已集齐全部成就，返回名次（第几个集齐的玩家）；同一账号重复调用返回同一名次 */
+export const claimCompletionRank = async (): Promise<number> => {
+  const data = await post<{ rank: number | null }>('/achievements/complete');
+  if (typeof data.rank !== 'number') throw new AuthError('NO_RANK', 500);
+  return data.rank;
+};
+
 // ---------- 错误文案 ----------
 
 export const translateAuthError = (err: unknown): string => {

@@ -338,6 +338,38 @@ app.put('/api/save', async (c) => {
   return c.json({ ok: true, version: baseVersion + 1, updatedAt: now });
 });
 
+// ---------- 全成就名次（致谢名单） ----------
+
+/**
+ * 记录当前账号集齐全部成就，返回名次（第几个集齐的玩家）。
+ * 同一账号重复调用返回同一个名次。成就数据保存在客户端，服务器无法核验是否真的集齐。
+ */
+app.post('/api/achievements/complete', async (c) => {
+  const { user, error } = await requireVerifiedUser(c);
+  if (error) return error;
+  const findRank = () =>
+    c.env.DB.prepare('SELECT rank FROM completions WHERE user_id = ?').bind(user.id).first<{ rank: number }>();
+  const existing = await findRank();
+  if (existing) return c.json({ ok: true, rank: existing.rank });
+
+  // 并发时两个请求可能算出同一个名次，rank 的唯一约束会让其中一个失败，失败后重试。
+  // 「WHERE true」用于消除 SQLite 中 INSERT ... SELECT 与 ON CONFLICT 的语法歧义。
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await c.env.DB.prepare(
+        'INSERT INTO completions (user_id, rank, completed_at) SELECT ?, COALESCE(MAX(rank), 0) + 1, ? FROM completions WHERE true ON CONFLICT(user_id) DO NOTHING',
+      )
+        .bind(user.id, Date.now())
+        .run();
+      break;
+    } catch (err) {
+      if (attempt >= 4 || !/UNIQUE constraint failed: completions\.rank/.test(String(err))) throw err;
+    }
+  }
+  const row = await findRank();
+  return c.json({ ok: true, rank: row?.rank ?? null });
+});
+
 // 未知接口返回 JSON 404；其余请求交给前端静态文件
 app.all('/api/*', (c) => fail(c, 404, 'NOT_FOUND'));
 app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
