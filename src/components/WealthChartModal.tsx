@@ -101,10 +101,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
     const savedStocks = localStorage.getItem('amigo_stocks');
     const savedHoldings = localStorage.getItem('amigo_stock_holdings');
     const stocks = savedStocks ? JSON.parse(savedStocks) : null;
-    const holdings = savedHoldings ? JSON.parse(savedHoldings) : [
-      { stockId: 's1', shares: 500, avgCost: 80.0 },
-      { stockId: 's3', shares: 200, avgCost: 205.0 }
-    ];
+    const holdings = savedHoldings ? JSON.parse(savedHoldings) : [];
     if (Array.isArray(holdings)) {
       holdingStockCount = holdings.length;
       holdings.forEach((h: any) => {

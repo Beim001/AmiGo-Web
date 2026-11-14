@@ -30,7 +30,7 @@ export interface BirthModalProps {
   setCoins?: React.Dispatch<React.SetStateAction<number>>;
   health?: number;
   setHealth?: React.Dispatch<React.SetStateAction<number>>;
-  onRegisterBirth: (name: string) => { gender: string; age: number };
+  onRegisterBirth: (name: string) => { gender: string; age: number; classLabel?: string; surname?: string };
   onOpenGender?: () => void;
   onOpenHousing?: () => void;
   onOpenVisa?: () => void;
@@ -130,7 +130,7 @@ export const BirthModal: React.FC<BirthModalProps> = ({
     // 首次登记完全随机确定性别
     if (!isRegistered) {
       const regRes = onRegisterBirth(trimmed);
-      showToast(`已完成出生登记，性别【${regRes.gender}】，初始年龄 8 岁`);
+      showToast(`已完成出生登记：${regRes.classLabel ?? ''}之家 · ${regRes.surname ?? ''}家族，性别【${regRes.gender}】，初始年龄 8 岁`);
     } else {
       showToast(`已更新公民姓名【${trimmed}】`);
     }

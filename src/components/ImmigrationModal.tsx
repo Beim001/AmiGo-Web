@@ -1,3 +1,4 @@
+import { addLifeLog } from '../lib/lifeLog';
 import React, { useState } from 'react';
 import {
   ChevronLeft,
@@ -391,6 +392,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
     saveResidencies(updated);
 
     setSelectedProgram(null);
+    addLifeLog('出行', `获得${prog.country}永久居留`, `${prog.cardName}，卡号 ${randomCardNo}。`);
     showToast(`🎉 恭喜！已获发【${prog.country}】永久居留绿卡！扣除规费 ${prog.cost.toLocaleString()} ₽`);
     setActiveSubTab('dossier');
   };
@@ -418,6 +420,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
 
     saveResidencies(updated);
     setOathProgram(null);
+    addLifeLog('大事', `入籍${res.country}`, `完成宣誓，正式加入${res.country}国籍。`);
     showToast(`👑 宣誓完成！正式加入【${res.country}】国籍，尊享全套主权国民政治与经济特权！`);
   };
 

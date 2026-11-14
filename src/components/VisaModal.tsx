@@ -1,3 +1,4 @@
+import { addLifeLog } from '../lib/lifeLog';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   ChevronLeft,
@@ -563,6 +564,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
       tier: 'Standard',
     };
     setPassport(newPassport);
+    addLifeLog('出行', '申领护照', `护照编号 ${newPassport.passportNumber}。`);
     showToast('阿米诺斯帝国出入境护照签发成功！已加盖皇家出入境公署防伪钢印', 'success');
   };
 
@@ -638,6 +640,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
       }
 
       // 打开仪式感签证公证书弹窗
+      addLifeLog('出行', `获得${visa.country}签证`, `${visa.visaType}，有效期至 ${expireY}.${expireM}。`);
       setAwardedVisaCertificate({ visa, issuedVisa: newVisa });
       showToast(`【${visa.country} · ${visa.visaType}】审核通过！已获得官方领事签证准许公证书`, 'success');
     }, 2200);
@@ -860,6 +863,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
       };
 
       setTravelLogs((prev) => [newLog, ...prev]);
+      addLifeLog('出行', `出访${issued.country}`, story);
       setIsTravelling(false);
       setTravelResultModal(newLog);
     }, 800);

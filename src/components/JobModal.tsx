@@ -1,3 +1,6 @@
+import { addLifeLog } from '../lib/lifeLog';
+import { MIN_WORK_AGE, WORK_DAYS_PER_MONTH } from '../lib/monthly';
+import { CHILD_JOBS, CHILD_JOB_KEY, readChildJob } from '../lib/lineage';
 import React, { useState, useMemo } from 'react';
 import {
   ChevronLeft,
@@ -36,6 +39,10 @@ export interface JobModalProps {
   onClose: () => void;
   coins: number;
   setCoins: React.Dispatch<React.SetStateAction<number>>;
+  /** 玩家年龄：未满 16 岁不能应聘、不发薪 */
+  age: number;
+  /** 家族阶层允许打童工（乞丐、平民家庭 8–15 岁） */
+  childLaborAllowed?: boolean;
 }
 
 export interface JobPosition {
@@ -435,26 +442,43 @@ export const getCompanyInfo = (deptName: string): CompanyInfo => {
   };
 };
 
-// 读取当前在职岗位 ID：
-// - 从未存档（新存档）→ 默认在职 'j1'（俄文通译），默认值待定见 undefined.md 第 3 题
-// - 存为空字符串 → 已离职、待业中
+// 读取当前在职岗位 ID：未存档或存为空字符串 → 待业
+// （undefined.md 第 3 题 A：新存档默认待业，年满 16 岁才能就业）
 export const CURRENT_JOB_KEY = 'amigo_current_job_id';
+export const JOB_HISTORY_KEY = 'amigo_job_history';
 export const readCurrentJobId = (): string | null => {
   try {
-    const saved = localStorage.getItem(CURRENT_JOB_KEY);
-    if (saved === null) return 'j1';
-    return saved || null;
+    return localStorage.getItem(CURRENT_JOB_KEY) || null;
   } catch (e) {
-    return 'j1';
+    return null;
   }
 };
 
-export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) => {
+/** 玩家做过的所有岗位（就业记录 + 当前岗位） */
+export const readJobHistoryIds = (): string[] => {
+  try {
+    const history = JSON.parse(localStorage.getItem(JOB_HISTORY_KEY) || '[]');
+    const current = readCurrentJobId();
+    const ids: string[] = Array.isArray(history) ? history : [];
+    return current && !ids.includes(current) ? [current, ...ids] : ids;
+  } catch (e) {
+    return [];
+  }
+};
+
+export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, age, childLaborAllowed = false }) => {
+  const [childJobId, setChildJobId] = useState<string | null>(() => readChildJob()?.id ?? null);
+  const setChildJob = (id: string | null) => {
+    setChildJobId(id);
+    try {
+      if (id) localStorage.setItem(CHILD_JOB_KEY, id);
+      else localStorage.removeItem(CHILD_JOB_KEY);
+    } catch (e) {}
+  };
   const [activeTab, setActiveTab] = useState<'hall' | 'resume'>('hall');
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('全部');
   const [sortBy, setSortBy] = useState<'default' | 'salary_desc' | 'salary_asc'>('default');
-  const [workingProgress, setWorkingProgress] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   // Screen View Detail Navigation State
@@ -466,11 +490,10 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) 
 
   const [jobHistoryIds, setJobHistoryIds] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem('amigo_job_history');
-      if (saved) return JSON.parse(saved);
-      return ['j1'];
+      const saved = localStorage.getItem(JOB_HISTORY_KEY);
+      return saved ? JSON.parse(saved) : [];
     } catch (e) {
-      return ['j1'];
+      return [];
     }
   });
 
@@ -480,25 +503,6 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) 
       .filter((j): j is JobPosition => j !== undefined);
   }, [jobHistoryIds]);
 
-  const [totalShiftCount, setTotalShiftCount] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem('amigo_job_shifts_count');
-      return saved ? parseInt(saved, 10) : 5;
-    } catch (e) {
-      return 5;
-    }
-  });
-
-  const [totalEarnedCoins, setTotalEarnedCoins] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem('amigo_job_earned_coins');
-      return saved ? parseInt(saved, 10) : 6000;
-    } catch (e) {
-      return 6000;
-    }
-  });
-
-  const [lastWorkLog, setLastWorkLog] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -543,14 +547,11 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) 
     }
   };
 
-  const getCareerRank = (shifts: number) => {
-    if (shifts >= 50) return { title: '帝国特级勋劳', color: 'bg-amber-500/20 text-amber-300 border-amber-500/50' };
-    if (shifts >= 20) return { title: '部门资深骨干', color: 'bg-purple-500/20 text-purple-300 border-purple-500/50' };
-    if (shifts >= 8) return { title: '熟练岗位职员', color: 'bg-sky-500/20 text-sky-300 border-sky-500/50' };
-    return { title: '见习试用职员', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50' };
-  };
-
   const handleApply = (job: JobPosition) => {
+    if (age < MIN_WORK_AGE) {
+      showToast(`未满 ${MIN_WORK_AGE} 岁，暂不能应聘（当前 ${age} 岁）`);
+      return;
+    }
     if (currentJobId === job.id) {
       showToast(`当前已在「${job.title}」岗位任职中`);
       return;
@@ -564,12 +565,13 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) 
     setJobHistoryIds((prev) => {
       const updated = prev.includes(job.id) ? prev : [job.id, ...prev];
       try {
-        localStorage.setItem('amigo_job_history', JSON.stringify(updated));
+        localStorage.setItem(JOB_HISTORY_KEY, JSON.stringify(updated));
       } catch (e) {}
       return updated;
     });
 
     setSelectedJobDetail(null);
+    addLifeLog('事业', `入职「${job.title}」`, `进入${job.department}任职，日薪 ${job.dailySalary} ₽。`);
     showToast(`恭喜！顺利签署用工合同，入职「${job.department}」的【${job.title}】！`);
   };
 
@@ -580,46 +582,10 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) 
       // 写入空字符串表示待业；若直接删除键，下次打开会被当成新存档而默认入职 'j1'
       localStorage.setItem(CURRENT_JOB_KEY, '');
     } catch (e) {}
+    addLifeLog('事业', `辞去「${currentJob.title}」`, `离开${currentJob.department}，暂时待业。`);
     showToast('已办理离职手续，目前处于自由待业状态');
   };
 
-  const handleWorkShift = () => {
-    if (!currentJob) {
-      showToast('请先选择并应聘一项岗位！');
-      return;
-    }
-    if (workingProgress) return;
-
-    setWorkingProgress(true);
-
-    setTimeout(() => {
-      const wage = currentJob.dailySalary;
-      const bonus = Math.floor(Math.random() * 200);
-      const totalPay = wage + bonus;
-
-      setCoins((prev) => prev + totalPay);
-
-      const newShifts = totalShiftCount + 1;
-      const newEarned = totalEarnedCoins + totalPay;
-
-      setTotalShiftCount(newShifts);
-      setTotalEarnedCoins(newEarned);
-
-      try {
-        localStorage.setItem('amigo_job_shifts_count', newShifts.toString());
-        localStorage.setItem('amigo_job_earned_coins', newEarned.toString());
-      } catch (e) {}
-
-      const randomTask = currentJob.responsibilities[Math.floor(Math.random() * currentJob.responsibilities.length)];
-      const logText = `完成班次：【${currentJob.title}】 - ${randomTask}，获得日薪 ${wage} ₽${bonus > 0 ? ` (勤勉津贴 +${bonus} ₽)` : ''}`;
-      
-      setLastWorkLog(logText);
-      setWorkingProgress(false);
-      showToast(`⚡ 勤勉执勤完成！领取日薪与津贴 ${totalPay.toLocaleString()} ₽`);
-    }, 1000);
-  };
-
-  const careerRank = getCareerRank(totalShiftCount);
 
   return (
     <div className="absolute inset-0 bg-[#12141c] flex flex-col z-50 animate-in slide-in-from-bottom-4 duration-200 overflow-hidden font-sans">
@@ -845,7 +811,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) 
                       <div className="flex items-center gap-3 flex-shrink-0">
                         <div className="text-right">
                           <div className="text-amber-400 font-mono font-black text-base">{job.dailySalary} ₽</div>
-                          <div className="text-gray-400 text-[9px] font-mono">日薪按班结算</div>
+                          <div className="text-gray-400 text-[9px] font-mono">×22 天 = 月薪</div>
                         </div>
                         <button
                           onClick={(e) => {
@@ -904,7 +870,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) 
                   <div className="text-amber-400 font-mono font-black text-lg">
                     {selectedJobDetail.dailySalary.toLocaleString()} ₽
                   </div>
-                  <div className="text-gray-400 text-[10px] font-mono">基础日薪 (按班发放)</div>
+                  <div className="text-gray-400 text-[10px] font-mono">基础日薪（每月按 22 个工作日自动发放）</div>
                 </div>
               </div>
 
@@ -1000,6 +966,46 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) 
             {/* TAB 1: 招募岗位大厅 */}
             {activeTab === 'hall' && (
               <div className="space-y-3">
+                {/* 童工（未满 16 岁） */}
+                {age < MIN_WORK_AGE && (
+                  <div className="bg-[#2a2219] border-2 border-amber-700/70 rounded-2xl p-3 shadow-[0_2px_0_#000] space-y-2">
+                    <div className="text-amber-300 font-black text-xs">🧒 童工（{age} 岁）</div>
+                    {childLaborAllowed ? (
+                      <>
+                        <p className="text-amber-100/80 text-[11px] font-bold leading-relaxed">
+                          家里贫困，只能出去做工补贴家用。童工每月自动发薪，但会额外损耗健康；年满 {MIN_WORK_AGE} 岁后可正式求职。
+                        </p>
+                        {CHILD_JOBS.map((j) => {
+                          const active = childJobId === j.id;
+                          return (
+                            <div key={j.id} className={`flex items-center justify-between gap-2 p-2 rounded-xl border ${active ? 'bg-amber-900/50 border-amber-400' : 'bg-[#1f1a14] border-black'}`}>
+                              <div className="min-w-0">
+                                <div className="text-white font-black text-xs">{j.title}</div>
+                                <div className="text-gray-400 text-[10px] font-bold truncate">{j.desc}</div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <div className="text-amber-300 font-mono font-black text-[11px]">{j.salary} ₽/月</div>
+                                <div className="text-red-400 text-[10px] font-bold">健康 -{j.healthCost}/月</div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setChildJob(active ? null : j.id);
+                                  if (!active) addLifeLog('事业', `开始做童工：${j.title}`, j.desc);
+                                  showToast(active ? `已辞去「${j.title}」` : `开始做「${j.title}」，每月 ${j.salary} ₽`);
+                                }}
+                                className={`text-[10px] font-black px-2 py-1 rounded-lg border border-black shrink-0 cursor-pointer ${active ? 'bg-gray-600 text-white' : 'bg-amber-400 text-black'}`}
+                              >
+                                {active ? '辞工' : '做工'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </>
+                    ) : (
+                      <p className="text-amber-100/80 text-[11px] font-bold">家里条件尚可，不需要你出去做工。年满 {MIN_WORK_AGE} 岁后可以正式求职。</p>
+                    )}
+                  </div>
+                )}
                 {/* Compact Current Job Quick Status Bar */}
                 {currentJob && (
                   <div className="bg-[#1f2231] border-2 border-black rounded-2xl px-3 py-2 shadow-[0_2px_0_#000] flex items-center justify-between gap-2">
@@ -1013,27 +1019,11 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) 
                       </span>
                     </div>
 
-                    <button
-                      onClick={handleWorkShift}
-                      disabled={workingProgress}
-                      className={`px-3 py-1 rounded-xl border border-black text-xs font-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer flex-shrink-0 flex items-center gap-1 transition-all ${
-                        workingProgress
-                          ? 'bg-amber-600 text-black cursor-wait animate-pulse'
-                          : 'bg-amber-400 hover:bg-amber-300 text-black'
-                      }`}
-                    >
-                      {workingProgress ? (
-                        <>
-                          <RefreshCw size={12} className="animate-spin" />
-                          <span>核算中...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Zap size={12} />
-                          <span>打工发薪</span>
-                        </>
-                      )}
-                    </button>
+                    <span className="text-[10px] font-black text-emerald-300 bg-emerald-950/80 border border-emerald-500/50 px-2 py-1 rounded-lg flex-shrink-0">
+                      {age >= MIN_WORK_AGE
+                        ? `月薪 ${(currentJob.dailySalary * WORK_DAYS_PER_MONTH).toLocaleString()} ₽ · 每月自动发放`
+                        : `未满 ${MIN_WORK_AGE} 岁，暂不发薪`}
+                    </span>
                   </div>
                 )}
 
@@ -1168,7 +1158,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) 
                               <div className="text-amber-400 font-mono font-black text-sm sm:text-base">
                                 {job.dailySalary.toLocaleString()} ₽
                               </div>
-                              <div className="text-gray-400 text-[9px] font-mono">日薪按班结算</div>
+                              <div className="text-gray-400 text-[9px] font-mono">×22 天 = 月薪</div>
                             </div>
                           </div>
 

@@ -1,3 +1,4 @@
+import { addLifeLog } from '../lib/lifeLog';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   TrendingUp,
@@ -28,198 +29,38 @@ import {
   Filter,
 } from 'lucide-react';
 
-export interface StockItem {
-  id: string;
-  code: string;
-  name: string;
-  sector: string;
-  price: number;
-  prevPrice: number;
-  highPrice: number;
-  lowPrice: number;
-  volume: number;
-  history: number[];
-  desc: string;
-}
+import {
+  StockItem,
+  StockHolding,
+  StockTradeLog,
+  StockNewsItem,
+  INITIAL_STOCKS,
+  INITIAL_NEWS,
+  STOCK_KEYS,
+  TRADING_DAYS_PER_MONTH,
+} from '../lib/stockMarket';
 
-export interface StockHolding {
-  stockId: string;
-  shares: number;
-  avgCost: number;
-}
-
-export interface StockTradeLog {
-  id: string;
-  type: 'buy' | 'sell';
-  stockName: string;
-  shares: number;
-  price: number;
-  total: number;
-  time: string;
-}
-
-export interface StockNewsItem {
-  id: string;
-  title: string;
-  desc: string;
-  type: 'up' | 'down' | 'neutral';
-  time: string;
-  stockId?: string;
-}
-
-export const INITIAL_STOCKS: StockItem[] = [
-  {
-    id: 's1',
-    code: '0001.CR',
-    name: '卡罗尼亚重工',
-    sector: '重工',
-    price: 88.5,
-    prevPrice: 85.0,
-    highPrice: 94.2,
-    lowPrice: 82.0,
-    volume: 1250000,
-    history: [78, 80, 82, 81, 85, 84, 88, 86, 85, 88.5],
-    desc: '军工与齿轮重工巨头，主营战术蒸汽机甲与长枪大炮研发。',
-  },
-  {
-    id: 's2',
-    code: '0002.AM',
-    name: '阿米诺斯医药',
-    sector: '医药',
-    price: 135.0,
-    prevPrice: 128.0,
-    highPrice: 142.5,
-    lowPrice: 125.0,
-    volume: 890000,
-    history: [115, 118, 122, 120, 126, 128, 130, 127, 128, 135.0],
-    desc: '医学院直属高能药企，专精抗体试剂与体能恢复液。',
-  },
-  {
-    id: 's3',
-    code: '0003.VT',
-    name: '瓦伦丁机械工坊',
-    sector: '工坊',
-    price: 215.0,
-    prevPrice: 210.0,
-    highPrice: 228.0,
-    lowPrice: 205.0,
-    volume: 540000,
-    history: [195, 198, 202, 208, 205, 210, 212, 208, 210, 215.0],
-    desc: '名门家族核心实业，生产精密齿轮、皇家怀表与飞艇构件。',
-  },
-  {
-    id: 's4',
-    code: '0004.AT',
-    name: '远洋飞艇航运',
-    sector: '物流',
-    price: 42.8,
-    prevPrice: 45.0,
-    highPrice: 48.5,
-    lowPrice: 40.2,
-    volume: 2100000,
-    history: [48, 47, 46, 45, 44, 46, 45, 43, 45, 42.8],
-    desc: '跨大西洋与极地蒸汽飞艇航线运营商，连通各大洲客货交通。',
-  },
-  {
-    id: 's5',
-    code: '0005.RM',
-    name: '皇家晶石矿业',
-    sector: '矿业',
-    price: 64.2,
-    prevPrice: 60.5,
-    highPrice: 68.0,
-    lowPrice: 58.0,
-    volume: 1680000,
-    history: [52, 55, 54, 58, 60, 59, 62, 60, 60.5, 64.2],
-    desc: '开采高纯度蒸汽晶石与黑金矿脉，为工业提供动力源泉。',
-  },
-  {
-    id: 's6',
-    code: '0006.AI',
-    name: '微型齿轮AI',
-    sector: '科技',
-    price: 310.0,
-    prevPrice: 285.0,
-    highPrice: 335.0,
-    lowPrice: 270.0,
-    volume: 420000,
-    history: [240, 255, 260, 275, 280, 270, 290, 282, 285, 310.0],
-    desc: '研制差分机自动化推演核心与智能算盘，高成长性科技龙头。',
-  },
-  {
-    id: 's7',
-    code: '0007.VB',
-    name: '皇家飞雷黑啤',
-    sector: '消费',
-    price: 35.6,
-    prevPrice: 35.0,
-    highPrice: 37.2,
-    lowPrice: 34.0,
-    volume: 3200000,
-    history: [33, 34, 34, 35, 35, 34.5, 35.2, 35, 35, 35.6],
-    desc: '百年酿酒坊，经典黑啤畅销各大社交圈，属于高分红防御资产。',
-  },
-  {
-    id: 's8',
-    code: '0008.RB',
-    name: '帝国皇家铁道',
-    sector: '物流',
-    price: 92.0,
-    prevPrice: 90.0,
-    highPrice: 96.5,
-    lowPrice: 88.0,
-    volume: 1850000,
-    history: [82, 84, 85, 87, 88, 90, 91, 89, 90, 92.0],
-    desc: '贯穿东西铁路主干线，客货运输垄断地位，现金流极为充沛。',
-  },
-  {
-    id: 's9',
-    code: '0009.EB',
-    name: '远东联合商业银行',
-    sector: '金融',
-    price: 178.5,
-    prevPrice: 172.0,
-    highPrice: 185.0,
-    lowPrice: 168.0,
-    volume: 960000,
-    history: [155, 160, 162, 165, 170, 168, 172, 170, 172, 178.5],
-    desc: '跨国金融银行与抵押信用机构，盈利稳健且享受极高利息分红。',
-  },
-  {
-    id: 's10',
-    code: '0010.ST',
-    name: '圣米迦勒新能源',
-    sector: '科技',
-    price: 52.4,
-    prevPrice: 48.0,
-    highPrice: 56.0,
-    lowPrice: 45.0,
-    volume: 1420000,
-    history: [40, 42, 45, 44, 48, 46, 50, 47, 48, 52.4],
-    desc: '主营高压气动涡轮与极光蓄电池组，绿色清洁能源新兴标杆。',
-  },
-];
-
-export const NEWS_TEMPLATES = [
-  { text: '【重大利好】卡罗尼亚重工斩获海军战术大单，核心军工股领涨！', stockId: 's1', impact: 1.08, type: 'up' as const },
-  { text: '【科技突破】微型齿轮AI发布新一代差分机芯片，引发科技板块暴涨！', stockId: 's6', impact: 1.12, type: 'up' as const },
-  { text: '【财报优异】阿米诺斯医药三季度高能恢复液销量创新高，资金大幅流入。', stockId: 's2', impact: 1.06, type: 'up' as const },
-  { text: '【家族助力】瓦伦丁机械工坊完成自动化升级，皇家订单续约。', stockId: 's3', impact: 1.05, type: 'up' as const },
-  { text: '【气象预警】远洋飞艇航运因极光雾航线受阻，物流板块回调。', stockId: 's4', impact: 0.94, type: 'down' as const },
-  { text: '【矿脉大捷】皇家晶石矿业发现高纯度黑金矿区，估值再次飙升！', stockId: 's5', impact: 1.09, type: 'up' as const },
-  { text: '【消费旺季】皇家飞雷黑啤进入夏季社交高峰，业绩稳健增长。', stockId: 's7', impact: 1.03, type: 'up' as const },
-  { text: '【铁道扩建】皇家铁道获批新干线特许经营权，客流量创历史新高！', stockId: 's8', impact: 1.07, type: 'up' as const },
-  { text: '【金融利好】远东联合商业银行三季度息差扩大，派发特别股息！', stockId: 's9', impact: 1.08, type: 'up' as const },
-  { text: '【清洁能源】圣米迦勒新能源成功研发极光储能电池，主力抢筹！', stockId: 's10', impact: 1.11, type: 'up' as const },
-  { text: '【降准降息】中央银行下调基准利率，流动性充裕资本流入股市！', stockId: '', impact: 1.04, type: 'up' as const },
-  { text: '【黑天鹅事件】海峡飓风警报触发，交运与物流板块承压下跌。', stockId: 's4', impact: 0.92, type: 'down' as const },
-];
+export type { StockItem, StockHolding, StockTradeLog, StockNewsItem } from '../lib/stockMarket';
+export { INITIAL_STOCKS, NEWS_TEMPLATES } from '../lib/stockMarket';
 
 export const StockModal: React.FC<{
   onClose: () => void;
   coins: number;
   setCoins: React.Dispatch<React.SetStateAction<number>>;
-}> = ({ onClose, coins, setCoins }) => {
+  /** 家族金融背景（满足时为说明文字，否则为 null）；决定能否开立证券账户 */
+  financeBackground: string | null;
+}> = ({ onClose, coins, setCoins, financeBackground }) => {
+  // 证券账户：旧存档已有持仓的视为已开户
+  const [accountOpened, setAccountOpened] = useState<boolean>(() => {
+    try {
+      if (localStorage.getItem(STOCK_KEYS.accountOpened) === 'true') return true;
+      const legacy = JSON.parse(localStorage.getItem(STOCK_KEYS.holdings) || '[]');
+      return Array.isArray(legacy) && legacy.length > 0;
+    } catch (e) {
+      return false;
+    }
+  });
+
   const [stocks, setStocks] = useState<StockItem[]>(() => {
     try {
       const saved = localStorage.getItem('amigo_stocks');
@@ -232,12 +73,7 @@ export const StockModal: React.FC<{
   const [holdings, setHoldings] = useState<StockHolding[]>(() => {
     try {
       const saved = localStorage.getItem('amigo_stock_holdings');
-      return saved
-        ? JSON.parse(saved)
-        : [
-            { stockId: 's1', shares: 500, avgCost: 80.0 },
-            { stockId: 's3', shares: 200, avgCost: 205.0 },
-          ];
+      return saved ? JSON.parse(saved) : [];
     } catch (e) {
       return [];
     }
@@ -246,12 +82,7 @@ export const StockModal: React.FC<{
   const [tradeLogs, setTradeLogs] = useState<StockTradeLog[]>(() => {
     try {
       const saved = localStorage.getItem('amigo_stock_tradelogs');
-      return saved
-        ? JSON.parse(saved)
-        : [
-            { id: 'tl1', type: 'buy', stockName: '卡罗尼亚重工', shares: 500, price: 80.0, total: 40000, time: '交易日 #1' },
-            { id: 'tl2', type: 'buy', stockName: '瓦伦丁机械工坊', shares: 200, price: 205.0, total: 41000, time: '交易日 #1' },
-          ];
+      return saved ? JSON.parse(saved) : [];
     } catch (e) {
       return [];
     }
@@ -260,17 +91,7 @@ export const StockModal: React.FC<{
   const [newsFeed, setNewsFeed] = useState<StockNewsItem[]>(() => {
     try {
       const saved = localStorage.getItem('amigo_stock_news');
-      return saved
-        ? JSON.parse(saved)
-        : [
-            {
-              id: 'n1',
-              title: '【开盘大吉】帝国证券交易所正式开盘！',
-              desc: '十大核心工业、科技与金融龙头齐聚，各路资本交投火热。',
-              type: 'up',
-              time: '交易日 #1',
-            },
-          ];
+      return saved ? JSON.parse(saved) : INITIAL_NEWS;
     } catch (e) {
       return [];
     }
@@ -285,7 +106,6 @@ export const StockModal: React.FC<{
     }
   });
 
-  const [autoPlay, setAutoPlay] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'quotes' | 'portfolio' | 'news' | 'history'>('quotes');
   const [selectedStock, setSelectedStock] = useState<StockItem | null>(null);
@@ -343,71 +163,6 @@ export const StockModal: React.FC<{
     } catch (e) {}
   };
 
-  // Push to Next Trading Day
-  const handleNextTradingDay = () => {
-    const nextDay = tradingDay + 1;
-
-    // Pick a news template
-    const randomNewsTemplate = NEWS_TEMPLATES[Math.floor(Math.random() * NEWS_TEMPLATES.length)];
-
-    const updatedStocks = stocks.map((s) => {
-      let changeRatio = (Math.random() - 0.48) * 0.12; // -6% to +6% random swing
-      if (randomNewsTemplate.stockId === s.id) {
-        changeRatio = randomNewsTemplate.impact - 1 + (Math.random() - 0.5) * 0.04;
-      }
-
-      const newPrice = Math.max(1, parseFloat((s.price * (1 + changeRatio)).toFixed(2)));
-      const newHigh = Math.max(s.highPrice, newPrice);
-      const newLow = Math.min(s.lowPrice, newPrice);
-      const newHistory = [...s.history.slice(1), newPrice];
-
-      return {
-        ...s,
-        prevPrice: s.price,
-        price: newPrice,
-        highPrice: newHigh,
-        lowPrice: newLow,
-        history: newHistory,
-      };
-    });
-
-    const newNewsItem: StockNewsItem = {
-      id: Date.now().toString(),
-      title: randomNewsTemplate.text,
-      desc: `交易日 #${nextDay} 快报：盘面波动率 ${(Math.random() * 3 + 1).toFixed(1)}%，大盘量能充沛，多空博弈激烈。`,
-      type: randomNewsTemplate.type,
-      time: `交易日 #${nextDay}`,
-      stockId: randomNewsTemplate.stockId || undefined,
-    };
-
-    const updatedNews = [newNewsItem, ...newsFeed.slice(0, 24)];
-
-    setStocks(updatedStocks);
-    setNewsFeed(updatedNews);
-    setTradingDay(nextDay);
-
-    // Keep inspector updated if selected
-    if (selectedStock) {
-      const updatedSelected = updatedStocks.find((s) => s.id === selectedStock.id);
-      if (updatedSelected) setSelectedStock(updatedSelected);
-    }
-
-    saveAllData(updatedStocks, holdings, tradeLogs, updatedNews, nextDay);
-    showToast(`📈 已推演至【交易日 #${nextDay}】！行情与快讯已更新`);
-  };
-
-  // Auto Tick Interval
-  useEffect(() => {
-    let timer: any = null;
-    if (autoPlay) {
-      timer = setInterval(() => {
-        handleNextTradingDay();
-      }, 3500);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [autoPlay, stocks, holdings, tradeLogs, newsFeed, tradingDay]);
 
   // Calculate Portfolio Totals
   const totalMarketValue = useMemo(() => {
@@ -547,6 +302,11 @@ export const StockModal: React.FC<{
     setTradeLogs(updatedLogs);
     saveAllData(stocks, updatedHoldings, updatedLogs, newsFeed, tradingDay);
 
+    // 单笔盈亏达 1 万 ₽ 才记入人生日志
+    const realized = Math.round(revenue - shares * existing.avgCost);
+    if (Math.abs(realized) >= 10000) {
+      addLifeLog('财富', realized > 0 ? `股票大赚：${stock.name}` : `股票重亏：${stock.name}`, `卖出 ${shares.toLocaleString()} 股，${realized > 0 ? '盈利' : '亏损'} ${Math.abs(realized).toLocaleString()} ₽。`);
+    }
     showToast(`💰 成功平仓卖出【${stock.name}】${shares.toLocaleString()} 股！资金回收 +${revenue.toLocaleString()} ₽`);
   };
 
@@ -587,6 +347,62 @@ export const StockModal: React.FC<{
   const maxBuyShares = selectedStock ? Math.floor(coins / selectedStock.price) : 0;
   const maxSellShares = currentHoldingShares;
 
+  const handleOpenAccount = () => {
+    if (!financeBackground) return;
+    try {
+      localStorage.setItem(STOCK_KEYS.accountOpened, 'true');
+    } catch (e) {}
+    setAccountOpened(true);
+    addLifeLog('财富', '开立证券账户', `开户资格：${financeBackground}。`);
+    showToast('🎉 证券账户开立成功，欢迎入市！');
+  };
+
+  if (!accountOpened) {
+    return (
+      <div className="absolute inset-0 bg-[#0d0f18] text-gray-100 flex flex-col z-50 animate-in slide-in-from-bottom-4 duration-200 overflow-hidden font-sans">
+        <div className="relative w-full bg-[#141724] border-b-2 border-black px-3 py-3 flex items-center gap-3 flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="h-9 px-2.5 bg-[#23273a] hover:bg-[#2e334a] border-2 border-black rounded-xl active:translate-y-0.5 shadow-[0_2px_0_#000] cursor-pointer text-white"
+          >
+            <ChevronLeft size={18} strokeWidth={3} />
+          </button>
+          <span className="text-amber-300 text-sm font-black tracking-wider">帝国证券交易所 · 开户柜台</span>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5 flex flex-col items-center justify-center gap-4 text-center">
+          <FileText size={48} className="text-amber-400" />
+          <h2 className="text-white font-black text-lg">开立证券账户</h2>
+          <p className="text-gray-300 text-xs font-bold leading-relaxed max-w-xs">
+            交易所只为具备金融背景的家族开立账户：家族中需有人读过金融学，或从事过金融相关工作（例如交易所代理经纪人、商行账房）。
+          </p>
+          {financeBackground ? (
+            <>
+              <div className="bg-emerald-950/80 border-2 border-emerald-500/70 text-emerald-200 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-2">
+                <CheckCircle2 size={14} /> 符合条件：{financeBackground}
+              </div>
+              <button
+                onClick={handleOpenAccount}
+                className="bg-gradient-to-r from-amber-400 to-amber-500 text-black font-black text-sm px-6 py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer active:translate-y-0.5"
+              >
+                立即开户
+              </button>
+            </>
+          ) : (
+            <div className="bg-red-950/70 border-2 border-red-500/60 text-red-200 text-xs font-bold px-3 py-2 rounded-xl flex items-start gap-2 max-w-xs text-left">
+              <AlertCircle size={14} className="shrink-0 mt-0.5" />
+              <span>暂不符合开户条件。可在「就业招聘」应聘交易所代理经纪人，或与从事金融工作的人结婚后再来办理。</span>
+            </div>
+          )}
+        </div>
+        {toast && (
+          <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-[#161928]/95 text-amber-300 border-2 border-amber-400/80 text-xs font-black px-4 py-2 rounded-xl">
+            {toast}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="absolute inset-0 bg-[#0d0f18] text-gray-100 flex flex-col z-50 animate-in slide-in-from-bottom-4 duration-200 overflow-hidden font-sans">
       {/* Toast Notification */}
@@ -620,27 +436,9 @@ export const StockModal: React.FC<{
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 z-10">
-          <button
-            onClick={() => setAutoPlay(!autoPlay)}
-            className={`h-9 px-2.5 rounded-xl border-2 border-black font-black text-[10px] shadow-[0_2px_0_#000] active:translate-y-0.5 flex items-center gap-1.5 cursor-pointer transition-all ${
-              autoPlay ? 'bg-amber-400 text-black' : 'bg-[#23273a] text-gray-300 hover:bg-[#2c3148]'
-            }`}
-            title="切换自动推演模式"
-          >
-            <RefreshCw size={12} className={autoPlay ? 'animate-spin text-black' : ''} />
-            <span className="hidden xs:inline">{autoPlay ? '连续竞价中' : '自动竞价'}</span>
-          </button>
-
-          {!selectedStock && (
-            <button
-              onClick={handleNextTradingDay}
-              className="h-9 px-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-xs rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer active:translate-y-0.5 flex items-center gap-1 transition-all"
-            >
-              <Zap size={14} className="fill-black" />
-              <span>推演</span>
-            </button>
-          )}
+        <div className="z-10 text-right leading-tight">
+          <div className="text-[9px] text-gray-400 font-bold">行情随月份推进</div>
+          <div className="text-[10px] text-amber-300 font-black">每月 {TRADING_DAYS_PER_MONTH} 个交易日</div>
         </div>
       </div>
 

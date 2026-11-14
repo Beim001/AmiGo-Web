@@ -1,10 +1,18 @@
+import { addLifeLog } from '../lib/lifeLog';
 import React, { useState } from 'react';
+import { traitNames, traitById } from '../lib/traits';
+import { REP } from '../lib/reputation';
 import { ChevronLeft, Heart, RefreshCw, Users, Baby, Scroll } from 'lucide-react';
 import {
   FamilyState,
   SpouseCandidate,
   generateSpouseCandidates,
   marry,
+  canTakeLover,
+  takeLover,
+  endLover,
+  LOVER_UPKEEP,
+  ILLEGITIMATE_CHANCE,
   divorce,
   getFormerSpouses,
   DIVORCE_FEE,
@@ -29,7 +37,27 @@ export interface MarriageModalProps {
   setFamily: React.Dispatch<React.SetStateAction<FamilyState>>;
   onOpenBirth: () => void;
   onOpenFamily: () => void;
+  /** 家族阶层：贵族、皇族已婚可结识情人 */
+  classId?: string;
+  /** 结婚 +3、离婚 -3 声望 */
+  onReputationChange?: (delta: number) => void;
 }
+
+/** 特质标签（悬停显示效果） */
+const TraitTags: React.FC<{ ids?: string[]; dark?: boolean }> = ({ ids, dark }) =>
+  ids && ids.length > 0 ? (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {ids.map((id) => (
+        <span
+          key={id}
+          title={traitById(id)?.desc}
+          className={`text-[9px] font-black px-1.5 py-px rounded border ${dark ? 'bg-black/10 border-black/30 text-[#3b2a14]' : 'bg-fuchsia-500/20 border-fuchsia-500/50 text-fuchsia-200'}`}
+        >
+          ✦ {traitNames([id])[0]}
+        </span>
+      ))}
+    </div>
+  ) : null;
 
 export const MarriageModal: React.FC<MarriageModalProps> = ({
   onClose,
@@ -45,7 +73,11 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
   setFamily,
   onOpenBirth,
   onOpenFamily,
+  classId = '',
+  onReputationChange,
 }) => {
+  const [loverCandidates, setLoverCandidates] = useState<SpouseCandidate[]>(() => generateSpouseCandidates(age).slice(0, 5));
+  const [confirmLover, setConfirmLover] = useState<SpouseCandidate | null>(null);
   const [candidates, setCandidates] = useState<SpouseCandidate[]>(() => generateSpouseCandidates(age));
   const [confirming, setConfirming] = useState<SpouseCandidate | null>(null);
   const [confirmDivorce, setConfirmDivorce] = useState(false);
@@ -64,7 +96,9 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
     }
     setCoins((prev) => prev - MARRIAGE_FEE);
     setFamily((prev) => marry(prev, c, gameYear, gameMonth));
+    onReputationChange?.(REP.marriage);
     setConfirming(null);
+    addLifeLog('大事', `与 ${c.name} 结婚`, `${c.gender} · ${c.age} 岁 · ${c.occupation}，在帝国民政署登记结婚。`);
     showToast(`💍 恭喜！你与 ${c.name} 正式结为夫妻`);
   };
 
@@ -77,8 +111,10 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
     }
     setCoins((prev) => prev - DIVORCE_FEE);
     setFamily((prev) => divorce(prev, gameYear, gameMonth));
+    onReputationChange?.(REP.divorce);
     setConfirmDivorce(false);
     setCandidates(generateSpouseCandidates(age));
+    addLifeLog('大事', `与 ${formerName} 离婚`, '在帝国民政署办理了离婚手续。');
     showToast(`已与 ${formerName} 解除婚姻关系`);
   };
 
@@ -111,7 +147,10 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
           <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-bold">
             <div className="bg-white/50 rounded-lg p-2 border border-black/30">配偶性别：{spouse.gender}</div>
             <div className="bg-white/50 rounded-lg p-2 border border-black/30">配偶年龄：{gameYear - spouse.birthYear} 岁</div>
-            <div className="bg-white/50 rounded-lg p-2 border border-black/30 col-span-2">配偶职业：{spouse.occupation}</div>
+            <div className="bg-white/50 rounded-lg p-2 border border-black/30 col-span-2">
+              配偶职业：{spouse.occupation}
+              <TraitTags ids={spouse.traits} dark />
+            </div>
             <div className="bg-white/50 rounded-lg p-2 border border-black/30 col-span-2">
               登记日期：{spouse.marriedYear} 年 {spouse.marriedMonth} 月 · 帝国民政署
             </div>
@@ -129,6 +168,56 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
             <Users size={14} /> 查看家族世系
           </button>
         </div>
+
+        {canTakeLover(classId, true, age) && (
+          <div className={`${card} space-y-2`}>
+            <div className="text-white font-black text-sm">🌹 {family.lover ? (family.lover.gender === '女' ? '情妇' : '情夫') : '结识情人'}</div>
+            <p className="text-gray-400 text-[11px] font-bold leading-relaxed">
+              贵族圈的隐秘往来：每月供养 {(LOVER_UPKEEP[classId] ?? LOVER_UPKEEP.noble).toLocaleString()} ₽，有 {Math.round(ILLEGITIMATE_CHANCE * 100)}% 概率生下私生子女。同时最多 1 位，现金不足时关系自动结束。
+            </p>
+            {family.lover ? (
+              <div className="bg-[#21232e] border border-black rounded-xl p-2.5 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-white font-black text-xs">{family.lover.name}</div>
+                  <div className="text-gray-400 text-[10px] font-bold">
+                    {family.lover.gender} · {gameYear - family.lover.birthYear} 岁 · {family.lover.occupation} · 自 {family.lover.sinceYear}.{family.lover.sinceMonth}
+                  </div>
+                  <TraitTags ids={family.lover.traits} />
+                </div>
+                <button
+                  onClick={() => {
+                    setFamily((prev) => endLover(prev));
+                    showToast(`已与 ${family.lover!.name} 断绝往来`);
+                  }}
+                  className="bg-gray-600 hover:bg-gray-500 text-white text-[10px] font-black px-2 py-1 rounded-lg border border-black cursor-pointer shrink-0"
+                >
+                  断绝往来
+                </button>
+              </div>
+            ) : (
+              <>
+                {loverCandidates.map((c, i) => (
+                  <div key={`${c.name}_${i}`} className="bg-[#21232e] border border-black rounded-xl p-2.5 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-white font-black text-xs">{c.name}</div>
+                      <div className="text-gray-400 text-[10px] font-bold">{c.gender} · {c.age} 岁 · {c.occupation}</div>
+                      <TraitTags ids={c.traits} />
+                    </div>
+                    <button onClick={() => setConfirmLover(c)} className="bg-rose-400 text-black text-[10px] font-black px-2 py-1 rounded-lg border border-black cursor-pointer shrink-0">
+                      结识
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => setLoverCandidates(generateSpouseCandidates(age).slice(0, 5))}
+                  className="w-full text-gray-300 text-[11px] font-black bg-[#21232e] py-1.5 rounded-lg border border-black cursor-pointer"
+                >
+                  换一批
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         <button
           onClick={() => setConfirmDivorce(true)}
@@ -170,6 +259,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
               <div className="min-w-0">
                 <div className="text-white font-black text-sm truncate">{c.name}</div>
                 <div className="text-gray-400 text-[11px] font-bold">{c.gender} · {c.age} 岁 · {c.occupation}</div>
+                <TraitTags ids={c.traits} />
               </div>
             </div>
             <button onClick={() => setConfirming(c)} className={`${primaryBtn} shrink-0`}>求婚</button>
@@ -250,6 +340,30 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
                 再想想
               </button>
               <button onClick={() => handleMarry(confirming)} className={primaryBtn}>确定登记</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmLover && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[60]">
+          <div className={`${card} max-w-sm w-full space-y-3`}>
+            <p className="text-white font-black text-sm text-center">确定与 {confirmLover.name} 发展秘密关系吗？</p>
+            <p className="text-gray-400 text-xs font-bold text-center">每月供养 {(LOVER_UPKEEP[classId] ?? LOVER_UPKEEP.noble).toLocaleString()} ₽。</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => setConfirmLover(null)} className="bg-gray-600 hover:bg-gray-500 text-white text-xs font-black py-2 rounded-xl border-2 border-black cursor-pointer">
+                再想想
+              </button>
+              <button
+                onClick={() => {
+                  setFamily((prev) => takeLover(prev, confirmLover, gameYear, gameMonth));
+                  showToast(`🌹 你与 ${confirmLover.name} 开始了秘密往来`);
+                  setConfirmLover(null);
+                }}
+                className={primaryBtn}
+              >
+                确定
+              </button>
             </div>
           </div>
         </div>

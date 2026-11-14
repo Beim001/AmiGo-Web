@@ -1,4 +1,6 @@
+import { addLifeLog } from '../lib/lifeLog';
 import React, { useState } from 'react';
+import type { DiseaseInfo } from '../lib/disease';
 import {
   ChevronLeft,
   Hospital,
@@ -20,6 +22,11 @@ export interface HospitalModalProps {
   setCoins: React.Dispatch<React.SetStateAction<number>>;
   health: number;
   setHealth: React.Dispatch<React.SetStateAction<number>>;
+  /** 未满 18 岁：医疗费用由父母承担（免费） */
+  parentsPay?: boolean;
+  /** 当前所患疾病 */
+  disease?: DiseaseInfo | null;
+  onCureDisease?: () => void;
 }
 
 export interface HospitalInfo {
@@ -184,6 +191,9 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
   setCoins,
   health,
   setHealth,
+  parentsPay = false,
+  disease = null,
+  onCureDisease,
 }) => {
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>('h1');
   const [isSelectingHospital, setIsSelectingHospital] = useState<boolean>(false);
@@ -202,6 +212,8 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
   });
 
   const currentHospital = HOSPITALS.find((h) => h.id === selectedHospitalId) || HOSPITALS[0];
+  // 未满 18 岁由父母承担医疗费
+  const costOf = (baseCost: number) => (parentsPay ? 0 : Math.round(baseCost * currentHospital.discount));
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -209,7 +221,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
   };
 
   const handleTreatment = (title: string, baseCost: number, baseRecover: number) => {
-    const finalCost = Math.round(baseCost * currentHospital.discount);
+    const finalCost = costOf(baseCost);
     const finalRecover = Math.min(100, baseRecover + currentHospital.bonusRecover);
 
     if (coins < finalCost) {
@@ -238,7 +250,9 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
       localStorage.setItem('amigo_hospital_logs', JSON.stringify(updatedLogs));
     } catch (e) {}
 
-    showToast(`🩺 在【${currentHospital.name}】成功进行【${title}】！健康度 +${finalRecover}%，花费 ${finalCost.toLocaleString()} ₽`);
+    // 只记录从危急状态（健康 < 30）恢复的就诊
+    if (health < 30) addLifeLog('健康', '转危为安', `在${currentHospital.name}接受「${title}」，健康 ${health} → ${Math.min(100, health + finalRecover)}。`);
+    showToast(`🩺 在【${currentHospital.name}】成功进行【${title}】！健康度 +${finalRecover}%，${parentsPay ? '费用由父母承担' : `花费 ${finalCost.toLocaleString()} ₽`}`);
   };
 
   const getHealthStatus = (h: number) => {
@@ -292,6 +306,39 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
 
       {/* Main Container */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+        {parentsPay && (
+          <div className="bg-emerald-950/80 border-2 border-emerald-500/60 text-emerald-200 text-xs font-black px-3 py-2 rounded-xl shadow-[0_2px_0_#000]">
+            👪 未满 18 岁：所有诊疗与药品费用由父母承担
+          </div>
+        )}
+        {disease && (
+          <div className="bg-red-950/80 border-2 border-red-500/70 rounded-2xl p-3 shadow-[0_3px_0_#000] space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-red-200 font-black text-sm">🤒 当前疾病：{disease.name}</div>
+                <div className="text-red-300/80 text-[11px] font-bold">
+                  每月健康 -{disease.monthlyDamage}，{disease.selfHealMonths === null ? '不会自愈，必须就医' : `约 ${disease.selfHealMonths} 个月可自愈`}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  const cost = costOf(disease.cost);
+                  if (coins < cost) {
+                    showToast(`❌ 金钱不足！治疗${disease.name}需要 ${cost.toLocaleString()} ₽`);
+                    return;
+                  }
+                  setCoins((prev) => prev - cost);
+                  onCureDisease?.();
+                  addLifeLog('健康', `治愈${disease.name}`, `在${currentHospital.name}就医痊愈。`);
+                  showToast(`🩺 在【${currentHospital.name}】治愈了${disease.name}！${parentsPay ? '费用由父母承担' : `花费 ${cost.toLocaleString()} ₽`}`);
+                }}
+                className="bg-red-400 hover:bg-red-300 text-black text-xs font-black px-3 py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer shrink-0"
+              >
+                治疗 {costOf(disease.cost).toLocaleString()} ₽
+              </button>
+            </div>
+          </div>
+        )}
         {/* Health Dashboard Card */}
         <div className="bg-[#232635] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] space-y-3 relative overflow-hidden">
           <div className="flex justify-between items-center">
@@ -479,7 +526,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
             {activeTab === 'treatments' && (
               <div className="space-y-3">
                 {currentHospital.treatments.map((item) => {
-                  const finalCost = Math.round(item.baseCost * currentHospital.discount);
+                  const finalCost = costOf(item.baseCost);
                   const finalRecover = Math.min(100, item.baseRecover + currentHospital.bonusRecover);
 
                   return (
@@ -532,7 +579,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
             {activeTab === 'pharmacy' && (
               <div className="space-y-3">
                 {PHARMACY.map((item) => {
-                  const finalCost = Math.round(item.baseCost * currentHospital.discount);
+                  const finalCost = costOf(item.baseCost);
                   const finalRecover = Math.min(100, item.baseRecover + currentHospital.bonusRecover);
 
                   return (

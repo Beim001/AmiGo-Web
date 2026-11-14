@@ -13,9 +13,32 @@ import { SimTab } from './components/SimTab';
 import { LogTab } from './components/LogTab';
 import { FamilyTab } from './components/FamilyTab';
 import { MarriageModal } from './components/MarriageModal';
-import { FamilyState, INITIAL_FAMILY_STATE, tryHaveChild } from './lib/family';
+import { FamilyState, INITIAL_FAMILY_STATE, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
+import { randomTraits, PLAYER_TRAITS_KEY, diseaseTraitMultiplier, decayReduction, salaryMultiplier, depositInterestMultiplier, traitNames, traitById } from './lib/traits';
+import { REPUTATION_KEY, REP, HIGH_SALARY, clampReputation, reputationLevel, CHARITY_KEY, CHARITY_UNIT, charityRemaining } from './lib/reputation';
+import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, formatRealTime } from './lib/achievements';
+import { GUARDIANSHIP_KEY, Guardianship, takeCustody, monthlyGuardianship, ORPHANAGE_NAME, ADULT_AGE as GUARDIAN_ADULT_AGE } from './lib/guardianship';
+import { rankFamilies, familyNetWorth } from './lib/familyRank';
+import { rollClass, generateOrigin, classById, readChildJob, CHILD_JOB_KEY, CHILD_LABOR_MAX_AGE } from './lib/lineage';
+import { progressDisease, diseaseInfo, DISEASE_KEY, ActiveDisease } from './lib/disease';
+import { SuccessionModal } from './components/SuccessionModal';
+import { SimEventInstance, rollMonthlyEvent, eventDef, resolveOption, optionBlocked, SIM_EVENTS_KEY, SIM_SCORE_KEY, SIM_QUIET_KEY } from './lib/simEvents';
+import { addLifeLog, readLifeLog, clearLifeLog } from './lib/lifeLog';
+import { BASE_STIPEND, monthlySalary, nextHealth, effectiveComfort, isMinor } from './lib/monthly';
+import {
+  BANK_LIST,
+  BankAccounts,
+  buildDefaultAccounts,
+  loadAccounts,
+  saveAccounts as persistBankAccounts,
+  settleMonthlyInterest,
+  currentRateEvent,
+  loanRateFor,
+  formatRate,
+} from './lib/bank';
+import { advanceMarket, loadMarket, saveMarket, TRADING_DAYS_PER_MONTH, findFinanceBackground } from './lib/stockMarket';
 import { HospitalModal } from './components/HospitalModal';
-import { JobModal, JOB_POSITIONS, readCurrentJobId } from './components/JobModal';
+import { JobModal, JOB_POSITIONS, readCurrentJobId, readJobHistoryIds, CURRENT_JOB_KEY, JOB_HISTORY_KEY } from './components/JobModal';
 import { BirthModal } from './components/BirthModal';
 import { WealthChartModal } from './components/WealthChartModal';
 import { GenderRightsModal } from './components/GenderRightsModal';
@@ -69,7 +92,7 @@ const saveStored = (key: string, value: unknown) => {
 };
 
 // 重置人生时保留的存档键（账号级数据，不属于某一段人生）
-const KEYS_KEPT_ON_RESET = new Set(['amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes']);
+const KEYS_KEPT_ON_RESET = new Set(['amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements']);
 
 
 
@@ -583,7 +606,7 @@ const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTa
   );
 };
 
-const getFallbackRankList = (boardNum: number, currentName: string, myCoins: number) => {
+const getFallbackRankList = (boardNum: number, currentName: string, myCoins: number, simScore = 0) => {
   if (boardNum === 1) {
     const baseList = [
       { rank: 1, score: 9850000, nickname: '亚历山大·瓦伦丁', avatar: '' },
@@ -605,7 +628,7 @@ const getFallbackRankList = (boardNum: number, currentName: string, myCoins: num
     const baseList = [
       { rank: 1, score: 25800, nickname: '皇家竞技场常胜皇', avatar: '' },
       { rank: 2, score: 21000, nickname: '齿轮战术家', avatar: '' },
-      { rank: 3, score: 18500, nickname: currentName + ' (你)', avatar: '' },
+      { rank: 3, score: simScore, nickname: currentName + ' (你)', avatar: '' },
       { rank: 4, score: 15200, nickname: '卡罗尼亚突击兵', avatar: '' },
       { rank: 5, score: 9800, nickname: '萌新机械师', avatar: '' },
     ];
@@ -614,7 +637,7 @@ const getFallbackRankList = (boardNum: number, currentName: string, myCoins: num
     const myItem = sortedList.find((i) => i.nickname.includes('(你)'));
     return {
       list: sortedList,
-      myRank: { ranked: true, rank: myItem ? myItem.rank : 3, score: 18500 },
+      myRank: { ranked: true, rank: myItem ? myItem.rank : 3, score: simScore },
     };
   }
 };
@@ -663,6 +686,13 @@ interface ProfileModalProps {
   setIsAvatarModalOpen: (open: boolean) => void;
   renderAvatarContent: () => React.ReactNode;
   ownedClothes: string[];
+  /** 推演积分（推演榜上报） */
+  simScore: number;
+  reputation: number;
+  playerTraits: string[];
+  /** 慈善捐款，返回提示文字 */
+  onDonate: (amount: number) => string;
+  originLabel?: string;
   isRegistered: boolean;
   age: number;
 }
@@ -687,6 +717,11 @@ const ProfileModal = ({
   setIsAvatarModalOpen,
   renderAvatarContent,
   ownedClothes,
+  originLabel,
+  simScore,
+  reputation,
+  playerTraits,
+  onDonate,
   isRegistered,
   age,
 }: ProfileModalProps) => {
@@ -907,7 +942,7 @@ const ProfileModal = ({
       const mine = await getBilibiliMyRank(targetBoard, targetPeriod, coins);
       if (mine) setMyRank(mine);
     } catch (err) {
-      const fallback = getFallbackRankList(targetBoard, playerName, coins);
+      const fallback = getFallbackRankList(targetBoard, playerName, coins, simScore);
       setRankList(fallback.list);
       setMyRank(fallback.myRank);
     } finally {
@@ -918,7 +953,7 @@ const ProfileModal = ({
   // Submit Score to Toy SDK
   const handleSubmitScore = async () => {
     let scoreToSubmit = coins;
-    if (board === 3) scoreToSubmit = 18500;
+    if (board === 3) scoreToSubmit = simScore;
 
     try {
       const res = await submitBilibiliScore(board, scoreToSubmit);
@@ -1025,6 +1060,7 @@ const ProfileModal = ({
     setPlayerName(trimmed);
     setIsEditingName(false);
     const remaining = 2 - updatedTimestamps.length;
+    addLifeLog('成长', '改名', `改名为「${trimmed}」。`);
     showToast(`🎉 昵称成功修改为 [${trimmed}]！(本月剩余改名次数: ${remaining}/2)`);
   };
 
@@ -1272,11 +1308,11 @@ const ProfileModal = ({
           <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-gray-700/80 text-center">
             <div className="bg-[#21232e] p-2 rounded-xl border border-black">
               <div className="text-[10px] text-gray-400 font-bold">声望等级</div>
-              <div className="text-gray-500 font-black text-xs mt-0.5">暂未开放</div>
+              <div className="text-yellow-400 font-black text-xs mt-0.5">{reputationLevel(reputation)} ({reputation})</div>
             </div>
             <div className="bg-[#21232e] p-2 rounded-xl border border-black">
-              <div className="text-[10px] text-gray-400 font-bold">机械推演</div>
-              <div className="text-gray-500 font-black text-xs mt-0.5">暂未开放</div>
+              <div className="text-[10px] text-gray-400 font-bold">推演积分</div>
+              <div className="text-white font-black text-xs mt-0.5">{simScore} 分</div>
             </div>
             <div className="bg-[#21232e] p-2 rounded-xl border border-black">
               <div className="text-[10px] text-gray-400 font-bold">拥有服装</div>
@@ -1351,7 +1387,7 @@ const ProfileModal = ({
               <div className="space-y-2.5 text-xs font-bold">
                 <div className="flex justify-between items-center bg-[#21232e] p-2.5 rounded-xl border border-black">
                   <span className="text-gray-400">出身背景</span>
-                  <span className="text-white font-black">卡罗尼亚帝国 · 瓦伦丁名门</span>
+                  <span className="text-white font-black">{originLabel || '卡罗尼亚帝国'}</span>
                 </div>
                 <div className="flex justify-between items-center bg-[#21232e] p-2.5 rounded-xl border border-black">
                   <span className="text-gray-400">毕业院校</span>
@@ -1368,6 +1404,42 @@ const ProfileModal = ({
                   <span className={propertySummary ? 'text-emerald-400 font-black text-right' : 'text-gray-500 font-black'}>
                     {propertySummary || '暂无房产'}
                   </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] space-y-3">
+              <h3 className="text-white font-black text-sm flex items-center gap-2 border-b border-gray-700/80 pb-2">
+                <Sparkles size={16} className="text-fuchsia-400" /> 特质与声望
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {playerTraits.length > 0 ? (
+                  playerTraits.map((id) => (
+                    <span key={id} className="bg-fuchsia-500/20 text-fuchsia-200 text-[11px] font-black px-2 py-1 rounded-lg border border-fuchsia-500/50">
+                      ✦ {traitNames([id])[0]}
+                      <span className="text-fuchsia-300/70 font-bold ml-1">{traitById(id)?.desc}</span>
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-gray-400 text-xs font-bold">出生登记后获得 1–3 个随机特质</span>
+                )}
+              </div>
+              <div className="bg-[#21232e] p-2.5 rounded-xl border border-black text-xs font-bold space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">声望</span>
+                  <span className="text-yellow-400 font-black">{reputation} / 100 · {reputationLevel(reputation)}</span>
+                </div>
+                <div className="text-[10px] text-gray-400">慈善捐款：每 10,000 ₽ 声望 +1，每个游戏月最多 +5</div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[10000, 50000, 100000].map((amt) => (
+                    <button
+                      key={amt}
+                      onClick={() => showToast(onDonate(amt))}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black py-1.5 rounded-lg border border-black cursor-pointer"
+                    >
+                      捐 {amt / 10000} 万
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1505,7 +1577,7 @@ const ProfileModal = ({
                     </span>
                   </div>
                   <div className="text-gray-300 text-[10px] font-mono mt-0.5">
-                    当前积分: <span className="text-yellow-300 font-bold">{myRank.score > 0 ? myRank.score.toLocaleString() : (board === 1 ? coins : 18500).toLocaleString()}</span>
+                    当前积分: <span className="text-yellow-300 font-bold">{myRank.score > 0 ? myRank.score.toLocaleString() : (board === 1 ? coins : simScore).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -1597,49 +1669,47 @@ const ProfileModal = ({
           </div>
         )}
 
-        {/* Tab 2: 成就勋章 (Achievements) */}
-        {subTab === 'achievement' && (
-          <div className="space-y-3">
-            {[
-              { title: '科技先驱', desc: '在青少年时期发明定时闹钟获得二等奖', icon: Crown, unlocked: true, date: '1882.04' },
-              { title: '学府霸主', desc: '考入帝国理工学院并获得全额奖学金', icon: GraduationCap, unlocked: true, date: '1888.06' },
-              { title: '首次开箱', desc: '在欧皇宝箱中首次抽取稀有或限定道具', icon: Gift, unlocked: true, date: '1892.07' },
-              { title: '富甲一方', desc: '拥有超过 1,000,000 帝国金币', icon: CircleDollarSign, unlocked: true, date: '1900.01' },
-              { title: '武道极境', desc: '在战术推演中达成连续 20 次战胜对手', icon: Swords, unlocked: false, date: '未达成 (18/20)' },
-              { title: '名流之光', desc: '与所有瓦伦丁家族成员好感度达到 90%', icon: Heart, unlocked: false, date: '未达成 (5/7)' },
-            ].map((ach, i) => (
-              <div
-                key={i}
-                className={`border-2 border-black rounded-2xl p-3 flex items-center gap-3 shadow-[0_3px_0_#000] ${
-                  ach.unlocked ? 'bg-[#2d2f3d]' : 'bg-[#21232e] opacity-75'
-                }`}
-              >
-                <div
-                  className={`w-11 h-11 rounded-xl border-2 border-black flex items-center justify-center flex-shrink-0 shadow-[0_2px_0_#000] ${
-                    ach.unlocked ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-400'
-                  }`}
-                >
-                  <ach.icon size={22} strokeWidth={2.5} />
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-white font-black text-xs">{ach.title}</h4>
-                    <span
-                      className={`text-[9px] font-black px-1.5 py-0.5 rounded border border-black ${
-                        ach.unlocked ? 'bg-emerald-900/80 text-emerald-300' : 'bg-gray-800 text-gray-400'
-                      }`}
-                    >
-                      {ach.unlocked ? '已解锁' : '未解锁'}
-                    </span>
-                  </div>
-                  <p className="text-gray-300 text-[11px] font-bold mt-0.5 truncate">{ach.desc}</p>
-                  <div className="text-[10px] text-gray-400 font-mono mt-1">{ach.date}</div>
-                </div>
+        {/* 成就勋章：完成时间为现实时间，跨人生保留 */}
+        {subTab === 'achievement' && (() => {
+          const record = readAchievements();
+          const icons: Record<string, React.ElementType> = {
+            baby: Baby, coins: CircleDollarSign, home: Home, heart: Heart, users: Users, gift: Gift, gem: Gem, crown: Crown,
+            chart: TrendingUp, plane: Plane, globe: Globe, hospital: Hospital, cake: Star, tree: GitFork, trophy: Trophy, scroll: Scroll,
+          };
+          const done = ACHIEVEMENTS.filter((a) => record[a.id]).length;
+          return (
+            <div className="space-y-3">
+              <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3 shadow-[0_3px_0_#000] flex items-center justify-between">
+                <span className="text-white font-black text-xs">已达成 {done} / {ACHIEVEMENTS.length}</span>
+                <span className="text-[10px] text-gray-400 font-bold">{done === ACHIEVEMENTS.length ? '🎉 致谢名单即将开放' : '集齐全部成就将解锁致谢名单'}</span>
               </div>
-            ))}
-          </div>
-        )}
+              {ACHIEVEMENTS.map((ach) => {
+                const at = record[ach.id];
+                const Icon = icons[ach.icon] ?? Award;
+                return (
+                  <div
+                    key={ach.id}
+                    className={`border-2 border-black rounded-2xl p-3 flex items-center gap-3 shadow-[0_3px_0_#000] ${at ? 'bg-[#2d2f3d]' : 'bg-[#21232e] opacity-75'}`}
+                  >
+                    <div className={`w-11 h-11 rounded-xl border-2 border-black flex items-center justify-center flex-shrink-0 shadow-[0_2px_0_#000] ${at ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-400'}`}>
+                      <Icon size={22} strokeWidth={2.5} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-white font-black text-xs">{ach.title}</h4>
+                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border border-black ${at ? 'bg-emerald-900/80 text-emerald-300' : 'bg-gray-800 text-gray-400'}`}>
+                          {at ? '已解锁' : '未解锁'}
+                        </span>
+                      </div>
+                      <p className="text-gray-300 text-[11px] font-bold mt-0.5">{ach.desc}</p>
+                      <div className="text-[10px] text-gray-400 font-mono mt-1">{at ? `${formatRealTime(at)} 达成` : '尚未达成'}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* Tab 3: 系统设置 (Settings) */}
         {subTab === 'settings' && (
@@ -2017,66 +2087,7 @@ const ProfileModal = ({
   );
 };
 
-const BANK_LIST = [
-  {
-    id: 'aminoac',
-    name: 'Bank Of Aminoac（阿米诺斯银行）',
-    shortName: 'Bank Of Aminoac',
-    type: '商业巨头',
-    rate: '4.8% 活期年化',
-    maxLoan: 1000000,
-    openFee: 0,
-    badge: '免开户费',
-    desc: '阿米诺斯帝国商业与民用核心银行，资金结算迅捷，提供灵活资金周转。',
-  },
-  {
-    id: 'aminoac_savings',
-    name: '阿米诺斯储蓄银行',
-    shortName: '阿米诺斯储蓄银行',
-    type: '官方储蓄',
-    rate: '5.8% 定期年化',
-    maxLoan: 500000,
-    openFee: 1000,
-    badge: '保本保息',
-    desc: '由阿米诺斯皇家财政部直辖担保，专精定期沉淀储蓄与稳健长效回报。',
-  },
-  {
-    id: 'russia_invest',
-    name: '俄罗斯投资银行',
-    shortName: '俄罗斯投资银行',
-    type: '资本投资',
-    rate: '8.5%~16% 浮动',
-    maxLoan: 3000000,
-    openFee: 10000,
-    badge: '高额信贷',
-    desc: '跨国重工业与能源风险投资银团，提供高额信用借贷与股票基金。',
-  },
-  {
-    id: 'joint_bank',
-    name: 'Совместный банк России и Аминоас诺汇银行',
-    shortName: '俄罗斯与阿米诺斯联合银行',
-    type: '跨国银团',
-    rate: '12.0% 尊享年化',
-    maxLoan: 10000000,
-    openFee: 50000,
-    badge: 'VIP尊享',
-    desc: '俄阿两国超级财团联合创立，VIP黑卡通道，享有极高利息与千万信贷。',
-  },
-];
-
-interface BankAccountData {
-  opened: boolean;
-  cardNo: string;
-  deposit: number;
-  loan: number;
-  transactions: Array<{
-    id: string;
-    type: 'deposit' | 'withdraw' | 'loan' | 'repay' | 'interest' | 'investment';
-    title: string;
-    amount: number;
-    time: string;
-  }>;
-}
+type BankAccountData = BankAccounts[string];
 
 const BankModal = ({
   onClose,
@@ -2087,6 +2098,7 @@ const BankModal = ({
   bankLoan,
   setBankLoan,
   onOpenWealthChart,
+  gameYear,
 }: {
   onClose: () => void;
   coins: number;
@@ -2096,78 +2108,31 @@ const BankModal = ({
   bankLoan: number;
   setBankLoan: React.Dispatch<React.SetStateAction<number>>;
   onOpenWealthChart?: () => void;
+  /** 当前游戏年份：决定贷款利率是否受历史大事件影响 */
+  gameYear: number;
 }) => {
   const [selectedBankId, setSelectedBankId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'deposit' | 'investment' | 'loan' | 'history'>('deposit');
   const [amountInput, setAmountInput] = useState('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // 多银行账户数据存储
-  const [accounts, setAccounts] = useState<Record<string, BankAccountData>>(() => {
-    try {
-      const saved = localStorage.getItem('amigo_multi_bank_accounts_v1');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-
-    // 初始状态：默认开通 Bank Of Aminoac，并继承旧的存贷款数据
-    return {
-      aminoac: {
-        opened: true,
-        cardNo: 'AMN-8801-9214',
-        deposit: bankDeposit || 500000,
-        loan: bankLoan || 0,
-        transactions: [
-          { id: '1', type: 'interest', title: '活期存款利息自动结算', amount: 1520, time: '今日 08:00' },
-          { id: '2', type: 'deposit', title: '存入Bank Of Aminoac储蓄金', amount: 500000, time: '2026.08.10' },
-        ],
-      },
-      aminoac_savings: {
-        opened: false,
-        cardNo: 'AMN-SAV-1029',
-        deposit: 0,
-        loan: 0,
-        transactions: [],
-      },
-      russia_invest: {
-        opened: false,
-        cardNo: 'RUS-INV-7731',
-        deposit: 0,
-        loan: 0,
-        transactions: [],
-      },
-      joint_bank: {
-        opened: false,
-        cardNo: 'RUS-AMN-9988',
-        deposit: 0,
-        loan: 0,
-        transactions: [],
-      },
-    };
-  });
+  // 多银行账户数据（读取时会把已归档理财基金的申购本金退回存款）
+  const [accounts, setAccounts] = useState<BankAccounts>(() => loadAccounts(bankDeposit, bankLoan));
 
   // 保存数据并同步总资产
-  const saveAccounts = (updated: Record<string, BankAccountData>) => {
+  const saveAccounts = (updated: BankAccounts) => {
     setAccounts(updated);
-    try {
-      localStorage.setItem('amigo_multi_bank_accounts_v1', JSON.stringify(updated));
-    } catch (e) {}
-
-    // 计算所有银航账户的总储蓄与总贷款并更新给主调函数
-    let totalDep = 0;
-    let totalL = 0;
-    Object.values(updated).forEach(acc => {
-      if (acc.opened) {
-        totalDep += acc.deposit;
-        totalL += acc.loan;
-      }
-    });
-    setBankDeposit(totalDep);
-    setBankLoan(totalL);
-    try {
-      localStorage.setItem('amigo_bank_deposit', totalDep.toString());
-      localStorage.setItem('amigo_bank_loan', totalL.toString());
-    } catch (e) {}
+    const totals = persistBankAccounts(updated);
+    setBankDeposit(totals.deposit);
+    setBankLoan(totals.loan);
   };
+
+  // 打开时保存一次：落盘退款结果并刷新汇总
+  React.useEffect(() => {
+    saveAccounts(accounts);
+  }, []);
+
+  const rateEvent = currentRateEvent(gameYear);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -2201,6 +2166,7 @@ const BankModal = ({
     };
 
     saveAccounts(updated);
+    addLifeLog('财富', `在${bank.shortName}开户`, `卡号 ${randomCard}。`);
     showToast(`成功在 [${bank.shortName}] 开户！获得卡号: ${randomCard}`);
     setSelectedBankId(bank.id);
   };
@@ -2309,6 +2275,7 @@ const BankModal = ({
     };
     saveAccounts(updated);
     setCoins(prev => prev + loanAmount);
+    if (loanAmount >= 100000) addLifeLog('财富', `向${currentBank.shortName}贷款`, `借入 ${loanAmount.toLocaleString()} ₽。`);
     showToast(`成功贷款 ${loanAmount.toLocaleString()} ₽，资金已入账！`);
   };
 
@@ -2433,6 +2400,17 @@ const BankModal = ({
               </div>
             </div>
 
+            {rateEvent && (
+              <div className="bg-red-950/70 border-2 border-red-500/60 rounded-2xl p-3 text-xs shadow-[0_3px_0_#000]">
+                <div className="text-red-300 font-black flex items-center gap-1.5">
+                  <AlertTriangle size={14} /> 时局：{rateEvent.title}（{rateEvent.fromYear}–{rateEvent.toYear}）
+                </div>
+                <p className="text-red-200/80 font-bold mt-1 leading-relaxed">
+                  {rateEvent.desc}各银行贷款年利率上浮 {formatRate(rateEvent.loanRateDelta)}。
+                </p>
+              </div>
+            )}
+
             <div className="text-xs font-black text-yellow-400 flex items-center gap-1.5 px-1">
               <Building size={16} className="text-amber-400" /> 选择银行办理业务或开立新账户：
             </div>
@@ -2465,6 +2443,9 @@ const BankModal = ({
                       <div className="flex items-center gap-3 text-xs">
                         <span className="text-emerald-400 font-black flex items-center gap-1">
                           <TrendingUp size={14} /> {bank.rate}
+                        </span>
+                        <span className={`font-black text-[11px] ${rateEvent ? 'text-red-400' : 'text-gray-400'}`}>
+                          贷款 {formatRate(loanRateFor(bank, gameYear))}
                         </span>
                         {isOpened && (
                           <span className="text-amber-300 font-mono text-[11px] font-bold">
@@ -2548,7 +2529,7 @@ const BankModal = ({
             </div>
 
             {/* 标签栏 */}
-            <div className="grid grid-cols-4 bg-[#21232e] p-1 rounded-xl border-2 border-black gap-1 shadow-[0_2px_0_#000]">
+            <div className="grid grid-cols-3 bg-[#21232e] p-1 rounded-xl border-2 border-black gap-1 shadow-[0_2px_0_#000]">
               <button
                 onClick={() => setActiveTab('deposit')}
                 className={`py-2 text-[11px] font-black rounded-lg border transition-all cursor-pointer truncate ${
@@ -2557,17 +2538,7 @@ const BankModal = ({
                     : 'text-gray-400 border-transparent hover:text-white'
                 }`}
               >
-                存款理财
-              </button>
-              <button
-                onClick={() => setActiveTab('investment')}
-                className={`py-2 text-[11px] font-black rounded-lg border transition-all cursor-pointer truncate ${
-                  activeTab === 'investment'
-                    ? 'bg-amber-400 text-black border-black shadow-[0_1px_0_#000]'
-                    : 'text-gray-400 border-transparent hover:text-white'
-                }`}
-              >
-                专属基金
+                存款业务
               </button>
               <button
                 onClick={() => setActiveTab('loan')}
@@ -2654,44 +2625,6 @@ const BankModal = ({
               </div>
             )}
 
-            {/* 基金理财 */}
-            {activeTab === 'investment' && (
-              <div className="space-y-3">
-                {[
-                  { title: `${currentBank?.shortName} 旗舰保本公债`, risk: '低风险', returnRate: '5.2% 年化', min: 10000, desc: '由该银行发行的政府信用担保公债。' },
-                  { title: '帝国跨境贸易高盈余基金', risk: '中风险', returnRate: '12.8% 年化', min: 50000, desc: '参与阿米诺斯与俄罗斯双边重工业机械贸易。' },
-                  { title: '前沿蒸汽能源与稀矿股票', risk: '高风险', returnRate: '28.5% 浮动', min: 100000, desc: '高杠杆能源股票投机，获得丰厚商业利润分红。' },
-                ].map((fund, idx) => (
-                  <div key={idx} className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3 shadow-[0_4px_0_#000] space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-white font-black text-xs">{fund.title}</h4>
-                      <span className="text-[10px] bg-yellow-400 text-black font-black px-1.5 py-0.5 rounded border border-black">
-                        {fund.risk}
-                      </span>
-                    </div>
-                    <p className="text-gray-300 text-[11px] font-bold">{fund.desc}</p>
-                    <div className="flex items-center justify-between pt-1 border-t border-gray-700/80">
-                      <span className="text-emerald-400 font-black text-xs">预期收益: {fund.returnRate}</span>
-                      <button
-                        onClick={() => {
-                          if (coins < fund.min) {
-                            showToast(`身上现金不足以申购 (${fund.min.toLocaleString()} ₽)！`);
-                            return;
-                          }
-                          setCoins(prev => prev - fund.min);
-                          addTransactionForCurrent('investment', `申购 [${fund.title}]`, fund.min);
-                          showToast(`成功申购 [${fund.title}] ${fund.min.toLocaleString()} ₽！`);
-                        }}
-                        className="bg-yellow-400 hover:bg-yellow-300 text-black font-black text-[11px] px-3 py-1 rounded-lg border border-black shadow-[0_1px_0_#000] cursor-pointer"
-                      >
-                        申购 ({(fund.min/10000)}万)
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
             {/* 信贷借还 */}
             {activeTab === 'loan' && (
               <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] space-y-4">
@@ -2699,6 +2632,18 @@ const BankModal = ({
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-400 font-bold">本行已借贷款：</span>
                     <span className="text-red-400 font-black font-mono">{currentAccount?.loan.toLocaleString()} ₽</span>
+                  </div>
+                  {currentBank && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-400 font-bold">当前贷款年利率：</span>
+                      <span className={`font-black font-mono ${rateEvent ? 'text-red-400' : 'text-amber-300'}`}>
+                        {formatRate(loanRateFor(currentBank, gameYear))}
+                        {rateEvent ? `（${rateEvent.title} +${formatRate(rateEvent.loanRateDelta)}）` : ''}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span className="font-bold">利息每月结算：现金不足先扣本行存款，再不足计入本金</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-400 font-bold">本行剩余可用额度：</span>
@@ -2820,12 +2765,20 @@ export default function App() {
 
   const [authUser, setAuthUser] = useState<AppUser | null>(() => (DEV_SKIP_AUTH ? DEV_MOCK_USER : readCachedUser()));
   const [authLoading, setAuthLoading] = useState(!DEV_SKIP_AUTH);
-  const [playerName, setPlayerName] = useState(() => readCachedUser()?.displayName || 'AmiGo·玩家');
+  const registeredName = (): string | null => {
+    try {
+      return localStorage.getItem('amigo_is_registered') === 'true' ? localStorage.getItem('amigo_player_name') : null;
+    } catch (e) {
+      return null;
+    }
+  };
+  const [playerName, setPlayerName] = useState(() => registeredName() || readCachedUser()?.displayName || 'AmiGo·玩家');
 
   const applySignedInUser = (user: AppUser) => {
     setAuthUser(user);
     cacheUser(user);
-    if (user.displayName || user.email) {
+    // 已办理出生登记的角色名以存档为准，不被账号昵称覆盖
+    if (!registeredName() && (user.displayName || user.email)) {
       setPlayerName(user.displayName || user.email?.split('@')[0] || 'AmiGo·玩家');
     }
   };
@@ -2901,6 +2854,12 @@ export default function App() {
   };
 
   const handleNextMonth = () => {
+    // 角色已故：不能继续推进时间（undefined.md 第 1 题）
+    if (isRegistered && health <= 0) {
+      showToast('💀 角色已故，无法继续推进时间。可在「推演」或个人中心「重置人生」');
+      return;
+    }
+
     let nextM = gameMonth + 1;
     let nextY = gameYear;
     if (nextM > 12) {
@@ -2914,9 +2873,10 @@ export default function App() {
       localStorage.setItem('amigo_game_month', nextM.toString());
     } catch (e) {}
 
-    const monthlyStipend = 1500;
+    const ageNextMonth = isRegistered ? Math.max(0, 8 + nextY - birthRegisteredYear) : 8;
+    const notes: string[] = [`俸禄 +${BASE_STIPEND.toLocaleString()}`];
 
-    // 结算名下出租房产租金收益
+    // 1. 名下出租房产租金收益与自住舒适度
     let propertyRentIncome = 0;
     let comfortBonusTotal = 0;
     try {
@@ -2942,7 +2902,7 @@ export default function App() {
       }
     } catch (e) {}
 
-    // 结算租住支出
+    // 2. 租住支出
     let rentExpense = 0;
     try {
       const savedRental = localStorage.getItem('amigo_current_rental');
@@ -2954,37 +2914,222 @@ export default function App() {
         }
       }
     } catch (e) {}
+    if (propertyRentIncome > 0) notes.push(`房租 +${propertyRentIncome.toLocaleString()}`);
+    if (rentExpense > 0) notes.push(`租金 -${rentExpense.toLocaleString()}`);
 
-    const netChange = monthlyStipend + propertyRentIncome - rentExpense;
-    setCoins((prev) => Math.max(0, prev + netChange));
+    // 3. 在职月薪（第 2、3 题：日薪 × 22，年满 16 岁才发）
+    const currentJobId = readCurrentJobId();
+    const job = currentJobId ? JOB_POSITIONS.find((j) => j.id === currentJobId) : null;
+    // 「勤勉」特质月薪 +10%
+    let salary = isRegistered ? Math.round(monthlySalary(job?.dailySalary, ageNextMonth) * salaryMultiplier(playerTraits)) : 0;
 
-    if (comfortBonusTotal > 0) {
-      setHealth((prev) => Math.min(100, prev + comfortBonusTotal));
-    }
-
-    const mStr = nextM < 10 ? `0${nextM}` : `${nextM}`;
-    let extraMsg = '';
-    if (propertyRentIncome > 0) extraMsg += ` | 房租净收 +${propertyRentIncome} ₽`;
-    if (rentExpense > 0) extraMsg += ` | 租金扣除 -${rentExpense} ₽`;
-
-    // 婚后每月有概率迎来子嗣
-    if (isRegistered && health > 0) {
-      const ageNextMonth = 8 + Math.max(0, nextY - birthRegisteredYear);
-      const birth = tryHaveChild(family, ageNextMonth, nextY, nextM);
-      if (birth.child) {
-        setFamily(birth.state);
-        extraMsg += ` | 👶 ${birth.child.name} 降生！`;
+    // 3b. 童工（第 19 题：乞丐、平民家庭 8–15 岁）；年满 16 岁自动结束
+    let childLaborDamage = 0;
+    const childJob = isRegistered ? readChildJob() : null;
+    if (childJob) {
+      if (ageNextMonth > CHILD_LABOR_MAX_AGE || !familyClass.childLabor) {
+        try {
+          localStorage.removeItem(CHILD_JOB_KEY);
+        } catch (e) {}
+        notes.push(`童工「${childJob.title}」结束，可正式求职`);
+        addLifeLog('事业', `结束童工生涯`, `不再做「${childJob.title}」，可以正式求职了。`, { year: nextY, month: nextM, age: ageNextMonth });
+      } else {
+        salary += childJob.salary;
+        childLaborDamage = childJob.healthCost;
+        notes.push(`童工 +${childJob.salary.toLocaleString()}`);
       }
     }
-    showToast(`🗓️ 已步入 ${nextY}.${mStr}！月度基本俸禄 +${monthlyStipend} ₽${extraMsg}`);
+    if (salary > 0) {
+      notes.push(`月薪 +${salary.toLocaleString()}`);
+      try {
+        const earned = Number(localStorage.getItem('amigo_job_earned_coins') || 0) + salary;
+        const months = Number(localStorage.getItem('amigo_job_months_worked') || 0) + 1;
+        localStorage.setItem('amigo_job_earned_coins', String(earned));
+        localStorage.setItem('amigo_job_months_worked', String(months));
+      } catch (e) {}
+    }
+
+    // 4. 银行存贷款利息（第 5 题：贷款利率随历史大事件上浮）
+    const cashBeforeInterest = Math.max(0, coins + BASE_STIPEND + propertyRentIncome - rentExpense + salary);
+    const interest = settleMonthlyInterest(loadAccounts(bankDeposit, bankLoan), cashBeforeInterest, nextY, nextM, Math.random, depositInterestMultiplier(playerTraits));
+    const bankTotals = persistBankAccounts(interest.accounts);
+    setBankDeposit(bankTotals.deposit);
+    setBankLoan(bankTotals.loan);
+    if (interest.depositInterest > 0) notes.push(`存款利息 +${interest.depositInterest.toLocaleString()}`);
+    if (interest.loanInterest > 0) notes.push(`贷款利息 -${interest.loanInterest.toLocaleString()}`);
+    if (interest.capitalized > 0) notes.push(`⚠️ ${interest.capitalized.toLocaleString()} ₽ 利息计入本金`);
+
+    const netChange = BASE_STIPEND + propertyRentIncome - rentExpense + salary - interest.cashPaid;
+    setCoins((prev) => Math.max(0, prev + netChange));
+
+    // 5. 股市推进（第 4 题：每月 20 个交易日）
+    try {
+      saveMarket(advanceMarket(loadMarket(), TRADING_DAYS_PER_MONTH));
+    } catch (e) {}
+
+    // 6. 健康：住房舒适度恢复 − 年龄自然衰减（第 1 题：A）
+    //    未满 18 岁没有自己的住处时住在父母家；老年住房加成打折
+    //    父母家的条件由家族阶层决定（乞丐家庭没有家）；疾病与童工额外损耗健康
+    const comfort = isRegistered ? effectiveComfort(comfortBonusTotal, ageNextMonth, familyClass.parentHomeComfort) : comfortBonusTotal;
+    let diseaseDamage = 0;
+    if (isRegistered) {
+      const sick = progressDisease(disease, ageNextMonth, familyClass.diseaseMultiplier * diseaseTraitMultiplier(playerTraits));
+      setDisease(sick.active);
+      diseaseDamage = sick.damage;
+      const when = { year: nextY, month: nextM, age: ageNextMonth };
+      if (sick.contracted) {
+        notes.push(`🤒 患上${sick.contracted.name}`);
+        addLifeLog('健康', `患上${sick.contracted.name}`, sick.contracted.selfHealMonths === null ? '这种病不会自愈，须尽快就医。' : `约 ${sick.contracted.selfHealMonths} 个月可自愈。`, when);
+      }
+      if (sick.recovered) {
+        notes.push(`${sick.recovered.name}已痊愈`);
+        addLifeLog('健康', `${sick.recovered.name}痊愈`, '熬过病痛，身体逐渐康复。', when);
+      }
+      else if (sick.damage > 0 && currentDisease) notes.push(`${currentDisease.name} -${sick.damage}`);
+    }
+    const newHealth = isRegistered
+      ? nextHealth(health, comfort, ageNextMonth, diseaseDamage + childLaborDamage - decayReduction(playerTraits, ageNextMonth))
+      : Math.min(100, health + comfort);
+    setHealth(newHealth);
+    if (isRegistered) {
+      const delta = newHealth - health;
+      if (delta !== 0) notes.push(`健康 ${delta > 0 ? '+' : ''}${delta}`);
+    }
+
+    // 7. 家族：生育（含特质）、情人、好感衰减与分家、监护托管
+    const logWhenFamily = { year: nextY, month: nextM, age: ageNextMonth };
+    let fam = family;
+    let familyCash = 0; // 本月家族相关的现金变动
+    let repDelta = 0;
+    if (isRegistered && newHealth > 0) {
+      const birth = tryHaveChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits);
+      if (birth.child) {
+        fam = birth.state;
+        repDelta += REP.child * birth.children.length;
+        notes.push(
+          birth.children.length === 2
+            ? `👶👶 双胞胎 ${birth.children.map((c) => c.name).join('、')} 降生`
+            : `👶 ${birth.child.name} 降生`,
+        );
+        addLifeLog(
+          '大事',
+          birth.children.length === 2 ? '喜得双胞胎' : `喜得${birth.child.gender === '女' ? '千金' : '麟儿'}`,
+          `${birth.children.map((c) => c.name).join('、')} 降生。`,
+          logWhenFamily,
+        );
+        if (birth.children.length === 2) unlockAchievement('twins');
+      }
+
+      // 贵族情人：每月供养；3% 概率生下私生子女
+      if (fam.lover) {
+        const upkeep = LOVER_UPKEEP[familyClass.id] ?? LOVER_UPKEEP.noble;
+        if (coins + netChange < upkeep) {
+          notes.push(`无力供养，与 ${fam.lover.name} 断绝往来`);
+          fam = { ...fam, lover: null };
+        } else {
+          familyCash -= upkeep;
+          notes.push(`供养情人 -${upkeep.toLocaleString()}`);
+          const secret = tryIllegitimateChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits);
+          if (secret.child) {
+            fam = secret.state;
+            notes.push(`🤫 私生${secret.child.gender === '女' ? '女' : '子'} ${secret.child.name} 降生`);
+            addLifeLog('大事', `私生${secret.child.gender === '女' ? '女' : '子'}降生`, `与 ${secret.child.otherParentName} 所生的 ${secret.child.name} 降生。`, logWhenFamily);
+          }
+        }
+      }
+
+      // 好感度衰减与分家（按推进前的月份判断本月是否互动过）
+      const membersNow = buildFamilyMembers(fam, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth });
+      const drift = monthlyFamilyDrift(fam, membersNow, gameYear, gameMonth);
+      fam = drift.state;
+      drift.splits.forEach((b) => {
+        const share = Math.round(Math.max(0, coins + netChange + familyCash) * SPLIT_CASH_SHARE);
+        familyCash -= share;
+        notes.push(`⚠️ ${b.relation} ${b.name} 分家，分走 ${share.toLocaleString()} ₽`);
+        addLifeLog('大事', `${b.relation} ${b.name} 分家`, `长期对当家人不满，携一支族人分家出走，分走 ${share.toLocaleString()} ₽。`, logWhenFamily);
+      });
+
+      // 未成年继承的监护：成年返还托管资产，之后赡养监护人
+      if (guardianship) {
+        const guardianAlive =
+          guardianship.guardianName === ORPHANAGE_NAME ||
+          membersNow.some((m) => m.name === guardianship.guardianName && m.status !== '已故');
+        const step = monthlyGuardianship(guardianship, ageNextMonth, guardianAlive, coins + netChange + familyCash);
+        setGuardianship(step.guardianship);
+        familyCash += step.returned - step.support;
+        if (step.note) {
+          notes.push(step.note);
+          addLifeLog('财富', step.returned > 0 ? '领回托管资产' : '赡养义务结束', step.note, logWhenFamily);
+        }
+        if (step.support > 0) notes.push(`赡养${guardianship.guardianName} -${step.support.toLocaleString()}`);
+      }
+
+      // 声望：高薪岗位每年 +1
+      if (nextM === 1 && salary >= HIGH_SALARY) repDelta += REP.highSalaryYearly;
+    }
+    if (fam !== family) setFamily(fam);
+    if (familyCash !== 0) setCoins((prev) => Math.max(0, prev + familyCash));
+    if (repDelta !== 0) changeReputation(repDelta);
+    if (salary > 0) unlockAchievement('first_salary');
+    if (interest.event) unlockAchievement('witness');
+
+    const mStr = nextM < 10 ? `0${nextM}` : `${nextM}`;
+    const enteredEvent = interest.event && interest.event !== currentRateEvent(gameYear) ? interest.event : null;
+    const logWhen = { year: nextY, month: nextM, age: ageNextMonth };
+
+    // 8. 推演事件：每月 50% 概率出现一张（第 8 题 A）
+    if (isRegistered && newHealth > 0) {
+      const inst = rollMonthlyEvent(
+        { age: ageNextMonth, classId: familyClass.id, employed: !!job, coins, hasChildren: fam.children.length > 0 },
+        nextY,
+        nextM,
+      );
+      if (inst) {
+        setSimEvents((prev) => [...prev, inst]);
+        setSimQuiet(null);
+        notes.push('📰 新的人生事件');
+      } else {
+        setSimQuiet(`${nextY}.${mStr} 本月无事发生`);
+        notes.push('本月无事发生');
+      }
+    }
+
+    // 9. 人生日志：整十岁生日、健康告急、时局剧变、辞世
+    if (isRegistered) {
+      if (nextM === 1 && ageNextMonth > 0 && ageNextMonth % 10 === 0) addLifeLog('成长', `${ageNextMonth} 岁`, `迎来 ${ageNextMonth} 岁生日。`, logWhen);
+      if (health >= 30 && newHealth > 0 && newHealth < 30) addLifeLog('健康', '健康告急', `健康跌至 ${newHealth}，需要尽快休养或就医。`, logWhen);
+      if (enteredEvent) addLifeLog('大事', `时局：${enteredEvent.title}`, enteredEvent.desc, logWhen);
+      if (newHealth <= 0) addLifeLog('大事', '辞世', `${playerName} 离开了人世，享年 ${ageNextMonth} 岁。`, logWhen);
+    }
+    if (isRegistered && newHealth <= 0) {
+      setShowSuccession(true);
+      showToast(`💀 ${nextY}.${mStr}：${playerName} 因健康耗尽离世，享年 ${ageNextMonth} 岁`);
+    } else if (enteredEvent) {
+      showToast(`⚠️ 时局剧变：${enteredEvent.title}！贷款利率上浮 ${formatRate(enteredEvent.loanRateDelta)}｜${notes.join('｜')}`);
+    } else {
+      showToast(`🗓️ 已步入 ${nextY}.${mStr}｜${notes.join('｜')}`);
+    }
     // 等本月结算写入本地存档后再同步到云端
     setTimeout(() => void cloud.saveNow(), 1500);
   };
 
-  const currentAge = isRegistered ? 8 + Math.max(0, gameYear - birthRegisteredYear) : 8;
+  // 年龄可小于 8 岁（年幼的子嗣继承家业时）
+  const currentAge = isRegistered ? Math.max(0, 8 + gameYear - birthRegisteredYear) : 8;
 
   const handleRegisterBirth = (name: string) => {
     const generatedGender = Math.random() > 0.5 ? '男' : '女';
+    // 随机家族出身（undefined.md 第 18 题）：决定起始资产、父母家条件与家族成员
+    const cls = rollClass();
+    const origin = generateOrigin(cls);
+    setFamily({ ...INITIAL_FAMILY_STATE, origin });
+    setCoins(cls.startCash);
+    const bankTotals = persistBankAccounts(buildDefaultAccounts(cls.startDeposit, 0));
+    setBankDeposit(bankTotals.deposit);
+    setBankLoan(bankTotals.loan);
+    setDisease(null);
+    try {
+      localStorage.removeItem(CHILD_JOB_KEY);
+    } catch (e) {}
     setIsRegistered(true);
     setGender(generatedGender);
     setBirthRegisteredYear(gameYear);
@@ -2995,8 +3140,94 @@ export default function App() {
       localStorage.setItem('amigo_birth_registered_year', gameYear.toString());
       localStorage.setItem('amigo_player_name', name);
     } catch (e) {}
-    showToast(`🎉 出生登记成功！性别：${generatedGender}，初始年龄：8岁`);
-    return { gender: generatedGender, age: 8 };
+    clearLifeLog();
+    setSimEvents([]);
+    const traits = randomTraits();
+    setPlayerTraits(traits);
+    setReputation(cls.startReputation);
+    setGuardianship(null);
+    addLifeLog('成长', '出生登记', `出生于${cls.label}之家（${origin.surname}家族），性别${generatedGender}，特质：${traitNames(traits).join('、')}。`, { year: gameYear, month: gameMonth, age: 8 });
+    unlockAchievement('born');
+    showToast(`🎉 出生登记成功！你出生在${cls.label}之家（${origin.surname}家族），性别：${generatedGender}，初始年龄：8岁`);
+    return { gender: generatedGender, age: 8, classLabel: cls.label, surname: origin.surname };
+  };
+
+  /** 由子嗣或兄弟姐妹继承：资产保留，身份、年龄、家族世系换成继承人（undefined.md 第 21 题） */
+  const handleSuccession = (heirId: string, keepRecords: boolean) => {
+    const members = buildFamilyMembers(family, {
+      playerName,
+      playerGender: gender,
+      playerAge: currentAge,
+      playerOccupation,
+      gameYear,
+      gameMonth,
+    });
+    const { state: nextFamily, heir } = succeed(
+      family,
+      members,
+      heirId,
+      { name: playerName, gender: (gender === '女' ? '女' : '男') as Gender, age: currentAge, occupation: playerOccupation },
+      gameYear,
+      gameMonth,
+    );
+    const newRegYear = gameYear - (heir.age - 8);
+    // 第 17 题：玩家可选择把前任主角的人生大事写入族谱
+    const records = keepRecords
+      ? readLifeLog()
+          .filter((e) => e.category === '大事')
+          .map((e) => ({ year: e.year, month: e.month, title: `${playerName}：${e.title}`, desc: e.desc }))
+      : [];
+    setFamily({ ...nextFamily, events: [...nextFamily.events.slice(0, -1), ...records, ...nextFamily.events.slice(-1)] });
+    setSimEvents([]);
+    setPlayerName(heir.name);
+    setGender(heir.gender);
+    setBirthRegisteredYear(newRegYear);
+    setHealth(100);
+    setDisease(null);
+    try {
+      localStorage.setItem('amigo_player_name', heir.name);
+      localStorage.setItem('amigo_gender', heir.gender);
+      localStorage.setItem('amigo_birth_registered_year', String(newRegYear));
+      // 继承人的职业生涯从头开始
+      localStorage.setItem(CURRENT_JOB_KEY, '');
+      localStorage.setItem(JOB_HISTORY_KEY, '[]');
+      localStorage.removeItem(CHILD_JOB_KEY);
+      localStorage.removeItem('amigo_job_months_worked');
+    } catch (e) {}
+    setShowSuccession(false);
+    setPlayerTraits(heir.traits && heir.traits.length > 0 ? heir.traits : randomTraits());
+    setReputation((r) => clampReputation(r * REP.heirShare));
+    unlockAchievement('succession');
+
+    // 未成年继承（第 25 题）：现金与存款的一半交由监护人托管，成年后返还
+    if (heir.age < GUARDIAN_ADULT_AGE) {
+      const newMembers: FamilyMemberView[] = buildFamilyMembers(nextFamily, {
+        playerName: heir.name,
+        playerGender: heir.gender,
+        playerAge: heir.age,
+        playerOccupation: '',
+        gameYear,
+        gameMonth,
+      });
+      const spouseAlive = family.spouse ? newMembers.find((m) => m.name === family.spouse!.name && m.status !== '已故') : undefined;
+      const eldest = newMembers
+        .filter((m) => !m.isPlayer && m.status !== '已故' && m.age >= GUARDIAN_ADULT_AGE && ['parent', 'grandparent', 'uncle', 'granduncle', 'sibling'].includes(m.kin ?? ''))
+        .sort((a, b) => b.age - a.age)[0];
+      const guardianName = spouseAlive?.name ?? eldest?.name ?? ORPHANAGE_NAME;
+      const custody = takeCustody(coins, loadAccounts(bankDeposit, bankLoan));
+      setCoins(custody.cashLeft);
+      const totals = persistBankAccounts(custody.accounts);
+      setBankDeposit(totals.deposit);
+      setBankLoan(totals.loan);
+      setGuardianship({ guardianName, held: custody.held, phase: 'holding', supportPerMonth: 0, supportMonthsLeft: 0 });
+      addLifeLog('财富', '监护托管', `${guardianName}代为管理一半家产 ${custody.held.toLocaleString()} ₽，成年后返还。`, { year: gameYear, month: gameMonth, age: heir.age });
+    } else {
+      setGuardianship(null);
+    }
+    // 继承人开始新的人生日志
+    clearLifeLog();
+    addLifeLog('大事', '继承家业', `${playerName} 辞世后，作为${heir.relation}继承了家业。`, { year: gameYear, month: gameMonth, age: heir.age });
+    showToast(`🕯️ ${heir.relation} ${heir.name}（${heir.age} 岁）继承了家业`);
   };
 
   const handleResetLife = () => {
@@ -3021,6 +3252,16 @@ export default function App() {
     setBankLoan(0);
     setFreeDrawUsed(false);
     setFamily(INITIAL_FAMILY_STATE);
+    setDisease(null);
+    setShowSuccession(false);
+    setSimEvents([]);
+    setSimScore(0);
+    setPlayerTraits([]);
+    setReputation(0);
+    setGuardianship(null);
+    setCharity(null);
+    setSimQuiet(null);
+    clearLifeLog();
 
     // 4. 清理本地存储中本段人生的全部存档（amigo_* / aminoac_* 前缀），保留账号级数据
     try {
@@ -3112,12 +3353,163 @@ export default function App() {
   // 云端存档（仅已验证的邮箱账号）
   const cloud = useCloudSave(authUser);
 
+  // 疾病（undefined.md 第 20 题）
+  const [disease, setDisease] = useState<ActiveDisease | null>(() => loadStored<ActiveDisease | null>(DISEASE_KEY, null));
+  React.useEffect(() => saveStored(DISEASE_KEY, disease), [disease]);
+  const currentDisease = diseaseInfo(disease);
+
+  // 家族出身（旧存档为贵族 · 瓦伦丁家族）
+  const familyOrigin = getOrigin(family);
+  const familyClass = classById(familyOrigin.classId);
+  const [showSuccession, setShowSuccession] = useState(false);
+
+  // 特质（第 27 题）、声望（第 22 题）、未成年继承的监护（第 25 题）
+  const [playerTraits, setPlayerTraits] = useState<string[]>(() => loadStored<string[]>(PLAYER_TRAITS_KEY, []));
+  const [reputation, setReputation] = useState<number>(() => loadStored(REPUTATION_KEY, isRegistered ? familyClass.startReputation : 0));
+  const [guardianship, setGuardianship] = useState<Guardianship | null>(() => loadStored<Guardianship | null>(GUARDIANSHIP_KEY, null));
+  const [charity, setCharity] = useState<{ month: string; gained: number } | null>(() => loadStored(CHARITY_KEY, null));
+  React.useEffect(() => saveStored(PLAYER_TRAITS_KEY, playerTraits), [playerTraits]);
+  React.useEffect(() => saveStored(REPUTATION_KEY, reputation), [reputation]);
+  React.useEffect(() => saveStored(GUARDIANSHIP_KEY, guardianship), [guardianship]);
+  React.useEffect(() => saveStored(CHARITY_KEY, charity), [charity]);
+  const changeReputation = (delta: number) => setReputation((r) => clampReputation(r + delta));
+
+  /** 慈善捐款：每 10,000 ₽ 声望 +1，每个游戏月最多 +5 */
+  const handleDonate = (amount: number): string => {
+    if (!isRegistered) return '请先完成出生登记';
+    if (coins < amount) return `现金不足（需 ${amount.toLocaleString()} ₽）`;
+    const monthKey = `${gameYear}-${gameMonth}`;
+    const gain = Math.min(Math.floor(amount / CHARITY_UNIT), charityRemaining(charity, monthKey));
+    setCoins((c) => c - amount);
+    changeReputation(gain);
+    setCharity({ month: monthKey, gained: (charity?.month === monthKey ? charity.gained : 0) + gain });
+    if (amount >= 100000) addLifeLog('大事', '慷慨解囊', `向慈善会捐款 ${amount.toLocaleString()} ₽。`);
+    return gain > 0 ? `感谢你的善举！声望 +${gain}` : '已捐款（本月因慈善获得的声望已达上限）';
+  };
+
+
+  // 推演：待处理事件、推演积分、最近一次「本月无事发生」提示
+  const [simEvents, setSimEvents] = useState<SimEventInstance[]>(() => loadStored<SimEventInstance[]>(SIM_EVENTS_KEY, []));
+  const [simScore, setSimScore] = useState<number>(() => loadStored(SIM_SCORE_KEY, 0));
+  const [simQuiet, setSimQuiet] = useState<string | null>(() => loadStored<string | null>(SIM_QUIET_KEY, null));
+  React.useEffect(() => saveStored(SIM_EVENTS_KEY, simEvents), [simEvents]);
+  React.useEffect(() => saveStored(SIM_SCORE_KEY, simScore), [simScore]);
+  React.useEffect(() => saveStored(SIM_QUIET_KEY, simQuiet), [simQuiet]);
+
+  /** 处理推演事件的选项（只结算金币与健康） */
+  const handleSimResolve = (uid: string, optionIndex: number) => {
+    const inst = simEvents.find((e) => e.uid === uid);
+    const def = inst ? eventDef(inst) : undefined;
+    const option = def?.options[optionIndex];
+    if (!inst || !def || !option || optionBlocked(option, coins)) return null;
+    const result = resolveOption(option);
+    const newHealth = Math.max(0, Math.min(100, health + result.health));
+    setCoins((prev) => Math.max(0, prev + result.coins));
+    setHealth(newHealth);
+    setSimScore((n) => n + result.score);
+    setSimEvents((prev) => prev.filter((e) => e.uid !== uid));
+    addLifeLog('大事', def.headline, `${option.label}：${result.text}`);
+    if (isRegistered && newHealth <= 0) {
+      addLifeLog('大事', '辞世', `${playerName} 离开了人世，享年 ${currentAge} 岁。`);
+      setShowSuccession(true);
+    }
+    return result;
+  };
+
+  // 开发测试工具：一键快进。每次只推进一个月，等界面用新状态重新渲染后再推进下一个月，
+  // 保证每个月都按最新的现金、健康、家族等状态完整结算；角色去世时自动停止。
+  const [fastForwardRemaining, setFastForwardRemaining] = useState(0);
+  React.useEffect(() => {
+    if (fastForwardRemaining <= 0) return;
+    if (isRegistered && health <= 0) {
+      setFastForwardRemaining(0);
+      return;
+    }
+    const timer = setTimeout(() => {
+      handleNextMonth();
+      setFastForwardRemaining((n) => Math.max(0, n - 1));
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fastForwardRemaining, gameYear, gameMonth, health]);
+
+  const handleDevSetAge = (age: number) => {
+    const regYear = gameYear - (age - 8);
+    setBirthRegisteredYear(regYear);
+    try {
+      localStorage.setItem('amigo_birth_registered_year', String(regYear));
+    } catch (e) {}
+    showToast(`🛠️ 年龄已设为 ${age} 岁`);
+  };
+
+  const handleDevAddChild = (twins: boolean) => {
+    const birth = addChildForTesting(family, gameYear, gameMonth, twins, Math.random, playerTraits);
+    if (twins) unlockAchievement('twins');
+    setFamily(birth.state);
+    showToast(`🛠️ 新增子嗣：${birth.children.map((c) => c.name).join('、')}`);
+  };
+
+  // 角色名持久化（改名、继承后刷新页面仍保留）
+  React.useEffect(() => {
+    if (isRegistered) {
+      try {
+        localStorage.setItem('amigo_player_name', playerName);
+      } catch (e) {}
+    }
+  }, [isRegistered, playerName]);
+
   const playerOccupation = (() => {
     const id = readCurrentJobId();
     const job = id ? JOB_POSITIONS.find((j) => j.id === id) : null;
     if (job) return job.title;
     return currentAge < 18 ? '学堂学生' : '待业';
   })();
+
+  // 成就：解锁时弹出提示；状态类成就随数据变化自动检查
+  React.useEffect(() => {
+    const onUnlock = (e: Event) => {
+      const def = ACHIEVEMENTS.find((a) => a.id === (e as CustomEvent).detail);
+      if (def) showToast(`🏆 成就达成：${def.title} —— ${def.desc}`);
+    };
+    window.addEventListener(ACHIEVEMENT_EVENT, onUnlock);
+    return () => window.removeEventListener(ACHIEVEMENT_EVENT, onUnlock);
+  }, []);
+  React.useEffect(() => {
+    if (!isRegistered) return;
+    const lsArray = (key: string) => {
+      try {
+        const v = JSON.parse(localStorage.getItem(key) || '[]');
+        return Array.isArray(v) ? v : [];
+      } catch (e) {
+        return [];
+      }
+    };
+    unlockAchievement('born');
+    if (coins + bankDeposit >= 1_000_000) unlockAchievement('rich');
+    if (coins + bankDeposit >= 100_000_000) unlockAchievement('tycoon');
+    if (family.spouse) unlockAchievement('married');
+    if (family.children.length >= 4) unlockAchievement('big_family');
+    if (currentAge >= 80 && health > 0) unlockAchievement('eighty');
+    if (simScore >= 100) unlockAchievement('sim_master');
+    if (lsArray('amigo_owned_properties').length > 0) unlockAchievement('home');
+    if (lsArray('amigo_permanent_residencies').length > 0) unlockAchievement('resident');
+    if (lsArray('aminoac_travel_history').length >= 3) unlockAchievement('traveler');
+    try {
+      if (localStorage.getItem('amigo_stock_account_opened') === 'true') unlockAchievement('stock');
+    } catch (e) {}
+  }, [isRegistered, coins, bankDeposit, family, currentAge, health, simScore, gameYear, gameMonth]);
+
+  // 家族排行榜：凝聚力（在世成员对当家人的平均好感）、财力（家族资产净值）、影响力（声望）
+  const familyMembersView = buildFamilyMembers(family, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth });
+  const livingRelatives = familyMembersView.filter((m) => !m.isPlayer && m.status !== '已故');
+  const familyCohesion = livingRelatives.length > 0 ? Math.round(livingRelatives.reduce((sum, m) => sum + m.affinity, 0) / livingRelatives.length) : 50;
+  const familyWealth = familyNetWorth(coins, bankDeposit, bankLoan, guardianship?.held ?? 0);
+  const familyRanking = rankFamilies({
+    surname: familyOrigin.surname,
+    classLabel: familyOrigin.classLabel,
+    cohesion: familyCohesion,
+    wealth: familyWealth,
+    influence: reputation,
+  });
 
   if (authLoading) {
     return (
@@ -3191,6 +3583,8 @@ export default function App() {
              gender={gender}
              age={currentAge}
              childrenCount={family.children.length}
+             diseaseName={currentDisease?.name}
+             onOpenSuccession={() => setShowSuccession(true)}
            />
          )}
          {activeTab === 'bag' && (
@@ -3217,9 +3611,15 @@ export default function App() {
              gameMonth={gameMonth}
              onGoToBirthRegistration={() => setShowBirthModal(true)}
              onResetLife={handleResetLife}
+             onOpenSuccession={() => setShowSuccession(true)}
+             events={simEvents}
+             coins={coins}
+             simScore={simScore}
+             quietMessage={simQuiet}
+             onResolve={handleSimResolve}
            />
          )}
-         {activeTab === 'log' && <LogTab />}
+         {activeTab === 'log' && <LogTab isRegistered={isRegistered} />}
          {activeTab === 'map' && (
            <FamilyTab
              isRegistered={isRegistered}
@@ -3236,6 +3636,12 @@ export default function App() {
              setFamily={setFamily}
              onOpenMarriage={() => setShowMarriage(true)}
              onGoToBirthRegistration={() => setShowBirthModal(true)}
+             playerTraits={playerTraits}
+             reputation={reputation}
+             ranking={familyRanking}
+             cohesion={familyCohesion}
+             wealth={familyWealth}
+             guardianship={guardianship}
            />
          )}
          
@@ -3291,6 +3697,12 @@ export default function App() {
              setCoins={setCoins}
              health={health}
              setHealth={setHealth}
+             parentsPay={isRegistered && isMinor(currentAge) && familyClass.parentsPayMedical}
+             disease={currentDisease}
+             onCureDisease={() => {
+               setDisease(null);
+               unlockAchievement('cured');
+             }}
            />
          )}
 
@@ -3305,6 +3717,7 @@ export default function App() {
              bankLoan={bankLoan}
              setBankLoan={setBankLoan}
              onOpenWealthChart={() => setShowWealthChart(true)}
+             gameYear={gameYear}
            />
          )}
 
@@ -3314,6 +3727,21 @@ export default function App() {
              onClose={() => setShowStock(false)}
              coins={coins}
              setCoins={setCoins}
+             financeBackground={findFinanceBackground(
+               {
+                 jobIds: readJobHistoryIds(),
+                 playerName,
+                 familyMembers: buildFamilyMembers(family, {
+                   playerName,
+                   playerGender: gender,
+                   playerAge: currentAge,
+                   playerOccupation,
+                   gameYear,
+                   gameMonth,
+                 }).filter((m) => !m.isPlayer && m.status !== '已故'),
+               },
+               (id) => JOB_POSITIONS.find((j) => j.id === id)?.title,
+             )}
            />
          )}
 
@@ -3390,6 +3818,11 @@ export default function App() {
              ownedClothes={ownedClothes}
              isRegistered={isRegistered}
              age={currentAge}
+             originLabel={isRegistered ? `${familyOrigin.classLabel} · ${familyOrigin.surname}家族` : '尚未出生登记'}
+             simScore={simScore}
+             reputation={reputation}
+             playerTraits={playerTraits}
+             onDonate={handleDonate}
            />
          )}
 
@@ -3414,6 +3847,8 @@ export default function App() {
              onClose={() => setShowJob(false)}
              coins={coins}
              setCoins={setCoins}
+             age={currentAge}
+             childLaborAllowed={isRegistered && familyClass.childLabor}
            />
          )}
 
@@ -3496,6 +3931,33 @@ export default function App() {
                setShowMarriage(false);
                setActiveTab('map');
              }}
+             classId={familyClass.id}
+             onReputationChange={changeReputation}
+           />
+         )}
+
+         {/* 传承：角色去世后由子嗣/兄弟姐妹继承或重开 */}
+         {showSuccession && isRegistered && health <= 0 && (
+           <SuccessionModal
+             deceasedName={playerName}
+             deceasedAge={currentAge}
+             heirs={listHeirs(
+               buildFamilyMembers(family, {
+                 playerName,
+                 playerGender: gender,
+                 playerAge: currentAge,
+                 playerOccupation,
+                 gameYear,
+                 gameMonth,
+               }),
+             )}
+             onChooseHeir={handleSuccession}
+             majorRecordCount={readLifeLog().filter((e) => e.category === '大事').length}
+             onRestart={() => {
+               handleResetLife();
+               setShowSuccession(false);
+             }}
+             onClose={() => setShowSuccession(false)}
            />
          )}
 
@@ -3531,7 +3993,21 @@ export default function App() {
          )}
 
          {/* 开发测试工具：仅 npm run dev 下渲染，生产构建中被移除 */}
-         {import.meta.env.DEV && <DevToolsPanel coins={coins} setCoins={setCoins} />}
+         {import.meta.env.DEV && (
+           <DevToolsPanel
+             coins={coins}
+             setCoins={setCoins}
+             isRegistered={isRegistered}
+             age={currentAge}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
+             fastForwardRemaining={fastForwardRemaining}
+             onFastForward={(months) => setFastForwardRemaining(months)}
+             onStopFastForward={() => setFastForwardRemaining(0)}
+             onSetAge={handleDevSetAge}
+             onAddChild={handleDevAddChild}
+           />
+         )}
 
          {/* Firebase Authentication Overlay */}
          {showAuthModal && (

@@ -1,4 +1,9 @@
 import React, { useState } from 'react';
+import { traitNames, affinityBonus, traitById } from '../lib/traits';
+import type { RankedFamily } from '../lib/familyRank';
+import { wealthScore } from '../lib/familyRank';
+import type { Guardianship } from '../lib/guardianship';
+import { reputationLevel } from '../lib/reputation';
 import { ShieldCheck, GitFork, Crown, Building2, Shield, Sparkles, Heart, Baby } from 'lucide-react';
 import {
   FamilyState,
@@ -11,6 +16,9 @@ import {
   SPAR_HEALTH_GAIN,
   AFFINITY_GAIN,
   buildFamilyMembers,
+  getOrigin,
+  DISCONTENT_THRESHOLD,
+  SPLIT_AFTER_MONTHS,
   buildChronicles,
   canInteract,
   canDoInteraction,
@@ -66,6 +74,13 @@ export interface FamilyTabProps {
   setFamily: React.Dispatch<React.SetStateAction<FamilyState>>;
   onOpenMarriage: () => void;
   onGoToBirthRegistration: () => void;
+  /** 当家人（玩家）的特质：「亲和」互动好感额外 +1 */
+  playerTraits?: string[];
+  reputation?: number;
+  ranking?: RankedFamily[];
+  cohesion?: number;
+  wealth?: number;
+  guardianship?: Guardianship | null;
 }
 
 export const FamilyTab: React.FC<FamilyTabProps> = ({
@@ -83,8 +98,14 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   setFamily,
   onOpenMarriage,
   onGoToBirthRegistration,
+  playerTraits = [],
+  reputation = 0,
+  ranking = [],
+  cohesion = 0,
+  wealth = 0,
+  guardianship = null,
 }) => {
-  const [subTab, setSubTab] = useState<'tree' | 'heirlooms' | 'chronicles'>('tree');
+  const [subTab, setSubTab] = useState<'tree' | 'ranking' | 'heirlooms' | 'chronicles'>('tree');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -102,6 +123,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
     gameMonth,
   });
   const chronicles = buildChronicles(family, gameYear, gameMonth);
+  const origin = getOrigin(family);
   const selectedMember = members.find((m) => m.id === selectedId) || null;
 
   const livingCount = members.filter((m) => m.status !== '已故').length;
@@ -123,8 +145,8 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
       setCoins((prev) => prev - GIFT_COST);
     }
 
-    setFamily((prev) => applyInteraction(prev, member, kind, gameYear, gameMonth));
-    const newAffinity = Math.min(100, member.affinity + AFFINITY_GAIN[kind]);
+    setFamily((prev) => applyInteraction(prev, member, kind, gameYear, gameMonth, affinityBonus(playerTraits)));
+    const newAffinity = Math.min(100, member.affinity + AFFINITY_GAIN[kind] + affinityBonus(playerTraits));
 
     if (kind === 'spar') {
       setHealth((prev) => Math.min(100, prev + SPAR_HEALTH_GAIN));
@@ -144,7 +166,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
       <div className="flex-1 overflow-y-auto bg-[#252632] flex flex-col items-center justify-center p-6 text-center gap-3">
         <ShieldCheck size={48} className="text-yellow-400" />
         <p className="text-white font-black">尚未录入家族世系</p>
-        <p className="text-gray-400 text-xs font-bold">完成出生登记后，你将作为瓦伦丁家族第三代被记入族谱。</p>
+        <p className="text-gray-400 text-xs font-bold">完成出生登记后，会随机决定你出身的家族（从乞丐到皇族），并记入族谱。</p>
         <button
           onClick={onGoToBirthRegistration}
           className="bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black py-2 px-4 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer"
@@ -195,12 +217,12 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <h2 className="text-white font-black text-lg drop-shadow-[0_1.5px_0_#000]">瓦伦丁家族</h2>
+                <h2 className="text-white font-black text-lg drop-shadow-[0_1.5px_0_#000]">{origin.surname}家族</h2>
                 <span className="text-[10px] font-black bg-yellow-400 text-black px-2 py-0.5 rounded border border-black shadow-[0_1px_0_#000]">
-                  帝国名门望族
+                  {origin.classLabel}
                 </span>
               </div>
-              <p className="text-gray-300 text-xs font-bold mt-1 italic">“坚忍如钢，智慧永存”</p>
+              <p className="text-gray-300 text-xs font-bold mt-1 italic">{origin.isValentine ? '“坚忍如钢，智慧永存”' : `${origin.classLabel}出身 · 卡罗尼亚帝国`}</p>
             </div>
           </div>
 
@@ -225,6 +247,27 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
             </div>
           </div>
 
+          {guardianship && (
+            <div className="mt-3 bg-sky-950/70 border-2 border-sky-500/60 rounded-xl p-2.5 text-[11px] font-bold text-sky-100">
+              {guardianship.phase === 'holding'
+                ? `👪 监护托管：${guardianship.guardianName}代管一半家产 ${guardianship.held.toLocaleString()} ₽，你年满 18 岁时返还。`
+                : `🙏 赡养${guardianship.guardianName}：每月上缴 ${guardianship.supportPerMonth.toLocaleString()} ₽，还剩 ${guardianship.supportMonthsLeft} 个月。`}
+            </div>
+          )}
+          {(() => {
+            const unhappy = members.filter((m) => !m.isPlayer && m.status !== '已故' && m.age >= 18 && (family.discontent?.[m.id] ?? 0) > 0);
+            return unhappy.length > 0 ? (
+              <div className="mt-3 bg-red-950/70 border-2 border-red-500/60 rounded-xl p-2.5 text-[11px] font-bold text-red-100 space-y-0.5">
+                <div className="text-red-300 font-black">⚠️ 族人不满（好感低于 {DISCONTENT_THRESHOLD}% 连续 {SPLIT_AFTER_MONTHS} 个月的旁系会分家）</div>
+                {unhappy.map((m) => (
+                  <div key={m.id}>
+                    {m.relation} {m.name}：好感 {m.affinity}%，已不满 {family.discontent?.[m.id]} 个月
+                  </div>
+                ))}
+              </div>
+            ) : null;
+          })()}
+
           {!family.spouse && (
             <button
               onClick={onOpenMarriage}
@@ -239,6 +282,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
         <div className="flex bg-[#21232e] p-1 rounded-xl border-2 border-black gap-1 shadow-[0_2px_0_#000]">
           {([
             ['tree', '世系族谱'],
+            ['ranking', '家族排行'],
             ['heirlooms', '传家宝'],
             ['chronicles', '家族大事记'],
           ] as const).map(([id, label]) => (
@@ -260,7 +304,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
             {visibleGenerations.map((gen) => (
               <div key={gen} className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000]">
                 <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-gray-700">
-                  {gen.startsWith('四世') ? <Baby size={16} className="text-yellow-400" /> : <GitFork size={16} className="text-yellow-400" />}
+                  {gen === '子辈' ? <Baby size={16} className="text-yellow-400" /> : <GitFork size={16} className="text-yellow-400" />}
                   <span className="text-yellow-400 font-black text-xs tracking-wider">{gen}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -312,8 +356,66 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
           </div>
         )}
 
+        {/* 家族排行：凝聚力 30% + 财力 40% + 影响力 30% */}
+        {subTab === 'ranking' && (
+          <div className="space-y-3">
+            <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] grid grid-cols-3 gap-2 text-center">
+              <div className="bg-[#21232e] rounded-lg border border-black p-1.5">
+                <div className="text-[10px] text-gray-400 font-bold">凝聚力</div>
+                <div className="text-rose-300 font-black text-sm">{cohesion}</div>
+                <div className="text-[9px] text-gray-500 font-bold">族人平均好感</div>
+              </div>
+              <div className="bg-[#21232e] rounded-lg border border-black p-1.5">
+                <div className="text-[10px] text-gray-400 font-bold">财力</div>
+                <div className="text-amber-300 font-black text-sm">{Math.round(wealthScore(wealth))}</div>
+                <div className="text-[9px] text-gray-500 font-bold truncate">{wealth.toLocaleString()} ₽</div>
+              </div>
+              <div className="bg-[#21232e] rounded-lg border border-black p-1.5">
+                <div className="text-[10px] text-gray-400 font-bold">影响力</div>
+                <div className="text-sky-300 font-black text-sm">{reputation}</div>
+                <div className="text-[9px] text-gray-500 font-bold">{reputationLevel(reputation)}</div>
+              </div>
+            </div>
+            <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-2 shadow-[0_4px_0_#000] space-y-1.5">
+              {ranking.map((f) => (
+                <div
+                  key={f.surname}
+                  className={`flex items-center justify-between gap-2 p-2 rounded-lg border-2 ${f.isPlayer ? 'bg-[#3b3524] border-yellow-400' : 'bg-[#21232e] border-black'}`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`w-6 text-center font-black text-xs ${f.rank <= 3 ? 'text-yellow-400' : 'text-gray-400'}`}>#{f.rank}</span>
+                    <div className="min-w-0">
+                      <div className={`font-black text-xs truncate ${f.isPlayer ? 'text-yellow-300' : 'text-white'}`}>
+                        {f.surname}家族{f.isPlayer ? '（你）' : ''}
+                      </div>
+                      <div className="text-[10px] text-gray-400 font-bold">
+                        {f.classLabel} · 凝聚 {Math.round(f.cohesion)} · 财力 {Math.round(wealthScore(f.wealth))} · 影响 {Math.round(f.influence)}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-amber-300 font-black font-mono text-sm shrink-0">{f.score}</span>
+                </div>
+              ))}
+            </div>
+            {(family.splitBranches?.length ?? 0) > 0 && (
+              <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] text-[11px] font-bold text-gray-300 space-y-0.5">
+                <div className="text-white font-black text-xs mb-1">分家出去的支系</div>
+                {family.splitBranches!.map((b, i) => (
+                  <div key={i}>{b.year}.{b.month} · {b.relation} {b.name}</div>
+                ))}
+              </div>
+            )}
+            <p className="text-[10px] text-gray-500 font-bold text-center">综合分 = 凝聚力 × 30% + 财力 × 40% + 影响力 × 30%</p>
+          </div>
+        )}
+
         {/* Tab 2: 传家宝（仅展示） */}
-        {subTab === 'heirlooms' && (
+        {subTab === 'heirlooms' && !origin.isValentine && (
+          <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-4 shadow-[0_4px_0_#000] text-center text-gray-400 text-xs font-bold">
+            {origin.surname}家族尚无传家之宝。
+          </div>
+        )}
+        {subTab === 'heirlooms' && origin.isValentine && (
           <div className="space-y-3">
             {FAMILY_HEIRLOOMS.map((item) => (
               <div key={item.id} className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] flex items-start gap-3">
@@ -415,6 +517,15 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
 
             <p className="text-gray-300 text-xs font-bold leading-relaxed mb-3">{selectedMember.desc}</p>
 
+            {(selectedMember.isPlayer ? playerTraits : selectedMember.traitIds ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {(selectedMember.isPlayer ? playerTraits : selectedMember.traitIds ?? []).map((id) => (
+                  <span key={id} title={traitById(id)?.desc} className="bg-fuchsia-500/20 text-fuchsia-200 text-[10px] font-black px-2 py-0.5 rounded border border-fuchsia-500/50">
+                    ✦ {traitNames([id])[0]}
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="flex flex-wrap gap-1.5 mb-4">
               {selectedMember.traits.map((trait, idx) => (
                 <span key={idx} className="bg-yellow-400/20 text-yellow-300 text-[10px] font-black px-2 py-0.5 rounded border border-yellow-500/50">

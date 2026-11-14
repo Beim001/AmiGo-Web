@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SimEventInstance, SimEventDef, eventDef, optionBlocked, Resolution } from '../lib/simEvents';
 import {
   Briefcase,
   CircleDollarSign,
@@ -10,7 +11,42 @@ import {
   Clock,
   Skull,
   Scroll,
+  Wallet,
+  Snowflake,
+  Leaf,
+  AlertTriangle,
+  Waves,
+  Package,
+  Soup,
+  HandCoins,
+  Dices,
+  Factory,
+  Users,
+  Bandage,
+  Store,
+  Pill,
+  Baby,
+  Trophy,
 } from 'lucide-react';
+
+const EVENT_ICONS: Record<SimEventDef['icon'], React.ElementType> = {
+  wallet: Wallet,
+  snow: Snowflake,
+  herb: Leaf,
+  alert: AlertTriangle,
+  water: Waves,
+  box: Package,
+  bowl: Soup,
+  hand: HandCoins,
+  dice: Dices,
+  clock: Clock,
+  factory: Factory,
+  users: Users,
+  bandage: Bandage,
+  store: Store,
+  pill: Pill,
+  baby: Baby,
+};
 
 export interface SimTabProps {
   isRegistered?: boolean;
@@ -21,46 +57,17 @@ export interface SimTabProps {
   gameMonth?: number;
   onGoToBirthRegistration?: () => void;
   onResetLife?: () => void;
+  /** 打开传承界面（角色去世后） */
+  onOpenSuccession?: () => void;
+  /** 待处理的事件（按出现先后） */
+  events?: SimEventInstance[];
+  coins?: number;
+  simScore?: number;
+  /** 最近一次推进月份没有抽到事件时的提示，例如「1870.03 本月无事发生」 */
+  quietMessage?: string | null;
+  /** 选择选项，返回结算结果 */
+  onResolve?: (uid: string, optionIndex: number) => Resolution | null;
 }
-
-const INITIAL_EVENTS = [
-  {
-    id: 'career',
-    title: '职业抉择',
-    icon: Briefcase,
-    headline: '海外分公司急需新领导！',
-    date: '1871年10月',
-    desc: '你面临一个重要的人生转折。经理向你提供了一个去海外分公司担任领导的机会。\n\n接受这个机会意味着你将获得更高的薪水和更大的权力，但你需要离开你熟悉的环境，并且工作压力会显著增加。\n\n你该如何抉择？',
-    options: [
-      { label: '接受外派 (+金币, -体力)', type: 'primary' },
-      { label: '婉言拒绝 (维持现状)', type: 'secondary' },
-    ],
-  },
-  {
-    id: 'investment',
-    title: '工商业投资',
-    icon: CircleDollarSign,
-    headline: '蒸汽工矿实业募资！是风口还是陷阱？',
-    date: '1872年3月',
-    desc: '商界伙伴向你引荐了一处新兴的蒸汽动力采矿实业项目。尽管前期勘探充满未知，但若勘探成功，预计将带来丰厚的股息分红与资产增值。\n\n你手里有一笔闲置资金，你决定冒险一试吗？',
-    options: [
-      { label: '投资 20,000 ₽ (高收益)', type: 'primary' },
-      { label: '稳妥起见不投资', type: 'secondary' },
-    ],
-  },
-  {
-    id: 'education',
-    title: '自我深造',
-    icon: BookOpen,
-    headline: '皇家科学院进修名额开放！',
-    date: '1872年9月',
-    desc: '你意识到当前的知识与技能储备在快速发展的时代显得不足。你可以选择花费一笔积蓄前往皇家工学院进修高阶学衔，或者继续在当前的岗位上按部就班。\n\n深造会消耗大量的时间和金钱，但能显著拓宽未来的职业与社会声望。',
-    options: [
-      { label: '报名深造 (-10,000 ₽)', type: 'primary' },
-      { label: '继续工作积累经验', type: 'secondary' },
-    ],
-  },
-];
 
 export const SimTab: React.FC<SimTabProps> = ({
   isRegistered = false,
@@ -71,17 +78,19 @@ export const SimTab: React.FC<SimTabProps> = ({
   gameMonth = 1,
   onGoToBirthRegistration,
   onResetLife,
+  onOpenSuccession,
+  events = [],
+  coins = 0,
+  simScore = 0,
+  quietMessage = null,
+  onResolve,
 }) => {
-  const [activeEvent, setActiveEvent] = useState<any>(null);
-  const [events, setEvents] = useState([...INITIAL_EVENTS]);
+  const [activeUid, setActiveUid] = useState<string | null>(null);
+  const [lastResult, setLastResult] = useState<{ title: string; result: Resolution } | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
 
   const isDeceased = isRegistered && health <= 0;
 
-  const handleOptionSelect = (eventId: string) => {
-    setEvents((prev) => prev.filter((e) => e.id !== eventId));
-    setActiveEvent(null);
-  };
 
   // 1. 未出生状态引导界面
   if (!isRegistered) {
@@ -175,6 +184,16 @@ export const SimTab: React.FC<SimTabProps> = ({
               </p>
             </div>
 
+            {/* 传承家业：由子嗣或兄弟姐妹继承 */}
+            {onOpenSuccession && (
+              <button
+                onClick={onOpenSuccession}
+                className="w-full bg-amber-400 hover:bg-amber-300 text-black text-xs font-black py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
+              >
+                🕯️ 传承家业（选择继承人）
+              </button>
+            )}
+
             {/* Reset / Rebirth Action */}
             {onResetLife && (
               <div className="w-full pt-1">
@@ -224,12 +243,17 @@ export const SimTab: React.FC<SimTabProps> = ({
   }
 
   // 3. 详情事件弹窗（存活状态下）
-  if (activeEvent) {
+  const activeInst = events.find((e) => e.uid === activeUid) || null;
+  const activeDef = activeInst ? eventDef(activeInst) : undefined;
+  const dateOf = (e: SimEventInstance) => `${e.year}年${e.month}月`;
+
+  if (activeInst && activeDef) {
+    const Icon = EVENT_ICONS[activeDef.icon] || Scroll;
     return (
       <div className="flex-1 overflow-y-auto bg-[#252632] flex flex-col p-2 sm:p-4 relative custom-scrollbar">
         <div
           className="absolute top-2 sm:top-4 left-2 sm:left-4 z-20 cursor-pointer bg-black/40 p-1.5 sm:p-2 rounded-full border-2 border-black"
-          onClick={() => setActiveEvent(null)}
+          onClick={() => setActiveUid(null)}
         >
           <ChevronLeft className="text-white" size={24} />
         </div>
@@ -243,37 +267,44 @@ export const SimTab: React.FC<SimTabProps> = ({
               人生快报
             </h1>
             <div className="flex justify-between w-full text-xs sm:text-sm font-bold border-t-[3px] border-b-[3px] border-black py-1 mt-2 sm:mt-3">
-              <span>{activeEvent.date}</span>
-              <span>头版头条</span>
+              <span>{dateOf(activeInst)}</span>
+              <span>{activeDef.title}</span>
             </div>
           </div>
 
-          <h2 className="text-black text-xl sm:text-2xl font-black text-center mb-4 sm:mb-6 leading-snug">
-            {activeEvent.headline}
-          </h2>
+          <h2 className="text-black text-xl sm:text-2xl font-black text-center mb-4 sm:mb-6 leading-snug">{activeDef.headline}</h2>
 
           <div className="flex justify-center mb-4 sm:mb-6">
             <div className="w-20 h-20 sm:w-24 sm:h-24 bg-black/5 border-[3px] border-black flex items-center justify-center shadow-[4px_4px_0_#000] -rotate-3">
-              <activeEvent.icon size={40} className="text-black sm:w-12 sm:h-12" />
+              <Icon size={40} className="text-black sm:w-12 sm:h-12" />
             </div>
           </div>
 
           <div className="flex-1 text-black font-bold leading-relaxed overflow-y-auto text-[14px] sm:text-[16px] whitespace-pre-wrap px-1 sm:px-2 custom-scrollbar">
-            {activeEvent.desc}
+            {activeDef.desc}
           </div>
 
           <div className="mt-4 sm:mt-8 flex flex-col gap-2 sm:gap-3">
-            {activeEvent.options.map((opt: any, idx: number) => (
-              <button
-                key={idx}
-                onClick={() => handleOptionSelect(activeEvent.id)}
-                className={`py-2.5 sm:py-3.5 border-[3px] border-black font-black text-black text-[15px] sm:text-[17px] shadow-[4px_4px_0_#000] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all cursor-pointer ${
-                  idx === 0 ? 'bg-[#ffeb3b]' : 'bg-[#e0e0e0]'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+            {activeDef.options.map((opt, idx) => {
+              const blocked = optionBlocked(opt, coins);
+              return (
+                <button
+                  key={idx}
+                  disabled={!!blocked}
+                  onClick={() => {
+                    const result = onResolve?.(activeInst.uid, idx);
+                    if (result) setLastResult({ title: activeDef.headline, result });
+                    setActiveUid(null);
+                  }}
+                  className={`py-2.5 sm:py-3 border-[3px] border-black font-black text-black text-[15px] sm:text-[16px] shadow-[4px_4px_0_#000] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex flex-col items-center ${
+                    idx === 0 ? 'bg-[#ffeb3b]' : 'bg-[#e0e0e0]'
+                  }`}
+                >
+                  <span>{opt.label}</span>
+                  <span className="text-[11px] font-bold text-black/60">{blocked || opt.hint}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -293,76 +324,74 @@ export const SimTab: React.FC<SimTabProps> = ({
         </span>
       </div>
 
+      <div className="flex items-center justify-between px-4 pt-3 z-10 text-xs font-black">
+        <span className="flex items-center gap-1.5 bg-[#1b1c25] text-amber-300 px-3 py-1 rounded-full border-2 border-black">
+          <Trophy size={13} /> 推演积分 {simScore}
+        </span>
+        <span className="text-gray-400">待处理 {events.length} 件</span>
+      </div>
+      {quietMessage && (
+        <div className="mx-4 mt-2 z-10 bg-[#1b1c25] border-2 border-black rounded-xl px-3 py-2 text-xs font-bold text-gray-300 text-center">
+          🍃 {quietMessage}
+        </div>
+      )}
+
       {events.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center z-10">
           <div className="w-24 h-24 bg-[#3a3b46] rounded-full flex items-center justify-center mb-4 border-4 border-black shadow-[0_4px_0_#000]">
             <CheckCircle size={48} className="text-[#a1a1aa]" />
           </div>
-          <h2
-            className="text-white text-2xl font-black mb-2 tracking-widest"
-            style={{ textShadow: '0 2px 0 #000' }}
-          >
+          <h2 className="text-white text-2xl font-black mb-2 tracking-widest" style={{ textShadow: '0 2px 0 #000' }}>
             本期风平浪静
           </h2>
-          <p className="text-[#a1a1aa] font-bold">暂无突发的人生抉择事件，继续享受平稳的生活吧。</p>
+          <p className="text-[#a1a1aa] font-bold">暂无需要抉择的人生事件。每推进一个月，有一半机会遇到新的事件。</p>
         </div>
       ) : (
         <div className="flex-1 relative flex items-center justify-center p-6 mt-4 perspective-[1000px]">
-          {events.map((event, index) => {
+          {events.map((inst, index) => {
+            const def = eventDef(inst);
+            if (!def) return null;
+            const Icon = EVENT_ICONS[def.icon] || Scroll;
             const isTop = index === events.length - 1;
             const reverseIndex = events.length - 1 - index;
-
-            const rotation =
-              reverseIndex % 2 === 0 ? reverseIndex * 2 : -(reverseIndex * 2);
+            const rotation = reverseIndex % 2 === 0 ? reverseIndex * 2 : -(reverseIndex * 2);
             const yOffset = reverseIndex * -12;
-            const xOffset =
-              reverseIndex % 2 === 0 ? reverseIndex * 4 : reverseIndex * -4;
+            const xOffset = reverseIndex % 2 === 0 ? reverseIndex * 4 : reverseIndex * -4;
 
             return (
               <div
-                key={event.id}
+                key={inst.uid}
                 onClick={() => {
-                  if (isTop) setActiveEvent(event);
+                  if (isTop) setActiveUid(inst.uid);
                 }}
                 className={`absolute w-[85%] max-w-[320px] aspect-[3/4] h-auto max-h-[75vh] min-h-[360px] bg-[#f4ebd0] border-[3px] border-black p-3 sm:p-4 flex flex-col transition-all duration-300 ${
-                  isTop
-                    ? 'cursor-pointer hover:-translate-y-2 hover:shadow-[8px_12px_0_#000] shadow-[6px_8px_0_#000]'
-                    : 'shadow-[2px_2px_0_#000]'
+                  isTop ? 'cursor-pointer hover:-translate-y-2 hover:shadow-[8px_12px_0_#000] shadow-[6px_8px_0_#000]' : 'shadow-[2px_2px_0_#000]'
                 }`}
                 style={{
                   zIndex: index,
-                  transform: `translate(${xOffset}px, ${yOffset}px) rotate(${rotation}deg) scale(${
-                    1 - reverseIndex * 0.03
-                  })`,
+                  transform: `translate(${xOffset}px, ${yOffset}px) rotate(${rotation}deg) scale(${1 - Math.min(reverseIndex, 3) * 0.03})`,
                   opacity: reverseIndex > 2 ? 0 : 1,
                 }}
               >
                 <div className="border-b-[3px] border-black pb-2 sm:pb-3 mb-2 sm:mb-3 flex flex-col items-center">
-                  <h1
-                    className="font-serif text-2xl sm:text-3xl font-black text-black tracking-widest text-center"
-                    style={{ textShadow: '2px 2px 0px rgba(0,0,0,0.1)' }}
-                  >
+                  <h1 className="font-serif text-2xl sm:text-3xl font-black text-black tracking-widest text-center" style={{ textShadow: '2px 2px 0px rgba(0,0,0,0.1)' }}>
                     人生快报
                   </h1>
                   <div className="flex justify-between w-full text-[10px] sm:text-xs font-bold border-t-[2px] border-b-[2px] border-black py-1 mt-1 sm:mt-2">
-                    <span>{event.date}</span>
-                    <span>NO. {9824 + index}</span>
+                    <span>{dateOf(inst)}</span>
+                    <span>{def.title}</span>
                   </div>
                 </div>
                 <div className="flex-1 flex flex-col overflow-hidden">
-                  <h2 className="text-lg sm:text-xl font-black text-black leading-tight mb-2 sm:mb-4 text-center px-1 sm:px-2">
-                    {event.headline}
-                  </h2>
-
+                  <h2 className="text-lg sm:text-xl font-black text-black leading-tight mb-2 sm:mb-4 text-center px-1 sm:px-2">{def.headline}</h2>
                   <div className="flex flex-col items-center gap-2 sm:gap-3 mb-2 sm:mb-3 flex-1 overflow-hidden">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 bg-black/5 border-[2px] border-black flex items-center justify-center flex-shrink-0 -rotate-2">
-                      <event.icon size={28} className="text-black sm:w-9 sm:h-9" />
+                      <Icon size={28} className="text-black sm:w-9 sm:h-9" />
                     </div>
                     <p className="text-[11px] sm:text-[13px] font-bold text-gray-800 line-clamp-4 sm:line-clamp-6 leading-relaxed text-justify px-1 sm:px-2">
-                      {event.desc}
+                      {def.desc}
                     </p>
                   </div>
-
                   {isTop && (
                     <div className="mt-auto flex justify-center pb-1 sm:pb-2">
                       <span className="bg-black text-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold animate-pulse shadow-[2px_2px_0_#000] border-2 border-transparent">
@@ -374,6 +403,29 @@ export const SimTab: React.FC<SimTabProps> = ({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {lastResult && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setLastResult(null)}>
+          <div className="bg-[#f4ebd0] border-[4px] border-black p-4 max-w-xs w-full shadow-[6px_6px_0_#000] text-black space-y-2">
+            <div className="text-xs font-black border-b-2 border-black pb-1">{lastResult.title}</div>
+            <p className="font-bold text-sm leading-relaxed">{lastResult.result.text}</p>
+            <div className="text-xs font-black flex flex-wrap gap-2">
+              {lastResult.result.coins !== 0 && (
+                <span className={lastResult.result.coins > 0 ? 'text-emerald-700' : 'text-red-700'}>
+                  {lastResult.result.coins > 0 ? '+' : ''}{lastResult.result.coins.toLocaleString()} ₽
+                </span>
+              )}
+              {lastResult.result.health !== 0 && (
+                <span className={lastResult.result.health > 0 ? 'text-emerald-700' : 'text-red-700'}>
+                  健康 {lastResult.result.health > 0 ? '+' : ''}{lastResult.result.health}
+                </span>
+              )}
+              <span className="text-amber-800">推演积分 +{lastResult.result.score}</span>
+            </div>
+            <div className="text-[10px] text-black/50 font-bold text-center pt-1">点击任意处关闭</div>
+          </div>
         </div>
       )}
     </div>

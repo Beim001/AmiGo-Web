@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { LIFE_LOG_EVENT, LOG_CATEGORIES, LifeLogEntry, LogCategory, readLifeLog } from '../lib/lifeLog';
 import {
   Baby,
   GraduationCap,
@@ -8,7 +9,20 @@ import {
   Heart,
   Wallet,
   Gem,
+  Plane,
+  HeartPulse,
+  Landmark,
 } from 'lucide-react';
+
+// 日志分类的图标与颜色（undefined.md 第 15 题 A）
+const CATEGORY_STYLE: Record<LogCategory, { icon: React.ElementType; color: string }> = {
+  成长: { icon: Baby, color: '#d69e9e' },
+  事业: { icon: Briefcase, color: '#9eaad6' },
+  财富: { icon: Wallet, color: '#d6c99e' },
+  出行: { icon: Plane, color: '#9ec2d6' },
+  健康: { icon: HeartPulse, color: '#d6a59e' },
+  大事: { icon: Landmark, color: '#b09ed6' },
+};
 
 const INITIAL_LOG_ENTRIES = [
   {
@@ -101,13 +115,50 @@ const INITIAL_LOG_ENTRIES = [
   },
 ];
 
-export const LogTab: React.FC = () => {
-  const [filter, setFilter] = useState('全部');
+export interface LogTabProps {
+  /** 未办理出生登记时展示示例日志（第 16 题 B） */
+  isRegistered: boolean;
+}
 
-  const filteredLogs =
-    filter === '全部'
-      ? INITIAL_LOG_ENTRIES
-      : INITIAL_LOG_ENTRIES.filter((item) => item.category === filter);
+interface LogView {
+  id: string;
+  age: string;
+  year: string;
+  title: string;
+  category: string;
+  desc: string;
+  icon: React.ElementType;
+  color: string;
+  tag: string;
+}
+
+const toView = (e: LifeLogEntry): LogView => ({
+  id: e.id,
+  age: `${e.age}岁`,
+  year: `${e.year}.${e.month < 10 ? '0' + e.month : e.month}`,
+  title: e.title,
+  category: e.category,
+  desc: e.desc,
+  icon: CATEGORY_STYLE[e.category]?.icon ?? Gem,
+  color: CATEGORY_STYLE[e.category]?.color ?? '#a3a9b3',
+  tag: e.category,
+});
+
+export const LogTab: React.FC<LogTabProps> = ({ isRegistered }) => {
+  const [filter, setFilter] = useState('全部');
+  const [entries, setEntries] = useState<LifeLogEntry[]>(readLifeLog);
+
+  // 其他界面写入日志时刷新
+  useEffect(() => {
+    const refresh = () => setEntries(readLifeLog());
+    window.addEventListener(LIFE_LOG_EVENT, refresh);
+    return () => window.removeEventListener(LIFE_LOG_EVENT, refresh);
+  }, []);
+
+  const showingSamples = !isRegistered;
+  const allLogs: LogView[] = showingSamples ? INITIAL_LOG_ENTRIES : [...entries].reverse().map(toView);
+  const categories = showingSamples ? ['全部', '成长', '成就', '转折', '事业'] : ['全部', ...LOG_CATEGORIES];
+  const filteredLogs = filter === '全部' ? allLogs : allLogs.filter((item) => item.category === filter);
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#252632] pb-6 flex flex-col relative">
@@ -124,7 +175,7 @@ export const LogTab: React.FC = () => {
 
       {/* Category Filter Pills */}
       <div className="px-4 pt-3 pb-1 flex gap-2 overflow-x-auto no-scrollbar relative z-10 flex-shrink-0">
-        {['全部', '成长', '成就', '转折', '事业'].map((cat) => (
+        {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setFilter(cat)}
@@ -138,6 +189,17 @@ export const LogTab: React.FC = () => {
           </button>
         ))}
       </div>
+
+      {showingSamples && (
+        <div className="mx-4 mt-2 bg-[#1b1c25] border-2 border-black rounded-xl px-3 py-2 text-[11px] font-bold text-gray-300">
+          以下为示例日志。完成出生登记后，这里会自动记录你的人生大事。
+        </div>
+      )}
+      {!showingSamples && filteredLogs.length === 0 && (
+        <div className="mx-4 mt-6 text-center text-gray-400 text-xs font-bold">
+          {entries.length === 0 ? '人生的篇章才刚刚开始。' : '这个分类下还没有记录。'}
+        </div>
+      )}
 
       {/* Life Timeline with Dotted Connection Line */}
       <div className="p-4 relative">

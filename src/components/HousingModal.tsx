@@ -1,3 +1,4 @@
+import { addLifeLog } from '../lib/lifeLog';
 import React, { useState, useEffect } from 'react';
 import {
   ChevronLeft,
@@ -327,6 +328,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
       setCurrentRental(null);
     }
 
+    addLifeLog('财富', `购入房产「${item.title}」`, `位于${item.district}，花费 ${item.price.toLocaleString()} ₽。`);
     showToast(`成功购入【${item.title}】，产权已录入系统`);
     setSelectedPropDetail(null);
     setActiveTab('owned');
@@ -344,6 +346,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
       return remaining.map((p) => (p.id === nextPrimaryId ? { ...p, isPrimaryResidence: true } : p));
     });
 
+    addLifeLog('财富', `出售房产「${owned.title}」`, `扣除交易税费后到账 ${refund.toLocaleString()} ₽。`);
     showToast(`成功出售【${owned.title}】，扣除4%交易税费后到账 +${refund.toLocaleString()} ₽`);
   };
 
@@ -464,6 +467,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
       }))
     );
 
+    addLifeLog('财富', `租住「${item.title}」`, `位于${item.district}，月租 ${item.rentPerMonth.toLocaleString()} ₽。`);
     showToast(`已签约租住【${item.title}】，已支付押金与首期租金 ${deposit.toLocaleString()} ₽`);
     setActiveTab('rent');
   };

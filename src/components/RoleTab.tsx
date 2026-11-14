@@ -198,6 +198,10 @@ export interface RoleTabProps {
   gender?: string | null;
   age?: number;
   childrenCount?: number;
+  /** 当前所患疾病名称 */
+  diseaseName?: string;
+  /** 打开传承界面（角色去世后） */
+  onOpenSuccession?: () => void;
 }
 
 export const RoleTab: React.FC<RoleTabProps> = ({
@@ -218,6 +222,8 @@ export const RoleTab: React.FC<RoleTabProps> = ({
   gender,
   age = 8,
   childrenCount = 0,
+  diseaseName,
+  onOpenSuccession,
 }) => {
   const formattedMonth = gameMonth < 10 ? `0${gameMonth}` : `${gameMonth}`;
   const isDeceased = isRegistered && health <= 0;
@@ -322,8 +328,16 @@ export const RoleTab: React.FC<RoleTabProps> = ({
                   享年 {age} 岁 · 愿逝者安息于卡罗尼亚大地
                 </p>
                 <p className="text-gray-400 text-[11px] leading-snug pt-0.5">
-                  此生历程已谢幕，可在系统设置中重置开启新生。
+                  此生历程已谢幕，可由子嗣或兄弟姐妹继承家业，或重开人生。
                 </p>
+                {onOpenSuccession && (
+                  <button
+                    onClick={onOpenSuccession}
+                    className="mt-2 bg-amber-400 hover:bg-amber-300 text-black text-xs font-black px-4 py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
+                  >
+                    🕯️ 传承家业
+                  </button>
+                )}
               </div>
             </div>
             <div className="w-[104%] -mt-1.5 h-4 bg-[#1e1f26] border-x-4 border-b-4 border-black rounded-b-xl shadow-[0_4px_0_#000] relative flex justify-center items-center">
@@ -380,7 +394,7 @@ export const RoleTab: React.FC<RoleTabProps> = ({
             onClick={onOpenGender}
           />
           <StatCard
-            title="健康度"
+            title={diseaseName && isRegistered && !isDeceased ? `健康度 · 🤒${diseaseName}` : '健康度'}
             value={!isRegistered ? '未激活' : isDeceased ? '已故' : health.toString()}
             unit={!isRegistered || isDeceased ? '' : '%'}
             color={!isRegistered ? 'bg-[#373b47]' : isDeceased ? 'bg-[#4a3234]' : 'bg-[#a63d40]'}

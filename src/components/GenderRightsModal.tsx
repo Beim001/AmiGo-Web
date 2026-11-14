@@ -1,3 +1,4 @@
+import { addLifeLog } from '../lib/lifeLog';
 import React, { useState } from 'react';
 import {
   ChevronLeft,
@@ -72,6 +73,7 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
       localStorage.setItem('amigo_gender', selectedGender);
     } catch {}
 
+    addLifeLog('成长', '变更法定性别', `法定性别由「${currentGender}」更正为「${selectedGender}」。`);
     showToast(`法定性别已更正为【${selectedGender}】！扣除规费 ${CHANGE_FEE} ₽`);
   };
 
