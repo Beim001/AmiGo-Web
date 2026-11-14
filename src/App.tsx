@@ -25,6 +25,7 @@ import { AuthModal } from './components/AuthModal';
 import { AuthScreen } from './components/AuthScreen';
 import { EmailVerificationScreen } from './components/EmailVerificationScreen';
 import { DevToolsPanel } from './components/DevToolsPanel';
+import { drawGacha, INITIAL_PITY, PITY_RARE, PITY_LIMITED, RARITY_LABEL, PityState, Rarity } from './lib/gacha';
 import { auth, onAuthStateChanged, signOut, FirebaseUser } from './firebase';
 import {
   getBilibiliUserProfile,
@@ -240,6 +241,11 @@ const ChestAnimation = ({ isDrawing, result, onComplete }: any) => {
                           <Shirt size={result.length > 1 ? 32 : 50} className="text-purple-600 drop-shadow-md" strokeWidth={2.5} />
                         )}
                         {item.type !== 'coin' && <div className="absolute -top-1 -right-1 text-xs">✨</div>}
+                     {item.rarity && (
+                       <div className={`absolute bottom-0 inset-x-0 text-center font-black ${result.length > 1 ? 'text-[7px]' : 'text-[10px]'} ${RARITY_STYLE[item.rarity as Rarity].badge}`}>
+                         {RARITY_LABEL[item.rarity as Rarity]}{item.isPity ? '·保底' : ''}
+                       </div>
+                     )}
                      </div>
                      {result.length === 1 && (
                        <div className="text-white font-bold text-lg mt-3 text-center bg-black/50 px-3 py-1 rounded-full border border-gray-600">
@@ -253,7 +259,7 @@ const ChestAnimation = ({ isDrawing, result, onComplete }: any) => {
                      )}
                      {result.length > 1 && item.type === 'coin' && (
                        <div className="text-yellow-300 font-bold text-[10px] mt-1 text-center shadow-sm">
-                         1000
+                         {item.amount.toLocaleString()}
                        </div>
                      )}
                   </div>
@@ -272,11 +278,18 @@ const ChestAnimation = ({ isDrawing, result, onComplete }: any) => {
   );
 };
 
-// 商城服饰（不含初始服装 default）
-const SHOP_ITEMS = [
-  { id: 'knight', name: '骑士盔甲', effect: '防御力+10', currency: 'coin', price: 2000, icon: <Shirt size={26} className="text-gray-700 absolute fill-gray-400" strokeWidth={2}/>, bg: 'bg-[#b4f0c0]', iconBg: 'bg-[#cbd5e1]' },
-  { id: 'mage', name: '法师长袍', effect: '魔力+15', currency: 'coin', price: 50000, icon: <Shirt size={26} className="text-purple-900 absolute fill-purple-700" strokeWidth={2}/>, bg: 'bg-[#c8e8ff]', iconBg: 'bg-[#93c5fd]' },
-  { id: 'casual', name: '休闲卫衣', effect: '魅力+5', currency: 'coin', price: 8000, icon: <Shirt size={26} className="text-orange-700 absolute fill-orange-400" strokeWidth={2}/>, bg: 'bg-[#b4f0c0]', iconBg: 'bg-[#fde047]' }
+// 品质显示样式（与宝箱文案配色一致：高级蓝、稀有紫、限定橙）
+const RARITY_STYLE: Record<Rarity, { text: string; badge: string }> = {
+  advanced: { text: 'text-blue-300', badge: 'bg-blue-600 text-white' },
+  rare: { text: 'text-purple-300', badge: 'bg-purple-600 text-white' },
+  limited: { text: 'text-orange-300', badge: 'bg-orange-500 text-black' },
+};
+
+// 商城服饰（不含初始服装 default）；品质暂按售价划分
+const SHOP_ITEMS: Array<{ id: string; name: string; effect: string; currency: string; price: number; rarity: Rarity; icon: React.ReactNode; bg: string; iconBg: string }> = [
+  { id: 'knight', name: '骑士盔甲', effect: '防御力+10', currency: 'coin', price: 2000, rarity: 'advanced', icon: <Shirt size={26} className="text-gray-700 absolute fill-gray-400" strokeWidth={2}/>, bg: 'bg-[#b4f0c0]', iconBg: 'bg-[#cbd5e1]' },
+  { id: 'mage', name: '法师长袍', effect: '魔力+15', currency: 'coin', price: 50000, rarity: 'limited', icon: <Shirt size={26} className="text-purple-900 absolute fill-purple-700" strokeWidth={2}/>, bg: 'bg-[#c8e8ff]', iconBg: 'bg-[#93c5fd]' },
+  { id: 'casual', name: '休闲卫衣', effect: '魅力+5', currency: 'coin', price: 8000, rarity: 'rare', icon: <Shirt size={26} className="text-orange-700 absolute fill-orange-400" strokeWidth={2}/>, bg: 'bg-[#b4f0c0]', iconBg: 'bg-[#fde047]' }
 ];
 
 // 可拥有的服装总数 = 初始服装 + 商城服饰
@@ -298,6 +311,8 @@ const ShopModal = ({
   const [isDrawing, setIsDrawing] = React.useState(false);
   const [drawResult, setDrawResult] = React.useState<any | null>(null);
   const [shopToast, setShopToast] = React.useState<string | null>(null);
+  const [pity, setPity] = React.useState<PityState>(() => loadStored('amigo_gacha_pity', INITIAL_PITY));
+  React.useEffect(() => saveStored('amigo_gacha_pity', pity), [pity]);
 
   const showShopToast = (msg: string) => {
     setShopToast(msg);
@@ -327,32 +342,22 @@ const ShopModal = ({
     setIsDrawing(true);
     setDrawResult(null);
 
+    // 在点击时按当前保底计数抽取结果；开箱动画结束后再发放奖励
+    const { rewards, pity: nextPity } = drawGacha(times, SHOP_ITEMS, ownedClothes, pity);
+    setPity(nextPity);
+
     setTimeout(() => {
-      const results = [];
-      for (let i = 0; i < times; i++) {
-        // Find items the user doesn't own yet, and haven't already won in this multi-pull
-        const unownedItems = SHOP_ITEMS.filter(item => !ownedClothes.includes(item.id) && !results.find(r => r.id === item.id));
-        
-        // 20% chance to get a clothing item if any are unowned
-        if (unownedItems.length > 0 && Math.random() > 0.8) {
-          const resultItem = unownedItems[Math.floor(Math.random() * unownedItems.length)];
-          results.push(resultItem);
-        } else {
-          results.push({ type: 'coin', amount: 1000, name: '1000 金币' });
-        }
-      }
-      
-      const newClothes = results.filter(r => r.type !== 'coin').map(r => r.id);
+      const newClothes = rewards.flatMap((r) => (r.type === 'clothing' ? [r.id] : []));
       if (newClothes.length > 0) {
         setOwnedClothes((prev: string[]) => [...prev, ...newClothes]);
       }
-      
-      const totalCoins = results.filter(r => r.type === 'coin').reduce((sum, r) => sum + r.amount, 0);
+
+      const totalCoins = rewards.reduce((sum, r) => sum + (r.type === 'coin' ? r.amount : 0), 0);
       if (totalCoins > 0) {
         setCoins((prev: number) => prev + totalCoins);
       }
-      
-      setDrawResult(results);
+
+      setDrawResult(rewards);
     }, 1500);
   };
 
@@ -417,9 +422,11 @@ const ShopModal = ({
                  <div className="flex flex-col items-end mt-2 gap-1.5">
                    <div className="bg-[#c85ce6] border-2 border-[#9438ad] text-white text-[10px] px-3 py-0.5 rounded-full font-bold shadow-sm">
                      9次内必得<span className="text-blue-300 ml-1">稀有</span>服饰
+                     <span className="ml-1 text-yellow-200">· 还剩 {PITY_RARE - pity.sinceRare} 次</span>
                    </div>
                    <div className="bg-[#c85ce6] border-2 border-[#9438ad] text-white text-[10px] px-3 py-0.5 rounded-full font-bold shadow-sm">
                      99次内必得<span className="text-orange-300 ml-1">限定</span>皮肤
+                     <span className="ml-1 text-yellow-200">· 还剩 {PITY_LIMITED - pity.sinceLimited} 次</span>
                    </div>
                  </div>
                </div>
@@ -469,7 +476,10 @@ const ShopModal = ({
               
               return (
                 <div key={item.id} className={`${item.bg} border-2 border-black rounded-xl p-2 flex flex-col items-center shadow-[0_4px_0_#000] h-36`}>
-                  <span className="text-[#1f5c2b] text-[10px] font-black whitespace-nowrap mb-1">{item.name}</span>
+                  <span className="text-[#1f5c2b] text-[10px] font-black whitespace-nowrap mb-0.5 flex items-center gap-1">
+                    <span className={`${RARITY_STYLE[item.rarity].badge} text-[8px] px-1 rounded border border-black leading-tight`}>{RARITY_LABEL[item.rarity]}</span>
+                    {item.name}
+                  </span>
                   <div className="w-14 h-14 bg-[#5eb46d] rounded-lg border-2 border-black my-1 flex justify-center items-center relative overflow-hidden shrink-0">
                      <div className={`absolute inset-0 ${item.iconBg}`}></div>
                      {item.icon}
