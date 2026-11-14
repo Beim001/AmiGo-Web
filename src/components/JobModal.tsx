@@ -1,0 +1,1329 @@
+import React, { useState, useMemo } from 'react';
+import {
+  ChevronLeft,
+  Briefcase,
+  Search,
+  CheckCircle2,
+  CircleDollarSign,
+  Building2,
+  Zap,
+  Award,
+  FileText,
+  UserCheck,
+  TrendingUp,
+  Anchor,
+  Compass,
+  Scale,
+  GraduationCap,
+  Flame,
+  Shield,
+  Cpu,
+  Sparkles,
+  RefreshCw,
+  LogOut,
+  Clock,
+  X,
+  SlidersHorizontal,
+  FileCheck,
+  Crown,
+  Check,
+  Stamp,
+  Medal,
+  Layers,
+} from 'lucide-react';
+
+export interface JobModalProps {
+  onClose: () => void;
+  coins: number;
+  setCoins: React.Dispatch<React.SetStateAction<number>>;
+}
+
+export interface JobPosition {
+  id: string;
+  title: string;
+  category: string;
+  department: string;
+  dailySalary: number;
+  reqSkill: string;
+  iconName: string;
+  badge: string;
+  badgeColor: string;
+  desc: string;
+  responsibilities: string[];
+}
+
+export const JOB_POSITIONS: JobPosition[] = [
+  {
+    id: 'j1',
+    title: '俄文通译',
+    category: '金融文职',
+    department: '帝国涉外洋务局',
+    dailySalary: 1200,
+    reqSkill: '俄语流利 · 学识≥30',
+    iconName: 'Compass',
+    badge: '外交文职',
+    badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/50',
+    desc: '负责对俄贸易提单、远东边境照会与商务合同的俄语同声翻译与文书校验。',
+    responsibilities: ['同声笔译对外照会', '校验港口边贸提单', '接待涉外领事代表'],
+  },
+  {
+    id: 'j2',
+    title: '巡捕',
+    category: '政法治安',
+    department: '中央巡捕房',
+    dailySalary: 1050,
+    reqSkill: '格斗基础 · 体魄≥25',
+    iconName: 'Shield',
+    badge: '治安公职',
+    badgeColor: 'bg-red-500/20 text-red-300 border-red-500/50',
+    desc: '负责租界与街道巡视、治安维护、查验盘问嫌疑人员及维护市容秩序。',
+    responsibilities: ['街区例行治安巡逻', '盘查无证边境人员', '调解市井治安纠纷'],
+  },
+  {
+    id: 'j3',
+    title: '关税稽查员',
+    category: '政法治安',
+    department: '边境帝国关税局',
+    dailySalary: 1500,
+    reqSkill: '心细如发 · 学识≥35',
+    iconName: 'FileText',
+    badge: '海关财政',
+    badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/50',
+    desc: '驻守边境海关与港口货栈，核验出入境货运清单、查验夹带税品与开具关税凭单。',
+    responsibilities: ['登船抽查货柜清单', '征收违禁品关税', '核验关票与纳税印花'],
+  },
+  {
+    id: 'j4',
+    title: '交易所代理经纪人',
+    category: '金融文职',
+    department: '帝国证券交易所',
+    dailySalary: 2200,
+    reqSkill: '敏锐嗅觉 · 资本≥5万',
+    iconName: 'TrendingUp',
+    badge: '高薪金融',
+    badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50',
+    desc: '代理客户在证券交易所撮合股票买卖、盯盘跑单与出具每日大盘行情分析报告。',
+    responsibilities: ['撮合买卖股票订单', '撰写每日盘面研报', '盯防股市多空爆仓'],
+  },
+  {
+    id: 'j5',
+    title: '铁路司炉工',
+    category: '工程采掘',
+    department: '远东铁路局总工务段',
+    dailySalary: 950,
+    reqSkill: '吃苦耐劳 · 体魄≥30',
+    iconName: 'Flame',
+    badge: '重工体力',
+    badgeColor: 'bg-orange-500/20 text-orange-300 border-orange-500/50',
+    desc: '负责远东蒸汽机车锅炉的高强度铲煤、加水与气压监测，确保列车准点发车。',
+    responsibilities: ['连续铲煤维持锅炉气压', '检查蒸汽阀门密封性', '配合司机按时发车'],
+  },
+  {
+    id: 'j6',
+    title: '矿井工',
+    category: '工程采掘',
+    department: '阿穆尔重工采矿场',
+    dailySalary: 1100,
+    reqSkill: '耐受恶劣环境 · 体魄≥35',
+    iconName: 'Cpu',
+    badge: '硬核采掘',
+    badgeColor: 'bg-stone-500/20 text-stone-300 border-stone-500/50',
+    desc: '深入地下数百米矿道开凿矿石、安放支护木桩与运送矿车，体力消耗极大。',
+    responsibilities: ['开采高纯度铁矿石', '加固地下支撑巷道', '清运重型运矿拖车'],
+  },
+  {
+    id: 'j7',
+    title: '伐木场巡林员',
+    category: '工程采掘',
+    department: '北方兴安林业局',
+    dailySalary: 880,
+    reqSkill: '野外生存 · 体魄≥20',
+    iconName: 'Compass',
+    badge: '林业巡视',
+    badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50',
+    desc: '巡查原始森林伐木场、防止非法盗伐、测算原木胸径与防范森林火灾。',
+    responsibilities: ['巡视百里森林防火带', '标记可砍伐优质原木', '查抄私砍盗伐队'],
+  },
+  {
+    id: 'j8',
+    title: '医院/诊所医务助手',
+    category: '教育医疗',
+    department: '布津综合医院',
+    dailySalary: 980,
+    reqSkill: '护理常识 · 心细体贴',
+    iconName: 'Zap',
+    badge: '医疗卫生',
+    badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-500/50',
+    desc: '协助医师消毒手术器具、整理诊室病历、配置基础药剂与协助照顾留观病人。',
+    responsibilities: ['配置基础调理针剂', '消毒手术室与医疗器械', '照顾留观急救病人'],
+  },
+  {
+    id: 'j9',
+    title: '水电厂机械技师',
+    category: '工业制造',
+    department: '松花江水力发电总厂',
+    dailySalary: 1800,
+    reqSkill: '机械工程 · 学识≥35',
+    iconName: 'Cpu',
+    badge: '电力技术',
+    badgeColor: 'bg-blue-600/20 text-blue-300 border-blue-600/50',
+    desc: '维护发电机组水轮机、油压调节器与管道阀门，保障城市电网与水力稳定。',
+    responsibilities: ['检修水轮发电机转子', '调校高压变压器线路', '监控厂区实时发受电'],
+  },
+  {
+    id: 'j10',
+    title: '俄语同文馆教员',
+    category: '教育医疗',
+    department: '皇家同文翻译学堂',
+    dailySalary: 1600,
+    reqSkill: '俄语精通 · 名望≥20',
+    iconName: 'GraduationCap',
+    badge: '名门授业',
+    badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/50',
+    desc: '教授学员俄语语法、公文写作与远东民俗，为各行各业培养涉外语言人才。',
+    responsibilities: ['讲解俄语公文写作', '批改涉外学员试卷', '编撰新版涉外教材'],
+  },
+  {
+    id: 'j11',
+    title: '排字工',
+    category: '工业制造',
+    department: '帝国远东日报社印刷厂',
+    dailySalary: 850,
+    reqSkill: '手速敏捷 · 识字无误',
+    iconName: 'FileText',
+    badge: '报纸出版',
+    badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50',
+    desc: '在报社与印书馆按照手稿挑选铅字、反向排版、固定字盘与配合油墨压印。',
+    responsibilities: ['挑选铅字反向组版', '调配快速干油墨', '校对头条新闻样张'],
+  },
+  {
+    id: 'j12',
+    title: '纺织厂工人',
+    category: '工业制造',
+    department: '第一纺织大工坊',
+    dailySalary: 720,
+    reqSkill: '眼疾手快 · 动作熟练',
+    iconName: 'Building2',
+    badge: '轻工流水',
+    badgeColor: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50',
+    desc: '操纵蒸汽织布机与细纱机，巡回接头、清理飞絮与检验布匹质量。',
+    responsibilities: ['看管蒸汽飞梭织布机', '快速接断纱线头', '卷装棉布匹打捆'],
+  },
+  {
+    id: 'j13',
+    title: '远洋领航员',
+    category: '交通海事',
+    department: '海峡远洋航运工会',
+    dailySalary: 2800,
+    reqSkill: '航海观测 · 学识≥40',
+    iconName: 'Anchor',
+    badge: '高级航海',
+    badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/50',
+    desc: '熟悉港口水深、暗礁与潮汐，手持海图引导万吨远洋轮船安全进出港湾。',
+    responsibilities: ['测算港口水深与潮汐', '掌舵引导巨型货轮进港', '避开危险暗礁与沙洲'],
+  },
+  {
+    id: 'j14',
+    title: '律政士',
+    category: '政法治安',
+    department: '远东最高律政师公会',
+    dailySalary: 2500,
+    reqSkill: '精通法律 · 名望≥30',
+    iconName: 'Scale',
+    badge: '高端诉讼',
+    badgeColor: 'bg-[#a68245]/20 text-[#eab308] border-[#a68245]/50',
+    desc: '起草民商事诉状、代理法庭辩护与调解合同纠纷，熟悉大清律例与公约。',
+    responsibilities: ['起草商业诉讼抗辩书', '出庭代理法庭辩护', '调解企业巨额合同纠纷'],
+  },
+  {
+    id: 'j15',
+    title: '缉私官',
+    category: '政法治安',
+    department: '帝国缉私总署',
+    dailySalary: 1950,
+    reqSkill: '武力强悍 · 体魄≥35',
+    iconName: 'Shield',
+    badge: '缉私特警',
+    badgeColor: 'bg-red-600/20 text-red-400 border-red-600/50',
+    desc: '带队登上 संदिग्ध船只与货运火车进行突击搜查，查扣走私鸦片与违禁物资。',
+    responsibilities: ['深夜突袭走私货船', '清点违禁军火与鸦片', '逮捕走私团伙头头'],
+  },
+  {
+    id: 'j16',
+    title: '抄录员',
+    category: '金融文职',
+    department: '市政档案文书馆',
+    dailySalary: 650,
+    reqSkill: '字迹工整 · 耐性极佳',
+    iconName: 'FileText',
+    badge: '基础文员',
+    badgeColor: 'bg-gray-500/20 text-gray-300 border-gray-500/50',
+    desc: '用钢笔与毛笔抄写政府案卷、商业账目与教会档案，要求字迹工整无误。',
+    responsibilities: ['誊抄户籍与税务案卷', '整理过期商业契约', '抄录官方通告底稿'],
+  },
+  {
+    id: 'j17',
+    title: '教习',
+    category: '教育医疗',
+    department: '白山崇文书院',
+    dailySalary: 1400,
+    reqSkill: '经史通晓 · 学识≥25',
+    iconName: 'GraduationCap',
+    badge: '传统教头',
+    badgeColor: 'bg-amber-600/20 text-amber-300 border-amber-600/50',
+    desc: '在书院或新式学堂主持日常教学、督导学生经史子集与近代科学功课。',
+    responsibilities: ['主持学堂晨诵与晚自习', '督导学生修习算术格物', '主持月度学业考评'],
+  },
+  {
+    id: 'j18',
+    title: '冠军',
+    category: '体育文娱',
+    department: '地下打斗黑擂台',
+    dailySalary: 3200,
+    reqSkill: '擂台战神 · 体魄≥50',
+    iconName: 'Award',
+    badge: '擂台传奇',
+    badgeColor: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50 font-black',
+    desc: '参加打斗竞技场、拳击大擂台与力量表演，用硬实力赢取丰厚出场费与奖金。',
+    responsibilities: ['登台对决守擂挑战者', '完成力量举重表演', '横扫竞技场无敌记录'],
+  },
+  {
+    id: 'j19',
+    title: '煤炭工人',
+    category: '工程采掘',
+    department: '远东黑金煤炭堆场',
+    dailySalary: 1000,
+    reqSkill: '不怕脏累 · 体力充沛',
+    iconName: 'Flame',
+    badge: '煤炭采矿',
+    badgeColor: 'bg-[#42454d]/40 text-gray-200 border-gray-600',
+    desc: '负责煤矿堆场分拣、装卸煤车与煤质筛选，工作环境充满煤尘但需求巨大。',
+    responsibilities: ['挑选优质无烟煤块', '装载百吨煤炭货运车', '清理煤渣与风选精煤'],
+  },
+  {
+    id: 'j20',
+    title: '炼油厂工人',
+    category: '工业制造',
+    department: '皇家火油分馏炼制厂',
+    dailySalary: 1250,
+    reqSkill: '化工基础 · 谨慎小心',
+    iconName: 'Building2',
+    badge: '石油化工',
+    badgeColor: 'bg-teal-500/20 text-teal-300 border-teal-500/50',
+    desc: '监控分馏塔温度、取样测试煤油与润滑油纯度，操作高温高压管道设备。',
+    responsibilities: ['观测煤油分馏塔温度', '灌装防爆铁桶煤油', '巡检高压蒸汽管线'],
+  },
+];
+
+export interface CompanyInfo {
+  name: string;
+  type: string;
+  established: string;
+  scale: string;
+  location: string;
+  registeredCapital: string;
+  desc: string;
+  benefits: string[];
+}
+
+export const COMPANY_DATA: Record<string, CompanyInfo> = {
+  '帝国涉外洋务局': {
+    name: '帝国涉外洋务局',
+    type: '国有特许行政机关',
+    established: '1862年',
+    scale: '800 - 1500人',
+    location: '首都布津外务大街18号领事馆区',
+    registeredCapital: '1,800万 ₽',
+    desc: '阿米诺斯帝国专理涉外通商、外交领事事务及对俄边境贸易提单核验的核心行政机关。下设领事司、通商司与涉外同文翻译处，掌控远东多国边境贸易准入权。',
+    benefits: ['享帝国公职津贴', '包午餐膳食', '年度出境考察', '配发官定制服'],
+  },
+  '中央巡捕房': {
+    name: '中央巡捕房',
+    type: '执法治安司法机构',
+    established: '1875年',
+    scale: '2000 - 5000人',
+    location: '首都布津中央大街1号法政大楼',
+    registeredCapital: '2,500万 ₽',
+    desc: '负责首都布津及各商埠租界治安秩序维持、突发治安事件处置与市容盘查的核心警察执法部门，配备骑警队、突击巡捕队与治安侦缉科。',
+    benefits: ['高额执勤风险补贴', '医疗全额报销', '住房官邸分配', '勋章绩效奖励'],
+  },
+  '边境帝国关税局': {
+    name: '边境帝国关税局',
+    type: '海关财政征稽机关',
+    established: '1880年',
+    scale: '1000 - 3000人',
+    location: '阿穆尔口岸海关大楼',
+    registeredCapital: '3,000万 ₽',
+    desc: '掌控帝国远东边境口岸与海港货物进出口关税征收、验放凭单签发与缉私抽检，是帝国财政收入的重要支柱部门。',
+    benefits: ['关口绩效高额奖金', '包吃住宿营', '退伍优先提拔', '专业关务培训'],
+  },
+  '帝国证券交易所': {
+    name: '帝国证券交易所',
+    type: '特许股份制金融机构',
+    established: '1892年',
+    scale: '300 - 800人',
+    location: '金融街金融大厦交易大厅',
+    registeredCapital: '8,000万 ₽',
+    desc: '帝国规模最大、交易最活跃的证券集中交易场所，涵盖铁路、矿业、航运与银行等数百家上市公司的股票与债券搓合交易。',
+    benefits: ['行业顶尖薪资分红', '午间高档自助', '内幕研报优先获取', '年终巨额奖金'],
+  },
+  '远东铁路局总工务段': {
+    name: '远东铁路局总工务段',
+    type: '皇家重工国有企业',
+    established: '1888年',
+    scale: '10000+人',
+    location: '远东铁路枢纽总站工务大楼',
+    registeredCapital: '1.2亿 ₽',
+    desc: '横跨远东大平原的蒸汽机车与铁路线路运营维护总枢纽，下辖机务段、车辆段、电务段与调度中心，保障交通动脉畅通。',
+    benefits: ['铁路职工免费乘车', '高温寒暑专项补贴', '家属医疗保障', '退休养老金待遇'],
+  },
+  '阿穆尔重工采矿场': {
+    name: '阿穆尔重工采矿场',
+    type: '特许重工业采掘企业',
+    established: '1885年',
+    scale: '3000 - 8000人',
+    location: '阿穆尔黑山矿区1号采场',
+    registeredCapital: '5,000万 ₽',
+    desc: '阿米诺斯帝国远东最大的铁矿石与稀有金属采掘基业，拥有深井开采设备与重型拖车运输队，为帝国军工与铁路提供原材料。',
+    benefits: ['硬核采矿高日薪', '井下特别津贴', '免费高热量膳食', '工伤全额保险'],
+  },
+  '布津综合医院': {
+    name: '布津综合医院',
+    type: '公立高等医疗卫生机构',
+    established: '1890年',
+    scale: '500 - 1200人',
+    location: '公卫路99号医疗园区',
+    registeredCapital: '1,500万 ₽',
+    desc: '拥有现代西医外科、急诊科与药剂研究室的综合性三级医院，承担首都布津医疗救治、公卫防疫与医药教学重任。',
+    benefits: ['医疗专家指导', '家属就医折扣', '舒适工作环境', '定期体检津贴'],
+  },
+  '松花江水力发电总厂': {
+    name: '松花江水力发电总厂',
+    type: '国家电力基础设施企业',
+    established: '1898年',
+    scale: '600 - 1500人',
+    location: '松花江水利枢纽大坝区',
+    registeredCapital: '4,500万 ₽',
+    desc: '利用松花江丰沛水力资源建立的巨型水电枢纽，拥有大口径水轮发电机组，为周边工业区与居民区提供稳定电力。',
+    benefits: ['电力员工优惠用电', '高技术岗位津贴', '包宿包餐', '职业技能提升补助'],
+  },
+  '皇家同文翻译学堂': {
+    name: '皇家同文翻译学堂',
+    type: '高等名门语言教育学堂',
+    established: '1870年',
+    scale: '200 - 500人',
+    location: '文化区同文路88号',
+    registeredCapital: '1,000万 ₽',
+    desc: '帝国专门培养外交、通商、边政与公文翻译人才的皇家名校，拥有数十名俄语、德语与法文教习大师。',
+    benefits: ['学术名望加成', '寒暑假带薪休假', '藏书馆免费借阅', '名门社会地位'],
+  },
+};
+
+export const getCompanyInfo = (deptName: string): CompanyInfo => {
+  if (COMPANY_DATA[deptName]) {
+    return COMPANY_DATA[deptName];
+  }
+  return {
+    name: deptName,
+    type: '帝国特许行业重点企事业单位',
+    established: '1885年',
+    scale: '500 - 2000人',
+    location: '阿米诺斯首都布津 · 行业产业园区',
+    registeredCapital: '2,000万 ₽',
+    desc: `${deptName}是阿米诺斯帝国在该行业领头设立的核心企事业单位，承担着帝国经济建设、社会保障与产业运营的重要职责。`,
+    benefits: ['行业标准薪酬待遇', '包午餐与工作服', '定期工效奖金', '职业晋升通道'],
+  };
+};
+
+export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins }) => {
+  const [activeTab, setActiveTab] = useState<'hall' | 'resume'>('hall');
+  const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('全部');
+  const [sortBy, setSortBy] = useState<'default' | 'salary_desc' | 'salary_asc'>('default');
+  const [workingProgress, setWorkingProgress] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  // Screen View Detail Navigation State
+  const [selectedJobDetail, setSelectedJobDetail] = useState<JobPosition | null>(null);
+  const [selectedCompanyDetail, setSelectedCompanyDetail] = useState<CompanyInfo | null>(null);
+
+  // Saved Job State
+  const [currentJobId, setCurrentJobId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('amigo_current_job_id') || 'j1';
+    } catch (e) {
+      return 'j1';
+    }
+  });
+
+  const [jobHistoryIds, setJobHistoryIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('amigo_job_history');
+      if (saved) return JSON.parse(saved);
+      return ['j1'];
+    } catch (e) {
+      return ['j1'];
+    }
+  });
+
+  const historyJobs = useMemo(() => {
+    return jobHistoryIds
+      .map((id) => JOB_POSITIONS.find((j) => j.id === id))
+      .filter((j): j is JobPosition => j !== undefined);
+  }, [jobHistoryIds]);
+
+  const [totalShiftCount, setTotalShiftCount] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('amigo_job_shifts_count');
+      return saved ? parseInt(saved, 10) : 5;
+    } catch (e) {
+      return 5;
+    }
+  });
+
+  const [totalEarnedCoins, setTotalEarnedCoins] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('amigo_job_earned_coins');
+      return saved ? parseInt(saved, 10) : 6000;
+    } catch (e) {
+      return 6000;
+    }
+  });
+
+  const [lastWorkLog, setLastWorkLog] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  const currentJob = JOB_POSITIONS.find((j) => j.id === currentJobId) || null;
+
+  const categories = ['全部', '政法治安', '工程采掘', '金融文职', '教育医疗', '交通海事', '工业制造', '体育文娱'];
+
+  const filteredJobs = useMemo(() => {
+    return JOB_POSITIONS.filter((job) => {
+      const matchCat = selectedCategory === '全部' || job.category === selectedCategory;
+      const matchSearch =
+        search.trim() === '' ||
+        job.title.toLowerCase().includes(search.toLowerCase()) ||
+        job.department.toLowerCase().includes(search.toLowerCase()) ||
+        job.desc.toLowerCase().includes(search.toLowerCase());
+      return matchCat && matchSearch;
+    }).sort((a, b) => {
+      if (sortBy === 'salary_desc') return b.dailySalary - a.dailySalary;
+      if (sortBy === 'salary_asc') return a.dailySalary - b.dailySalary;
+      return 0;
+    });
+  }, [selectedCategory, search, sortBy]);
+
+  const getJobIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'Compass': return <Compass size={18} />;
+      case 'Shield': return <Shield size={18} />;
+      case 'FileText': return <FileText size={18} />;
+      case 'TrendingUp': return <TrendingUp size={18} />;
+      case 'Flame': return <Flame size={18} />;
+      case 'Cpu': return <Cpu size={18} />;
+      case 'Zap': return <Zap size={18} />;
+      case 'GraduationCap': return <GraduationCap size={18} />;
+      case 'Building2': return <Building2 size={18} />;
+      case 'Anchor': return <Anchor size={18} />;
+      case 'Scale': return <Scale size={18} />;
+      case 'Award': return <Award size={18} />;
+      default: return <Briefcase size={18} />;
+    }
+  };
+
+  const getCareerRank = (shifts: number) => {
+    if (shifts >= 50) return { title: '帝国特级勋劳', color: 'bg-amber-500/20 text-amber-300 border-amber-500/50' };
+    if (shifts >= 20) return { title: '部门资深骨干', color: 'bg-purple-500/20 text-purple-300 border-purple-500/50' };
+    if (shifts >= 8) return { title: '熟练岗位职员', color: 'bg-sky-500/20 text-sky-300 border-sky-500/50' };
+    return { title: '见习试用职员', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50' };
+  };
+
+  const handleApply = (job: JobPosition) => {
+    if (currentJobId === job.id) {
+      showToast(`当前已在「${job.title}」岗位任职中`);
+      return;
+    }
+    setCurrentJobId(job.id);
+    try {
+      localStorage.setItem('amigo_current_job_id', job.id);
+    } catch (e) {}
+
+    // Record to history
+    setJobHistoryIds((prev) => {
+      const updated = prev.includes(job.id) ? prev : [job.id, ...prev];
+      try {
+        localStorage.setItem('amigo_job_history', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    setSelectedJobDetail(null);
+    showToast(`恭喜！顺利签署用工合同，入职「${job.department}」的【${job.title}】！`);
+  };
+
+  const handleResign = () => {
+    if (!currentJob) return;
+    setCurrentJobId(null);
+    try {
+      localStorage.removeItem('amigo_current_job_id');
+    } catch (e) {}
+    showToast('已办理离职手续，目前处于自由待业状态');
+  };
+
+  const handleWorkShift = () => {
+    if (!currentJob) {
+      showToast('请先选择并应聘一项岗位！');
+      return;
+    }
+    if (workingProgress) return;
+
+    setWorkingProgress(true);
+
+    setTimeout(() => {
+      const wage = currentJob.dailySalary;
+      const bonus = Math.floor(Math.random() * 200);
+      const totalPay = wage + bonus;
+
+      setCoins((prev) => prev + totalPay);
+
+      const newShifts = totalShiftCount + 1;
+      const newEarned = totalEarnedCoins + totalPay;
+
+      setTotalShiftCount(newShifts);
+      setTotalEarnedCoins(newEarned);
+
+      try {
+        localStorage.setItem('amigo_job_shifts_count', newShifts.toString());
+        localStorage.setItem('amigo_job_earned_coins', newEarned.toString());
+      } catch (e) {}
+
+      const randomTask = currentJob.responsibilities[Math.floor(Math.random() * currentJob.responsibilities.length)];
+      const logText = `完成班次：【${currentJob.title}】 - ${randomTask}，获得日薪 ${wage} ₽${bonus > 0 ? ` (勤勉津贴 +${bonus} ₽)` : ''}`;
+      
+      setLastWorkLog(logText);
+      setWorkingProgress(false);
+      showToast(`⚡ 勤勉执勤完成！领取日薪与津贴 ${totalPay.toLocaleString()} ₽`);
+    }, 1000);
+  };
+
+  const careerRank = getCareerRank(totalShiftCount);
+
+  return (
+    <div className="absolute inset-0 bg-[#12141c] flex flex-col z-50 animate-in slide-in-from-bottom-4 duration-200 overflow-hidden font-sans">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-amber-400 text-black font-black text-xs px-4 py-2 rounded-xl border-2 border-black shadow-[0_4px_0_#000] animate-in fade-in slide-in-from-top-2 duration-200 text-center max-w-[90%] truncate">
+          {toast}
+        </div>
+      )}
+
+      {/* Top Header */}
+      <div className="bg-[#1e2330] border-b-2 border-black p-3 flex items-center justify-between shadow-md flex-shrink-0">
+        <button
+          onClick={() => {
+            if (selectedCompanyDetail) {
+              setSelectedCompanyDetail(null);
+            } else if (selectedJobDetail) {
+              setSelectedJobDetail(null);
+            } else {
+              onClose();
+            }
+          }}
+          className="bg-[#2a2e3f] hover:bg-[#353a4e] text-white p-1.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer active:translate-y-0.5 transition-all flex items-center gap-1 text-xs font-bold"
+        >
+          <ChevronLeft size={20} />
+          {(selectedJobDetail || selectedCompanyDetail) && <span className="hidden sm:inline">返回</span>}
+        </button>
+
+        <div className="flex items-center gap-2 min-w-0 px-2">
+          <div className="p-1.5 bg-blue-500/20 border-2 border-blue-500/50 rounded-xl text-blue-400 flex-shrink-0">
+            {selectedCompanyDetail ? (
+              <Building2 size={18} />
+            ) : selectedJobDetail ? (
+              getJobIcon(selectedJobDetail.iconName)
+            ) : (
+              <Briefcase size={18} />
+            )}
+          </div>
+          <span className="text-white font-black text-sm sm:text-base tracking-wider drop-shadow-[0_1px_0_#000] truncate">
+            {selectedCompanyDetail
+              ? `${selectedCompanyDetail.name} · 企业详情`
+              : selectedJobDetail
+              ? `${selectedJobDetail.title} · 岗位详解`
+              : '就业招聘'}
+          </span>
+        </div>
+
+        <div className="bg-[#12141c] border-2 border-black px-2.5 py-1 rounded-xl flex items-center gap-1 shadow-[0_2px_0_#000] flex-shrink-0">
+          <CircleDollarSign size={14} className="text-amber-400" />
+          <span className="text-amber-300 font-mono font-black text-xs">
+            {coins.toLocaleString()} ₽
+          </span>
+        </div>
+      </div>
+
+      {/* Primary Sub-Navigation Tabs (Only shown when not in full detail view) */}
+      {!selectedJobDetail && !selectedCompanyDetail && (
+        <div className="bg-[#181a26] border-b border-black/80 px-3 py-2 flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => setActiveTab('hall')}
+            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all border-2 border-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer ${
+              activeTab === 'hall'
+                ? 'bg-blue-500 text-white font-black'
+                : 'bg-[#212433] text-gray-400 hover:text-white'
+            }`}
+          >
+            <Briefcase size={14} />
+            <span>招募岗位大厅</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('resume')}
+            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all border-2 border-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer ${
+              activeTab === 'resume'
+                ? 'bg-blue-500 text-white font-black'
+                : 'bg-[#212433] text-gray-400 hover:text-white'
+            }`}
+          >
+            <Medal size={14} />
+            <span>我的职场履历</span>
+          </button>
+        </div>
+      )}
+
+      {/* Content Body Container */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-[#181a24]">
+        {/* VIEW 1: COMPANY DETAIL SCREEN (招人单位/企业详细界面) */}
+        {selectedCompanyDetail ? (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            {/* Navigation Path Breadcrumb */}
+            <div className="flex items-center gap-2 text-xs text-gray-400 font-mono">
+              <button
+                onClick={() => {
+                  setSelectedCompanyDetail(null);
+                  setSelectedJobDetail(null);
+                }}
+                className="hover:text-blue-300 underline cursor-pointer"
+              >
+                招募岗位大厅
+              </button>
+              <span>/</span>
+              <span className="text-white font-bold">{selectedCompanyDetail.name}</span>
+            </div>
+
+            {/* Company Main Header Card with Metallic Imperial Badge */}
+            <div className="bg-gradient-to-b from-[#25293c] to-[#1c1f2d] border-2 border-black rounded-3xl p-5 shadow-[0_6px_0_#000] space-y-4 relative overflow-hidden">
+              {/* Background Watermark Seal */}
+              <div className="absolute -right-4 -bottom-4 w-32 h-32 rounded-full border-4 border-blue-500/10 bg-blue-500/5 flex flex-col items-center justify-center text-blue-400/20 rotate-[-12deg] pointer-events-none select-none">
+                <Building2 size={48} />
+                <span className="text-[9px] font-black tracking-widest mt-1">官方备案</span>
+              </div>
+
+              <div className="flex items-start justify-between gap-3 border-b border-black/60 pb-4 relative z-10">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-14 h-14 rounded-2xl bg-blue-500/15 border-2 border-blue-500/40 flex items-center justify-center text-blue-400 flex-shrink-0 shadow-[0_4px_12px_rgba(59,130,246,0.2)]">
+                    <Building2 size={28} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-white font-black text-lg sm:text-xl tracking-wide">
+                        {selectedCompanyDetail.name}
+                      </h2>
+                      <span className="bg-blue-500/20 text-blue-300 border border-blue-500/50 text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                        <Award size={11} />
+                        <span>{selectedCompanyDetail.type}</span>
+                      </span>
+                    </div>
+                    <div className="text-gray-400 text-xs font-mono mt-1 flex items-center gap-1">
+                      <Compass size={13} className="text-blue-400 flex-shrink-0" />
+                      <span>驻地地址：{selectedCompanyDetail.location}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3-Column Metric Dashboard */}
+              <div className="grid grid-cols-3 gap-2 bg-[#131520] p-3 rounded-2xl border-2 border-black font-mono text-center relative z-10 shadow-inner">
+                <div className="p-1">
+                  <div className="text-[10px] text-gray-400 font-sans font-bold">创办年份</div>
+                  <div className="text-white font-black text-sm sm:text-base mt-0.5">{selectedCompanyDetail.established}</div>
+                </div>
+                <div className="p-1 border-x border-black/80">
+                  <div className="text-[10px] text-gray-400 font-sans font-bold">人员规模</div>
+                  <div className="text-sky-300 font-black text-sm sm:text-base mt-0.5">{selectedCompanyDetail.scale}</div>
+                </div>
+                <div className="p-1">
+                  <div className="text-[10px] text-gray-400 font-sans font-bold">划拨 / 注册资本</div>
+                  <div className="text-amber-400 font-black text-sm sm:text-base mt-0.5">{selectedCompanyDetail.registeredCapital}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Company Background Description */}
+            <div className="bg-[#232635] border-2 border-black rounded-2xl p-4 shadow-[0_3px_0_#000] space-y-2.5">
+              <div className="text-amber-400 font-black text-xs flex items-center gap-1.5">
+                <FileText size={16} />
+                <span>企事业单位背景与职能概况：</span>
+              </div>
+              <p className="text-gray-200 text-xs sm:text-sm leading-relaxed font-sans bg-[#181a24] p-3.5 rounded-xl border border-black/60 shadow-inner">
+                {selectedCompanyDetail.desc}
+              </p>
+            </div>
+
+            {/* Benefits & Perks Showcase */}
+            <div className="bg-[#232635] border-2 border-black rounded-2xl p-4 shadow-[0_3px_0_#000] space-y-2.5">
+              <div className="text-emerald-400 font-black text-xs flex items-center gap-1.5">
+                <Crown size={16} />
+                <span>雇员福利待遇与公署保障：</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {selectedCompanyDetail.benefits.map((b, i) => (
+                  <span
+                    key={i}
+                    className="bg-emerald-950/40 text-emerald-300 text-xs px-3 py-1.5 rounded-xl border border-emerald-500/50 font-bold flex items-center gap-1.5 shadow-[0_2px_0_#000]"
+                  >
+                    <CheckCircle2 size={13} className="text-emerald-400" />
+                    <span>{b}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Company Job Openings List */}
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center justify-between text-xs font-black text-gray-300 px-1">
+                <span className="flex items-center gap-1.5">
+                  <Briefcase size={16} className="text-blue-400" />
+                  <span>【{selectedCompanyDetail.name}】在招岗位列表</span>
+                </span>
+                <span className="text-[11px] font-mono text-blue-300 font-bold bg-blue-950/60 px-2 py-0.5 rounded-lg border border-blue-500/40">
+                  {JOB_POSITIONS.filter((j) => j.department === selectedCompanyDetail.name).length} 项公开招募
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                {JOB_POSITIONS.filter((j) => j.department === selectedCompanyDetail.name).map((job) => {
+                  const isCurrent = currentJobId === job.id;
+                  return (
+                    <div
+                      key={job.id}
+                      onClick={() => {
+                        setSelectedJobDetail(job);
+                        setSelectedCompanyDetail(null);
+                      }}
+                      className="bg-[#232635] border-2 border-black rounded-2xl p-3.5 shadow-[0_3px_0_#000] flex items-center justify-between gap-3 hover:bg-[#282c3e] hover:border-blue-400/80 cursor-pointer transition-all"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-[#181a24] border border-black flex items-center justify-center text-blue-400 flex-shrink-0 shadow-inner">
+                          {getJobIcon(job.iconName)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-black text-sm sm:text-base truncate">{job.title}</span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${job.badgeColor}`}>
+                              {job.badge}
+                            </span>
+                          </div>
+                          <div className="text-gray-400 text-[10px] font-mono mt-0.5">
+                            门槛: <span className="text-blue-300 font-bold">{job.reqSkill}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="text-right">
+                          <div className="text-amber-400 font-mono font-black text-base">{job.dailySalary} ₽</div>
+                          <div className="text-gray-400 text-[9px] font-mono">日薪按班结算</div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApply(job);
+                          }}
+                          disabled={isCurrent}
+                          className={`px-3 py-1.5 rounded-xl border-2 border-black font-black text-xs cursor-pointer shadow-[0_2px_0_#000] active:translate-y-0.5 ${
+                            isCurrent
+                              ? 'bg-gray-700 text-gray-400 border-black cursor-default'
+                              : 'bg-blue-600 hover:bg-blue-500 text-white'
+                          }`}
+                        >
+                          {isCurrent ? '履职中' : '应聘此岗'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : selectedJobDetail ? (
+          /* VIEW 2: JOB DETAIL SCREEN (岗位详细界面) */
+          <div className="space-y-3.5 animate-in fade-in duration-200">
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-2 text-xs text-gray-400 font-mono">
+              <button onClick={() => setSelectedJobDetail(null)} className="hover:text-blue-300 underline cursor-pointer">
+                招募岗位大厅
+              </button>
+              <span>/</span>
+              <span className="text-white font-bold">{selectedJobDetail.title} 详解</span>
+            </div>
+
+            {/* Job Header Hero Card */}
+            <div className="bg-[#232635] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] space-y-3 relative overflow-hidden">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border-2 border-blue-500/40 flex items-center justify-center text-blue-400 flex-shrink-0 shadow-inner">
+                    {getJobIcon(selectedJobDetail.iconName)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-white font-black text-base sm:text-lg">{selectedJobDetail.title}</h2>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${selectedJobDetail.badgeColor}`}>
+                        {selectedJobDetail.badge}
+                      </span>
+                    </div>
+                    <div className="text-gray-400 text-xs font-mono mt-0.5">
+                      分类：{selectedJobDetail.category} · 门槛：{selectedJobDetail.reqSkill}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right flex-shrink-0">
+                  <div className="text-amber-400 font-mono font-black text-lg">
+                    {selectedJobDetail.dailySalary.toLocaleString()} ₽
+                  </div>
+                  <div className="text-gray-400 text-[10px] font-mono">基础日薪 (按班发放)</div>
+                </div>
+              </div>
+
+              {/* Action Bar */}
+              <div className="pt-1 border-t border-black/60 flex items-center justify-between gap-3">
+                <span className="text-gray-400 text-xs">状态：{currentJobId === selectedJobDetail.id ? '当前正在此岗位履职' : '开放招聘中'}</span>
+                <button
+                  onClick={() => handleApply(selectedJobDetail)}
+                  disabled={currentJobId === selectedJobDetail.id}
+                  className={`px-5 py-2 rounded-xl border-2 border-black font-black text-xs shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer transition-all ${
+                    currentJobId === selectedJobDetail.id
+                      ? 'bg-gray-700 text-gray-400 border-black cursor-default shadow-none'
+                      : 'bg-blue-600 hover:bg-blue-500 text-white'
+                  }`}
+                >
+                  {currentJobId === selectedJobDetail.id ? '正式履职中' : '签署合同应聘入职'}
+                </button>
+              </div>
+            </div>
+
+            {/* Hiring Employer / Company Card (Clickable to jump to Company Detail!) */}
+            <div
+              onClick={() => setSelectedCompanyDetail(getCompanyInfo(selectedJobDetail.department))}
+              className="bg-[#232635] hover:bg-[#2a2d3e] border-2 border-black rounded-2xl p-4 shadow-[0_3px_0_#000] flex items-center justify-between gap-3 cursor-pointer transition-all group"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border-2 border-amber-500/40 flex items-center justify-center text-amber-400 flex-shrink-0">
+                  <Building2 size={20} />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-gray-400 text-[10px] font-mono">招聘单位 / 聘用企业 (点击查看企业详情)</div>
+                  <div className="text-white font-black text-sm sm:text-base group-hover:text-blue-300 transition-colors flex items-center gap-1.5">
+                    <span>{selectedJobDetail.department}</span>
+                    <span className="text-xs bg-blue-500/20 text-blue-300 border border-blue-500/40 px-1.5 py-0.2 rounded font-normal">
+                      官方认证
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 text-blue-400 font-bold text-xs flex-shrink-0 group-hover:translate-x-1 transition-transform">
+                <span>企业详情</span>
+                <ChevronLeft size={16} className="rotate-180" />
+              </div>
+            </div>
+
+            {/* Job Description & Responsibilities */}
+            <div className="bg-[#232635] border-2 border-black rounded-2xl p-4 shadow-[0_3px_0_#000] space-y-3">
+              <div className="text-amber-400 font-bold text-xs flex items-center gap-1.5">
+                <FileText size={15} />
+                <span>岗位职责与日常工作要求：</span>
+              </div>
+
+              <p className="text-gray-200 text-xs leading-relaxed font-sans bg-[#181a24] p-3 rounded-xl border border-black/60">
+                {selectedJobDetail.desc}
+              </p>
+
+              <div className="space-y-1.5 pt-1">
+                <div className="text-gray-400 font-bold text-xs">核心履行职责清单：</div>
+                <div className="space-y-1 text-xs text-gray-200">
+                  {selectedJobDetail.responsibilities.map((resp, i) => (
+                    <div key={i} className="flex items-center gap-2 bg-[#181a24] p-2 rounded-xl border border-black/60">
+                      <Check size={14} className="text-emerald-400 flex-shrink-0" />
+                      <span>{resp}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Official Employment Contract Certification (聘用公证书) */}
+            <div className="bg-[#191c28] border-2 border-black rounded-2xl p-4 space-y-3 relative overflow-hidden shadow-[0_3px_0_#000]">
+              <div className="absolute right-3 bottom-2 w-20 h-20 rounded-full border-4 border-red-500/30 bg-red-950/20 flex flex-col items-center justify-center text-red-400/50 rotate-[-15deg] pointer-events-none select-none">
+                <div className="text-[8px] font-black">人力资源公署</div>
+                <Stamp size={18} className="my-0.5" />
+                <div className="text-[8px] font-black">【用工准许】</div>
+              </div>
+
+              <div className="flex items-center gap-2 text-blue-300 font-bold text-xs border-b border-black/60 pb-2">
+                <Stamp size={15} />
+                <span>阿米诺斯帝国人力资源公署 · 正式用工公证备忘</span>
+              </div>
+
+              <div className="text-gray-300 text-xs leading-relaxed space-y-1">
+                <div>• 本岗位经帝国公署审核备案，出勤班次及薪酬所得受法律保障。</div>
+                <div>• 雇员上岗后需恪尽职守，按规完成日常巡查、核验与工作事项。</div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* VIEW 3: MAIN LIST VIEW (JOB HALL / RESUME TABS) */
+          <>
+            {/* TAB 1: 招募岗位大厅 */}
+            {activeTab === 'hall' && (
+              <div className="space-y-3">
+                {/* Compact Current Job Quick Status Bar */}
+                {currentJob && (
+                  <div className="bg-[#1f2231] border-2 border-black rounded-2xl px-3 py-2 shadow-[0_2px_0_#000] flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 animate-pulse" />
+                      <span className="text-gray-300 font-bold text-xs truncate">
+                        当前任职：<span className="text-white font-black">{currentJob.title}</span>
+                      </span>
+                      <span className="text-amber-400 font-mono font-bold text-xs flex-shrink-0">
+                        {currentJob.dailySalary} ₽/天
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={handleWorkShift}
+                      disabled={workingProgress}
+                      className={`px-3 py-1 rounded-xl border border-black text-xs font-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer flex-shrink-0 flex items-center gap-1 transition-all ${
+                        workingProgress
+                          ? 'bg-amber-600 text-black cursor-wait animate-pulse'
+                          : 'bg-amber-400 hover:bg-amber-300 text-black'
+                      }`}
+                    >
+                      {workingProgress ? (
+                        <>
+                          <RefreshCw size={12} className="animate-spin" />
+                          <span>核算中...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap size={12} />
+                          <span>打工发薪</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Search, Filter & Sort Controls */}
+                <div className="bg-[#1f2231] border-2 border-black rounded-2xl p-3 shadow-[0_3px_0_#000] space-y-2.5">
+                  {/* Search Bar */}
+                  <div className="relative flex items-center">
+                    <Search size={15} className="absolute left-3 text-gray-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="搜索岗位名称 / 部门 / 职能关键字..."
+                      className="w-full bg-[#131520] text-white text-xs font-bold pl-9 pr-8 py-2 rounded-xl border-2 border-black focus:border-blue-400 focus:outline-none transition-colors"
+                    />
+                    {search && (
+                      <button
+                        onClick={() => setSearch('')}
+                        className="absolute right-2.5 p-0.5 text-gray-400 hover:text-white cursor-pointer rounded-full hover:bg-white/10"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Category Pills & Sort Toolbar */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                    {/* Sector / Category Filter */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar flex-1 min-w-0">
+                      {categories.map((cat) => (
+                        <button
+                          key={cat}
+                          onClick={() => setSelectedCategory(cat)}
+                          className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition-all flex-shrink-0 cursor-pointer whitespace-nowrap shadow-[0_2px_0_#000] active:translate-y-0.5 ${
+                            selectedCategory === cat
+                              ? 'bg-blue-500 text-white border-black font-black'
+                              : 'bg-[#131520] text-gray-400 border-black hover:text-white'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Sort Dropdown */}
+                    <div className="flex items-center gap-1.5 flex-shrink-0 justify-end">
+                      <SlidersHorizontal size={13} className="text-gray-400" />
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                        className="bg-[#131520] text-xs font-bold text-gray-200 border border-black rounded-xl px-2.5 py-1 focus:outline-none focus:border-blue-400 cursor-pointer"
+                      >
+                        <option value="default">默认推荐排序</option>
+                        <option value="salary_desc">日薪从高到低</option>
+                        <option value="salary_asc">日薪从低到高</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Job Cards List */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-black text-gray-400 px-1">
+                    <span>招募岗位清单 ({filteredJobs.length} 项)</span>
+                    <span className="text-[10px] font-mono text-gray-500">公署认可按日核算发薪</span>
+                  </div>
+
+                  {filteredJobs.length === 0 ? (
+                    <div className="bg-[#232635] border-2 border-black rounded-2xl p-8 text-center text-gray-400 text-xs font-bold space-y-2">
+                      <Search size={24} className="mx-auto text-gray-500" />
+                      <div>未找到匹配“{search}”的就业岗位</div>
+                      <button
+                        onClick={() => {
+                          setSearch('');
+                          setSelectedCategory('全部');
+                        }}
+                        className="text-blue-400 text-xs font-bold underline cursor-pointer"
+                      >
+                        重置所有搜寻条件
+                      </button>
+                    </div>
+                  ) : (
+                    filteredJobs.map((job) => {
+                      const isCurrent = currentJobId === job.id;
+
+                      return (
+                        <div
+                          key={job.id}
+                          onClick={() => setSelectedJobDetail(job)}
+                          className={`bg-[#232635] border-2 border-black rounded-2xl p-3 shadow-[0_3px_0_#000] space-y-2 transition-all cursor-pointer hover:bg-[#282c3e] ${
+                            isCurrent ? 'ring-2 ring-amber-400 border-amber-400/80' : 'hover:border-blue-400/60'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {/* Dynamic Job Icon Container */}
+                              <div className="w-9 h-9 rounded-xl bg-[#181a24] border border-black flex items-center justify-center text-blue-400 flex-shrink-0 shadow-inner">
+                                {getJobIcon(job.iconName)}
+                              </div>
+
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-white font-black text-sm truncate">{job.title}</span>
+                                  <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${job.badgeColor}`}>
+                                    {job.badge}
+                                  </span>
+                                  {isCurrent && (
+                                    <span className="bg-amber-400 text-black text-[9px] font-black px-1.5 py-0.2 rounded border border-black flex items-center gap-0.5">
+                                      <CheckCircle2 size={10} />
+                                      <span>履职中</span>
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-gray-400 text-[10px] font-mono mt-0.5 flex items-center gap-1 truncate">
+                                  {/* Clickable Employer Name */}
+                                  <span
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedCompanyDetail(getCompanyInfo(job.department));
+                                    }}
+                                    className="text-blue-300 hover:text-blue-200 underline cursor-pointer font-bold"
+                                  >
+                                    {job.department}
+                                  </span>
+                                  <span>·</span>
+                                  <span>{job.category}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-amber-400 font-mono font-black text-sm sm:text-base">
+                                {job.dailySalary.toLocaleString()} ₽
+                              </div>
+                              <div className="text-gray-400 text-[9px] font-mono">日薪按班结算</div>
+                            </div>
+                          </div>
+
+                          {/* Bottom Quick Specs & Action Bar */}
+                          <div className="flex items-center justify-between border-t border-black/40 pt-2 text-xs gap-2">
+                            <span className="text-gray-400 text-[10px] font-mono truncate">
+                              门槛: <span className="text-blue-300 font-bold">{job.reqSkill}</span>
+                            </span>
+
+                            <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => setSelectedJobDetail(job)}
+                                className="bg-[#181a24] hover:bg-[#2b2f42] text-gray-200 text-xs font-bold px-2 py-1 rounded-xl border border-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer flex items-center gap-1"
+                              >
+                                <FileCheck size={12} />
+                                <span>岗位详情</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleApply(job)}
+                                disabled={isCurrent}
+                                className={`px-3 py-1 rounded-xl border-2 border-black font-black text-xs shadow-[0_2px_0_#000] cursor-pointer active:translate-y-0.5 transition-all ${
+                                  isCurrent
+                                    ? 'bg-gray-700 text-gray-400 border-black cursor-default shadow-none'
+                                    : 'bg-blue-600 hover:bg-blue-500 text-white'
+                                }`}
+                              >
+                                {isCurrent ? '履职中' : '应聘此岗'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: 我的职场 (履职记录列表 - 只保留干过的岗位) */}
+            {activeTab === 'resume' && (
+              <div className="space-y-3.5 animate-in fade-in duration-200">
+                {/* Header Summary Banner */}
+                <div className="bg-[#232635] border-2 border-black rounded-2xl p-4 shadow-[0_3px_0_#000] flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 flex-shrink-0">
+                      <Briefcase size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-black text-base">履职岗位记录</h3>
+                      <p className="text-gray-400 text-xs font-mono">共入职/曾任 {historyJobs.length} 个岗位</p>
+                    </div>
+                  </div>
+
+                  {currentJob ? (
+                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 text-xs font-black px-3 py-1 rounded-full flex items-center gap-1.5">
+                      <UserCheck size={14} />
+                      <span>在岗：{currentJob.title}</span>
+                    </span>
+                  ) : (
+                    <span className="bg-gray-700 text-gray-300 text-xs font-bold px-3 py-1 rounded-full">
+                      待业中
+                    </span>
+                  )}
+                </div>
+
+                {/* History List of Worked Jobs */}
+                <div className="space-y-2.5">
+                  {historyJobs.length > 0 ? (
+                    historyJobs.map((job) => {
+                      const isCurrent = currentJobId === job.id;
+                      return (
+                        <div
+                          key={job.id}
+                          className={`border-2 border-black rounded-2xl p-4 shadow-[0_3px_0_#000] space-y-3 transition-all ${
+                            isCurrent
+                              ? 'bg-gradient-to-r from-[#21273a] to-[#262c42] border-blue-500/70'
+                              : 'bg-[#232635]'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3 border-b border-black/50 pb-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`w-11 h-11 rounded-xl border-2 border-black flex items-center justify-center flex-shrink-0 shadow-inner ${
+                                isCurrent ? 'bg-blue-500/20 text-blue-300' : 'bg-[#181a24] text-gray-400'
+                              }`}>
+                                {getJobIcon(job.iconName)}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="text-white font-black text-base truncate">{job.title}</h4>
+                                  {isCurrent ? (
+                                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 font-black text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
+                                      <UserCheck size={11} />
+                                      <span>当前在岗</span>
+                                    </span>
+                                  ) : (
+                                    <span className="bg-gray-700/60 text-gray-400 border border-gray-600/50 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                      曾经任职
+                                    </span>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => setSelectedCompanyDetail(getCompanyInfo(job.department))}
+                                  className="text-blue-400 hover:text-blue-300 text-xs font-mono mt-0.5 hover:underline text-left block truncate"
+                                >
+                                  单位：{job.department}
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-amber-400 font-mono font-black text-base">{job.dailySalary} ₽</div>
+                              <div className="text-gray-400 text-[9px] font-mono">日薪</div>
+                            </div>
+                          </div>
+
+                          {/* Controls Footer */}
+                          <div className="flex items-center justify-between gap-2 pt-0.5">
+                            <div className="text-xs text-gray-400 font-mono">
+                              技能要求: <span className="text-gray-200">{job.reqSkill}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setSelectedJobDetail(job)}
+                                className="bg-[#181a24] hover:bg-[#1f2230] text-gray-200 border border-black/80 px-3 py-1.5 rounded-xl font-bold text-xs shadow-[0_2px_0_#000] cursor-pointer"
+                              >
+                                岗位详解
+                              </button>
+                              {isCurrent ? (
+                                <button
+                                  onClick={handleResign}
+                                  className="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-500/50 px-3 py-1.5 rounded-xl font-bold text-xs shadow-[0_2px_0_#000] cursor-pointer flex items-center gap-1"
+                                >
+                                  <LogOut size={13} />
+                                  <span>办理离职</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleApply(job)}
+                                  className="bg-blue-600 hover:bg-blue-500 text-white border border-black px-3 py-1.5 rounded-xl font-black text-xs shadow-[0_2px_0_#000] cursor-pointer"
+                                >
+                                  重新入职
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="bg-[#232635] border-2 border-black rounded-2xl p-8 text-center text-gray-400 space-y-2">
+                      <Briefcase size={32} className="mx-auto text-gray-500" />
+                      <div className="text-white font-bold text-sm">暂无任职记录</div>
+                      <p className="text-xs text-gray-400 font-mono">
+                        请前往【招募岗位大厅】挑选并应聘您的岗位！
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};

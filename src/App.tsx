@@ -4,7 +4,38 @@
  */
 
 import React, { useState } from 'react';
-import { User, Newspaper, CheckCircle, Store, BookOpen, Swords, Map as MapIcon, CircleDollarSign, Gem, MonitorPlay, Briefcase, Zap, ChevronLeft, Shirt, Crown, Car, Plane, Globe, Baby, Scale, Hospital, Lock, Receipt, Landmark, Wallet, Building2, HeartHandshake, Home, Heart, GraduationCap, Users, Megaphone, UserCog, Gamepad2 } from 'lucide-react';
+import { User, Newspaper, CheckCircle, Store, BookOpen, Swords, Map as MapIcon, CircleDollarSign, Gem, MonitorPlay, Briefcase, Zap, ChevronLeft, Shirt, Crown, Car, Plane, Globe, Baby, Scale, Hospital, Lock, Receipt, Landmark, Wallet, Building, Building2, TrendingUp, TrendingDown, HeartHandshake, Home, Heart, GraduationCap, Users, Megaphone, UserCog, Gamepad2, Shield, Award, Sparkles, Scroll, GitFork, ShieldCheck, ChevronRight, Settings, Volume2, VolumeX, Copy, Check, Edit2, RotateCcw, Save, KeyRound, Gift, Trophy, Flame, Star, RefreshCw, Upload, Medal, UserCheck, X, Info, ShieldAlert, AlertTriangle, History, FileText, BarChart2, ArrowUpRight, ArrowDownRight, Percent, LogOut, Mail, Camera } from 'lucide-react';
+import { RoleTab, CartoonCharacter } from './components/RoleTab';
+import { CalendarModal } from './components/CalendarModal';
+import { AvatarSelectModal, PRESET_AVATARS } from './components/AvatarSelectModal';
+import { FunctTab as FuncTab } from './components/FunctTab';
+import { SimTab } from './components/SimTab';
+import { LogTab } from './components/LogTab';
+import { FamilyTab as MapTab, FamilyTab } from './components/FamilyTab';
+import { HospitalModal } from './components/HospitalModal';
+import { JobModal } from './components/JobModal';
+import { BirthModal } from './components/BirthModal';
+import { WealthChartModal } from './components/WealthChartModal';
+import { GenderRightsModal } from './components/GenderRightsModal';
+import { HousingModal } from './components/HousingModal';
+import { VisaModal } from './components/VisaModal';
+import { ImmigrationModal } from './components/ImmigrationModal';
+import { StockModal } from './components/StockModal';
+import { AuthModal } from './components/AuthModal';
+import { AuthScreen } from './components/AuthScreen';
+import { EmailVerificationScreen } from './components/EmailVerificationScreen';
+import { auth, onAuthStateChanged, signOut, FirebaseUser } from './firebase';
+import {
+  getBilibiliUserProfile,
+  getBilibiliRankList,
+  getBilibiliMyRank,
+  submitBilibiliScore,
+  isRealToySdkAvailable,
+  AppUser,
+} from './lib/bilibiliToy';
+import { validatePlayerName, SENSITIVE_WORDS_CONFIG } from './utils/sensitiveWords';
+
+
 
 const AgeIcon = () => (
   <svg viewBox="0 0 24 24" width="22" height="22" className="drop-shadow-sm">
@@ -42,32 +73,59 @@ const ChildIcon = () => (
   </svg>
 );
 
-const TopBar = ({ coins, gems }: { coins: number, gems: number }) => (
-  <div className="flex justify-between items-center bg-[#252632] px-3 py-3 border-b-2 border-black z-20 shadow-md">
-    <div className="flex items-center gap-2 bg-[#1b1c25] rounded-lg pl-1 pr-4 py-1.5 border-2 border-black w-36 relative mt-1">
-      <div className="w-9 h-9 bg-yellow-500 border-2 border-black rounded flex items-center justify-center absolute -left-2 -top-2 shadow-[0_2px_0_#000]">
-        <User size={22} className="text-black" strokeWidth={3} />
+const TopBar = ({ 
+  coins, 
+  playerName, 
+  onOpenProfile, 
+  onOpenBank,
+  onOpenWealthChart,
+  avatarContent,
+}: { 
+  coins: number, 
+  playerName: string, 
+  onOpenProfile: () => void, 
+  onOpenBank?: () => void,
+  onOpenWealthChart?: () => void,
+  onOpenAuth?: () => void,
+  authUser?: FirebaseUser | null,
+  avatarContent?: React.ReactNode,
+}) => (
+  <div className="flex justify-between items-center bg-[#252632] px-3 py-2.5 border-b-2 border-black z-20 shadow-md">
+    <div className="flex items-center gap-1.5 min-w-0">
+      <div 
+        onClick={onOpenProfile}
+        className="flex items-center gap-2 bg-[#1b1c25] rounded-lg pl-1 pr-2 py-1.5 border-2 border-black relative cursor-pointer hover:border-yellow-400 transition-all active:scale-95 shadow-[0_2px_0_#000] shrink-0"
+      >
+        <div className="w-8 h-8 bg-[#181924] border-2 border-black rounded-lg flex items-center justify-center absolute -left-1.5 -top-1.5 shadow-[0_2px_0_#000] overflow-hidden">
+          {avatarContent || <User size={18} className="text-white" strokeWidth={2.5} />}
+        </div>
+        <span className="text-[11px] text-white ml-6 font-black truncate max-w-[80px]">{playerName}</span>
+        <span className="text-[9px] bg-yellow-400 text-black font-extrabold px-1 rounded border border-black ml-1 flex-shrink-0">
+          我的
+        </span>
       </div>
-      <span className="text-[11px] text-gray-400 ml-8 whitespace-nowrap font-bold">请输入文本</span>
     </div>
 
-    <div className="flex gap-2">
-      <div className="flex items-center bg-[#1b1c25] rounded-full pl-1 pr-3 py-1 border-2 border-black">
+    <div className="flex gap-1.5 items-center shrink-0">
+      <div 
+        onClick={onOpenWealthChart || onOpenBank}
+        title="点击查看个人资产全景"
+        className={`flex items-center bg-[#1b1c25] rounded-full pl-1 pr-2.5 py-1 border-2 border-black ${(onOpenWealthChart || onOpenBank) ? 'cursor-pointer hover:border-yellow-400 active:scale-95 transition-all' : ''}`}
+      >
         <div className="w-5 h-5 bg-yellow-400 rounded-full border border-yellow-700 flex justify-center items-center mr-1">
-          <CircleDollarSign size={14} className="text-yellow-700" strokeWidth={3} />
+          <CircleDollarSign size={13} className="text-yellow-700" strokeWidth={3} />
         </div>
-        <span className="font-black text-white text-xs">{coins}</span>
-      </div>
-      <div className="flex items-center bg-[#1b1c25] rounded-full pl-1 pr-3 py-1 border-2 border-black">
-        <Gem size={18} className="text-pink-400 mr-1" fill="#f472b6" />
-        <span className="font-black text-white text-xs">{gems}</span>
+        <span className="font-black text-white text-xs font-mono">{coins.toLocaleString()}</span>
       </div>
     </div>
   </div>
 );
 
-const StatCard = ({ title, value, unit, color, icon }: { title: string, value: string, unit: string, color: string, icon: React.ReactNode }) => (
-  <div className={`${color} border-2 border-black rounded-xl p-3 flex items-center gap-2.5 shadow-[0_4px_0_#000] relative overflow-hidden`}>
+const StatCard = ({ title, value, unit, color, icon, onClick }: { title: string, value: string, unit: string, color: string, icon: React.ReactNode, onClick?: () => void }) => (
+  <div 
+    onClick={onClick}
+    className={`${color} border-2 border-black rounded-xl p-3 flex items-center gap-2.5 shadow-[0_4px_0_#000] relative overflow-hidden ${onClick ? 'cursor-pointer active:scale-95 hover:brightness-110 transition-all' : ''}`}
+  >
     <div className="absolute -right-2 -bottom-2 opacity-20 rotate-12 scale-[2.5] pointer-events-none">
       {icon}
     </div>
@@ -77,157 +135,6 @@ const StatCard = ({ title, value, unit, color, icon }: { title: string, value: s
     <div className="flex flex-col relative z-10">
       <span className="text-white text-[11px] font-extrabold drop-shadow-[0_1px_0_#000]">{title}</span>
       <span className="text-white font-black text-xl leading-none mt-1 drop-shadow-[0_1.5px_0_#000]">{value}<span className="text-[11px] text-white/90 ml-0.5 font-bold drop-shadow-none">{unit}</span></span>
-    </div>
-  </div>
-);
-
-const CartoonCharacter = ({ clothing }: { clothing: string }) => {
-  return (
-    <svg viewBox="0 0 100 120" className="w-full h-full drop-shadow-md z-10">
-      {/* Base Body - Legs */}
-      <rect x="36" y="82" width="8" height="18" rx="3" fill="#2C3E50" stroke="#1A2A38" strokeWidth="2" />
-      <rect x="56" y="82" width="8" height="18" rx="3" fill="#2C3E50" stroke="#1A2A38" strokeWidth="2" />
-      
-      {/* Shoes */}
-      <path d="M 32 98 h 16 v 6 h -16 z" fill="#111" />
-      <path d="M 52 98 h 16 v 6 h -16 z" fill="#111" />
-      
-      {/* Body / Clothes */}
-      {clothing === 'knight' && (
-        <g>
-          {/* Armor body */}
-          <rect x="30" y="52" width="40" height="34" rx="4" fill="#cbd5e1" stroke="#475569" strokeWidth="2" />
-          <path d="M 30 65 l 20 10 l 20 -10" fill="none" stroke="#475569" strokeWidth="2" />
-          {/* Left Arm Armor */}
-          <rect x="18" y="54" width="12" height="22" rx="4" fill="#94a3b8" stroke="#475569" strokeWidth="2" />
-          {/* Right Arm Armor */}
-          <rect x="70" y="54" width="12" height="22" rx="4" fill="#94a3b8" stroke="#475569" strokeWidth="2" />
-        </g>
-      )}
-      
-      {clothing === 'mage' && (
-        <g>
-          {/* Robe body */}
-          <path d="M 32 52 L 68 52 L 75 90 L 25 90 Z" fill="#c084fc" stroke="#7e22ce" strokeWidth="2" />
-          <rect x="45" y="52" width="10" height="38" fill="#a855f7" />
-          {/* Left Arm Robe */}
-          <rect x="16" y="54" width="16" height="20" rx="4" fill="#a855f7" stroke="#7e22ce" strokeWidth="2" />
-          {/* Right Arm Robe */}
-          <rect x="68" y="54" width="16" height="20" rx="4" fill="#a855f7" stroke="#7e22ce" strokeWidth="2" />
-        </g>
-      )}
-      
-      {clothing === 'casual' && (
-        <g>
-          {/* Hoodie body */}
-          <rect x="28" y="52" width="44" height="32" rx="6" fill="#facc15" stroke="#ca8a04" strokeWidth="2" />
-          <rect x="35" y="65" width="30" height="14" rx="4" fill="#fde047" stroke="#ca8a04" strokeWidth="2" />
-          {/* Left Arm Hoodie */}
-          <rect x="18" y="54" width="12" height="24" rx="4" fill="#facc15" stroke="#ca8a04" strokeWidth="2" />
-          {/* Right Arm Hoodie */}
-          <rect x="70" y="54" width="12" height="24" rx="4" fill="#facc15" stroke="#ca8a04" strokeWidth="2" />
-        </g>
-      )}
-
-      {clothing === 'default' && (
-        <g>
-          {/* Default shirt body */}
-          <rect x="30" y="52" width="40" height="30" rx="6" fill="#4A7A9C" stroke="#3A5F7A" strokeWidth="2" />
-          {/* Left Arm Default */}
-          <rect x="20" y="54" width="8" height="22" rx="4" fill="#F5D0B8" stroke="#D4A88C" strokeWidth="2" />
-          <rect x="18" y="52" width="12" height="12" rx="2" fill="#4A7A9C" stroke="#3A5F7A" strokeWidth="2" />
-          {/* Right Arm Default */}
-          <rect x="72" y="54" width="8" height="22" rx="4" fill="#F5D0B8" stroke="#D4A88C" strokeWidth="2" />
-          <rect x="70" y="52" width="12" height="12" rx="2" fill="#4A7A9C" stroke="#3A5F7A" strokeWidth="2" />
-        </g>
-      )}
-      
-      {/* Hands */}
-      {clothing !== 'default' && (
-        <g>
-           <circle cx="24" cy="78" r="5" fill="#F5D0B8" stroke="#D4A88C" strokeWidth="2" />
-           <circle cx="76" cy="78" r="5" fill="#F5D0B8" stroke="#D4A88C" strokeWidth="2" />
-        </g>
-      )}
-      
-      {/* Head Base */}
-      <circle cx="50" cy="30" r="22" fill="#F5D0B8" stroke="#D4A88C" strokeWidth="2" />
-      
-      {/* Eyes */}
-      <circle cx="42" cy="27" r="3.5" fill="#2C2C2C" />
-      <circle cx="58" cy="27" r="3.5" fill="#2C2C2C" />
-      
-      {/* Cheeks */}
-      <circle cx="38" cy="32" r="3" fill="#ff7e7e" opacity="0.6" />
-      <circle cx="62" cy="32" r="3" fill="#ff7e7e" opacity="0.6" />
-
-      {/* Mouth */}
-      <path d="M 44 35 Q 50 40 56 35" fill="none" stroke="#B8836A" strokeWidth="2.5" strokeLinecap="round" />
-      
-      {/* Headwear */}
-      {clothing === 'knight' && (
-        <g>
-          <path d="M 26 22 C 26 -2, 74 -2, 74 22 L 74 35 C 74 40, 26 40, 26 35 Z" fill="#cbd5e1" stroke="#475569" strokeWidth="2" />
-          <rect x="42" y="10" width="16" height="26" fill="#1e293b" />
-        </g>
-      )}
-      {clothing === 'mage' && (
-        <g>
-          <path d="M 15 20 L 85 20 L 50 -15 Z" fill="#7e22ce" stroke="#581c87" strokeWidth="2" />
-          <ellipse cx="50" cy="20" rx="38" ry="8" fill="#a855f7" stroke="#581c87" strokeWidth="2" />
-        </g>
-      )}
-      {clothing === 'casual' && (
-        <g>
-           <path d="M 28 30 C 28 0, 72 0, 72 30 L 72 35 C 72 35, 28 35, 28 35 Z" fill="#facc15" stroke="#ca8a04" strokeWidth="2" />
-           <path d="M 40 10 Q 50 20 60 10" fill="none" stroke="#ca8a04" strokeWidth="2" strokeLinecap="round"/>
-        </g>
-      )}
-    </svg>
-  );
-};
-
-const RoleTab = ({ onOpenShop, equippedClothing, coins }: { onOpenShop: () => void, equippedClothing: string, coins: number }) => (
-  <div className="flex-1 overflow-y-auto bg-[#252632] pb-6 flex flex-col relative">
-    <div className="relative w-full h-16 z-20 mb-12 drop-shadow-[0_4px_4px_rgba(0,0,0,0.25)] flex-shrink-0">
-      <div className="absolute inset-0 flex">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className={`flex-1 h-full ${i % 2 === 0 ? 'bg-[#0f4b99]' : 'bg-[#1553a6]'} relative`}>
-             <div className={`absolute -bottom-4 left-0 w-full h-8 rounded-b-full ${i % 2 === 0 ? 'bg-[#0f4b99]' : 'bg-[#1553a6]'}`}></div>
-          </div>
-        ))}
-      </div>
-      <div className="absolute inset-0 flex items-center justify-center pt-2 z-10">
-         <span className="text-white text-3xl font-black tracking-widest" style={{ textShadow: '-2px -2px 0 #072a66, 2px -2px 0 #072a66, -2px 2px 0 #072a66, 2px 2px 0 #072a66, 0 4px 6px rgba(0,0,0,0.6)' }}>
-           角色
-         </span>
-      </div>
-    </div>
-
-    <div className="flex-1 flex flex-col items-center px-4 mt-2">
-      <div className="bg-[#2d2f3d] border-2 border-black rounded-xl px-6 py-2 flex flex-col items-center shadow-[0_4px_0_#000] mb-6 w-4/5 relative z-10">
-        <span className="text-gray-400 text-xs font-bold mb-0.5">卡罗尼亚帝国</span>
-        <span className="text-white text-xl font-black font-mono tracking-widest">1870.01</span>
-      </div>
-
-      <div 
-        className="relative cursor-pointer active:scale-95 transition-transform group mt-2 flex flex-col items-center"
-        onClick={onOpenShop}
-      >
-        <div className="w-48 h-56 relative z-10 flex justify-center items-end pb-6">
-          <CartoonCharacter clothing={equippedClothing} />
-        </div>
-        <div className="absolute bottom-2 bg-yellow-400 text-black font-black text-xs px-5 py-2 rounded-full border-2 border-black whitespace-nowrap shadow-[0_2px_0_#000] z-30 flex items-center gap-1">
-          <Store size={14} /> 点击换装
-        </div>
-      </div>
-
-      <div className="w-full grid grid-cols-2 gap-4 mt-10">
-        <StatCard title="岁数" value="0" unit="岁" color="bg-[#4d6b8c]" icon={<AgeIcon />} />
-        <StatCard title="健康度" value="100" unit="%" color="bg-[#a63d40]" icon={<HealthIcon />} />
-        <StatCard title="财富" value={coins.toString()} unit="₽" color="bg-[#ca8a04]" icon={<WealthIcon />} />
-        <StatCard title="子嗣" value="0" unit="人" color="bg-[#6b4c8a]" icon={<ChildIcon />} />
-      </div>
     </div>
   </div>
 );
@@ -336,9 +243,7 @@ const ChestAnimation = ({ isDrawing, result, onComplete }: any) => {
 const ShopModal = ({ 
   onClose,
   coins,
-  gems,
   setCoins,
-  setGems,
   ownedClothes,
   setOwnedClothes,
   equippedClothing,
@@ -349,8 +254,8 @@ const ShopModal = ({
 
   const SHOP_ITEMS = [
     { id: 'knight', name: '骑士盔甲', effect: '防御力+10', currency: 'coin', price: 2000, icon: <Shirt size={26} className="text-gray-700 absolute fill-gray-400" strokeWidth={2}/>, bg: 'bg-[#b4f0c0]', iconBg: 'bg-[#cbd5e1]' },
-    { id: 'mage', name: '法师长袍', effect: '魔力+15', currency: 'gem', price: 500, icon: <Shirt size={26} className="text-purple-900 absolute fill-purple-700" strokeWidth={2}/>, bg: 'bg-[#c8e8ff]', iconBg: 'bg-[#93c5fd]' },
-    { id: 'casual', name: '休闲卫衣', effect: '魅力+5', currency: 'coin', price: 800, icon: <Shirt size={26} className="text-orange-700 absolute fill-orange-400" strokeWidth={2}/>, bg: 'bg-[#b4f0c0]', iconBg: 'bg-[#fde047]' }
+    { id: 'mage', name: '法师长袍', effect: '魔力+15', currency: 'coin', price: 50000, icon: <Shirt size={26} className="text-purple-900 absolute fill-purple-700" strokeWidth={2}/>, bg: 'bg-[#c8e8ff]', iconBg: 'bg-[#93c5fd]' },
+    { id: 'casual', name: '休闲卫衣', effect: '魅力+5', currency: 'coin', price: 8000, icon: <Shirt size={26} className="text-orange-700 absolute fill-orange-400" strokeWidth={2}/>, bg: 'bg-[#b4f0c0]', iconBg: 'bg-[#fde047]' }
   ];
 
   const [isDrawing, setIsDrawing] = React.useState(false);
@@ -362,18 +267,18 @@ const ShopModal = ({
       if (!freeDrawUsed) {
         cost = 0;
       } else {
-        cost = 80;
+        cost = 8000;
       }
     } else {
-      cost = 720;
+      cost = 72000;
     }
 
-    if (gems < cost) {
-      alert("钻石不足！");
+    if (coins < cost) {
+      alert("金币不足！");
       return;
     }
 
-    if (cost > 0) setGems(gems - cost);
+    if (cost > 0) setCoins(coins - cost);
     if (times === 1 && !freeDrawUsed) setFreeDrawUsed(true);
 
     setIsDrawing(true);
@@ -466,13 +371,13 @@ const ShopModal = ({
               <button onClick={() => handleDraw(1)} className="flex-1 bg-gradient-to-b from-[#ffe56c] to-[#f5b822] border-2 border-black rounded-xl py-1.5 flex flex-col items-center shadow-[0_4px_0_#000] active:translate-y-1 active:shadow-none transition-all">
                  <span className="text-black font-black text-sm">抽1次</span>
                  <span className="text-[#a46914] font-bold text-[10px] flex items-center gap-1">
-                    {!freeDrawUsed ? '首次免费' : <><Gem size={10} className="text-pink-600 fill-pink-500"/> x80</>}
+                    {!freeDrawUsed ? '首次免费' : <><CircleDollarSign size={10} className="text-[#a46914]"/> x8000</>}
                  </span>
               </button>
               <button onClick={() => handleDraw(10)} className="flex-1 bg-gradient-to-b from-[#ffe56c] to-[#f5b822] border-2 border-black rounded-xl py-1.5 flex flex-col items-center shadow-[0_4px_0_#000] active:translate-y-1 active:shadow-none transition-all">
                  <span className="text-black font-black text-sm">抽10次</span>
                  <span className="text-[#a46914] font-bold text-[10px] flex items-center gap-1">
-                    <Gem size={10} className="text-pink-600 fill-pink-500"/> x720
+                    <CircleDollarSign size={10} className="text-[#a46914]"/> x72000
                  </span>
               </button>
             </div>
@@ -498,10 +403,6 @@ const ShopModal = ({
                     setCoins(coins - item.price);
                     setOwnedClothes([...ownedClothes, item.id]);
                     setEquippedClothing(item.id);
-                  } else if (item.currency === 'gem' && gems >= item.price) {
-                    setGems(gems - item.price);
-                    setOwnedClothes([...ownedClothes, item.id]);
-                    setEquippedClothing(item.id);
                   } else {
                     alert('余额不足');
                   }
@@ -522,7 +423,7 @@ const ShopModal = ({
                   >
                      {isEquipped ? '已穿戴' : isOwned ? '穿戴' : (
                        <>
-                         {item.currency === 'coin' ? <CircleDollarSign size={12} className="text-yellow-700 mr-0.5 stroke-[3]"/> : <Gem size={10} className="text-pink-600 fill-pink-500 mr-0.5"/>}
+                         <CircleDollarSign size={12} className="text-yellow-700 mr-0.5 stroke-[3]"/>
                          {item.price}
                        </>
                      )}
@@ -548,370 +449,12 @@ const ShopModal = ({
   );
 };
 
-const FUNC_BENTO = [
-  // row 1-2
-  { id: 'birth', label: '出生登记', sub: '新生儿', icon: Baby, colors: ['#d69e9e', '#c48989'], span: 'col-span-2 row-span-2', styleId: 0 },
-  { id: 'marriage', label: '结婚', sub: '婚姻关系', icon: Heart, colors: ['#d6a59e', '#c49389'], span: 'col-span-2', styleId: 1 },
-  { id: 'visa', label: '签证', sub: '出入境', icon: Plane, colors: ['#9eb4d6', '#89a2c4'], span: 'col-span-1', styleId: 2 },
-  { id: 'immigrate', label: '移民', sub: '居留入籍', icon: Globe, colors: ['#bca4d6', '#a990c4'], span: 'col-span-1', styleId: 3 },
-  
-  // row 3-4
-  { id: 'finance', label: '财务', sub: '资产信用', icon: Wallet, colors: ['#d6c99e', '#c4b689'], span: 'col-span-2 row-span-2', styleId: 0 },
-  { id: 'gender', label: '性别权利', sub: '转化性别', icon: UserCog, colors: ['#d6b79e', '#c4a589'], span: 'col-span-2', styleId: 1 },
-  { id: 'tax', label: '税单', sub: '缴税查询', icon: Receipt, colors: ['#9ed6ba', '#89c4a6'], span: 'col-span-1', styleId: 2 },
-  { id: 'cost', label: '生活成本', sub: '物价补贴', icon: Landmark, colors: ['#9ed6d6', '#89c4c4'], span: 'col-span-1', styleId: 3 },
-
-  // row 5
-  { id: 'housing', label: '住房', sub: '房产交易', icon: Home, colors: ['#d6b09e', '#c49e89'], span: 'col-span-2', styleId: 0 },
-  { id: 'job', label: '就业', sub: '找工作', icon: Briefcase, colors: ['#a3a9b3', '#9298a3'], span: 'col-span-2', styleId: 1 },
-  
-  // row 6-7
-  { id: 'company', label: '公司', sub: '企业事务', icon: Building2, colors: ['#9ec2d6', '#89b0c4'], span: 'col-span-1 row-span-2', styleId: 2 },
-  { id: 'license', label: '驾照', sub: '申领换证', icon: Car, colors: ['#b3b3b3', '#a3a3a3'], span: 'col-span-1 row-span-2', styleId: 3 },
-  { id: 'education', label: '教育', sub: '入学证明', icon: GraduationCap, colors: ['#9eaad6', '#8997c4'], span: 'col-span-2', styleId: 0 },
-  { id: 'hospital', label: '医院', sub: '医疗服务', icon: Hospital, colors: ['#d69ea8', '#c48995'], span: 'col-span-2', styleId: 1 },
-  
-  // row 8-9
-  { id: 'welfare', label: '社会福利', sub: '养老救济', icon: HeartHandshake, colors: ['#d69eb4', '#c489a2'], span: 'col-span-2 row-span-2', styleId: 0 },
-  { id: 'court', label: '法院', sub: '诉讼文书', icon: Scale, colors: ['#b8b8b3', '#a6a6a1'], span: 'col-span-1', styleId: 2 },
-  { id: 'prison', label: '监狱', sub: '服刑查询', icon: Lock, colors: ['#a1a1a6', '#8f8f94'], span: 'col-span-1', styleId: 3 },
-  { id: 'org', label: '组织', sub: '党派管理', icon: Users, colors: ['#b09ed6', '#9c89c4'], span: 'col-span-2', styleId: 1 },
-
-  // row 10
-  { id: 'movement', label: '运动', sub: '罢工游行', icon: Megaphone, colors: ['#d69ec2', '#c489b0'], span: 'col-span-2', styleId: 0 },
-  { id: 'map_srv', label: '地图', sub: '社区服务', icon: MapIcon, colors: ['#9cd6a5', '#88c492'], span: 'col-span-2', styleId: 1 },
-
-  // row 11
-  { id: 'entertainment', label: '娱乐', sub: '旅行/合法娱乐/上瘾类', icon: Gamepad2, colors: ['#c49ed6', '#b089c4'], span: 'col-span-4', styleId: 2 },
-];
-
-const renderBentoContent = (item: any) => {
-  if (item.span === 'col-span-2 row-span-2') {
-    return (
-      <>
-        <div className="absolute -right-4 -bottom-4 opacity-20 rotate-12 scale-[3] pointer-events-none">
-          <item.icon size={64} className="text-white" strokeWidth={2} />
-        </div>
-        <div className="flex flex-col items-center justify-center relative z-10 h-full p-4">
-          <item.icon size={48} className="text-white drop-shadow-[0_2px_0_rgba(0,0,0,0.8)] mb-3" stroke="black" strokeWidth={2} />
-          <h2 className="text-white text-xl font-black tracking-widest mb-1" style={{ textShadow: '-1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 3px 0 #000' }}>{item.label}</h2>
-          <div className="bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded border border-black font-extrabold shadow-[0_2px_0_#000]">{item.sub}</div>
-        </div>
-      </>
-    );
-  }
-  if (item.span === 'col-span-2' || item.span === 'col-span-4') {
-    return (
-      <>
-        <div className="absolute -right-2 -bottom-2 opacity-20 rotate-12 scale-[2.5] pointer-events-none">
-          <item.icon size={48} className="text-white" strokeWidth={2} />
-        </div>
-        <div className="flex items-center justify-start relative z-10 h-full px-4 gap-3">
-          <item.icon size={32} className="text-white drop-shadow-[0_2px_0_rgba(0,0,0,0.8)]" stroke="black" strokeWidth={2.5} />
-          <div className="flex flex-col">
-            <h2 className="text-white text-base font-black tracking-widest mb-0.5" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 0 #000' }}>{item.label}</h2>
-            <div className="bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded border border-black font-extrabold shadow-[0_1px_0_#000] w-max">{item.sub}</div>
-          </div>
-        </div>
-      </>
-    );
-  }
-  if (item.span === 'col-span-1 row-span-2') {
-    return (
-      <>
-        <div className="absolute -right-2 -bottom-2 opacity-20 rotate-12 scale-[2.5] pointer-events-none">
-          <item.icon size={40} className="text-white" strokeWidth={2} />
-        </div>
-        <div className="flex flex-col items-center justify-center relative z-10 h-full p-2">
-          <item.icon size={32} className="text-white drop-shadow-[0_2px_0_rgba(0,0,0,0.8)] mb-1.5" stroke="black" strokeWidth={2.5} />
-          <h2 className="text-white text-[13px] font-black tracking-widest mb-1 text-center leading-tight" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 0 #000' }}>{item.label}</h2>
-          <div className="bg-black/60 text-white text-[8px] px-1 py-0.5 rounded border border-black font-extrabold shadow-[0_1px_0_#000] text-center truncate w-full">{item.sub}</div>
-        </div>
-      </>
-    );
-  }
-  
-  // col-span-1
-  return (
-    <>
-      <div className="absolute -right-1 -bottom-1 opacity-20 rotate-12 scale-[2] pointer-events-none">
-        <item.icon size={32} className="text-white" strokeWidth={2} />
-      </div>
-      <div className="flex flex-col items-center justify-center relative z-10 h-full p-1">
-        <item.icon size={24} className="text-white drop-shadow-[0_1.5px_0_rgba(0,0,0,0.8)] mb-1" stroke="black" strokeWidth={2.5} />
-        <h2 className="text-white text-[11px] font-black tracking-widest text-center leading-tight" style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 1.5px 0 #000' }}>{item.label}</h2>
-      </div>
-    </>
-  );
-};
-
-const FuncTab = () => (
-  <div className="flex-1 overflow-y-auto bg-[#252632] pb-6 flex flex-col">
-    <div className="bg-[#1e3a8a] text-white text-center py-3 font-bold text-xl border-b-4 border-[#172554] relative z-10 shadow-lg flex-shrink-0">
-      <div className="absolute inset-0 flex justify-center items-center opacity-30 pointer-events-none overflow-hidden">
-         <div className="w-24 h-24 border-[6px] border-black rounded-full absolute -top-8"></div>
-         <div className="w-32 h-32 border-[6px] border-black rounded-full absolute -bottom-16"></div>
-      </div>
-      <span className="relative z-10 drop-shadow-[0_2px_0_#000] font-black tracking-widest text-2xl">功能</span>
-    </div>
-
-    <div className="p-4 mt-2">
-      <div className="grid grid-cols-4 gap-3 auto-rows-[76px]">
-        {FUNC_BENTO.map((item) => (
-          <div 
-            key={item.id} 
-            className={`
-              ${item.span} 
-              rounded-xl border-2 border-black relative overflow-hidden shadow-[0_4px_0_#000] 
-              cursor-pointer active:translate-y-[4px] active:shadow-none transition-all
-            `}
-            style={{ background: `linear-gradient(to right, ${item.colors[0]}, ${item.colors[1]})` }}
-          >
-            {renderBentoContent(item)}
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
-const INITIAL_EVENTS = [
-  { 
-    id: 'career', 
-    title: '职业抉择', 
-    icon: Briefcase,
-    headline: '震惊！海外分公司急需新领导！',
-    date: '2025年10月',
-    desc: '你面临一个重要的人生转折。你的经理向你提供了一个去海外分公司担任领导的机会。\n\n接受这个机会意味着你将获得更高的薪水和更大的权力，但你需要离开你熟悉的环境，并且工作压力会显著增加。\n\n你该如何抉择？',
-    options: [
-      { label: '接受外派 (+金币, -体力)', type: 'primary' },
-      { label: '婉言拒绝 (维持现状)', type: 'secondary' }
-    ]
-  },
-  { 
-    id: 'investment', 
-    title: '风险投资', 
-    icon: CircleDollarSign, 
-    headline: '神秘加密货币暴涨？是风口还是陷阱！',
-    date: '2026年3月',
-    desc: '你的朋友向你推荐了一个看起来非常有潜力的加密货币项目。虽然风险很高，但如果成功，可能会带来10倍甚至更高的回报。\n\n你手里有一笔闲置资金，你决定冒险一试吗？',
-    options: [
-      { label: '投资 50000 金币 (高风险)', type: 'primary' },
-      { label: '稳妥起见不投资', type: 'secondary' }
-    ]
-  },
-  { 
-    id: 'education', 
-    title: '自我提升', 
-    icon: BookOpen, 
-    headline: '终身学习时代来临！名校开放进修名额',
-    date: '2026年9月',
-    desc: '你意识到当前的知识储备已经不足以应对未来的挑战。你可以选择花费一笔积蓄去进修一个高级学位，或者继续在当前的岗位上摸爬滚打。\n\n深造会消耗大量的时间和金钱，但可能会极大地提升你未来的上限。',
-    options: [
-      { label: '报名深造 (-20000 金币)', type: 'primary' },
-      { label: '继续工作', type: 'secondary' }
-    ]
-  },
-];
-
-const SimTab = () => {
-  const [activeEvent, setActiveEvent] = React.useState<any>(null);
-  const [events, setEvents] = React.useState([...INITIAL_EVENTS]);
-
-  const handleOptionSelect = (eventId: string) => {
-    setEvents(prev => prev.filter(e => e.id !== eventId));
-    setActiveEvent(null);
-  };
-
-  if (activeEvent) {
-    return (
-      <div className="flex-1 overflow-y-auto bg-[#252632] flex flex-col p-4 relative">
-        <div className="absolute top-4 left-4 z-20 cursor-pointer bg-black/40 p-2 rounded-full border-2 border-black" onClick={() => setActiveEvent(null)}>
-          <ChevronLeft className="text-white" size={24} />
-        </div>
-        
-        <div className="flex-1 mt-12 bg-[#f4ebd0] border-[4px] border-black p-5 relative shadow-[0_6px_0_#000] flex flex-col">
-           <div className="border-b-[4px] border-black pb-3 mb-4 flex flex-col items-center">
-             <h1 className="font-serif text-4xl font-black text-black tracking-widest text-center" style={{ textShadow: '2px 2px 0px rgba(0,0,0,0.1)' }}>人生快报</h1>
-             <div className="flex justify-between w-full text-sm font-bold border-t-[3px] border-b-[3px] border-black py-1 mt-3">
-               <span>{activeEvent.date}</span>
-               <span>头版头条</span>
-             </div>
-           </div>
-           
-           <h2 className="text-black text-2xl font-black text-center mb-6 leading-snug">{activeEvent.headline}</h2>
-           
-           <div className="flex justify-center mb-6">
-             <div className="w-24 h-24 bg-black/5 border-[3px] border-black flex items-center justify-center shadow-[4px_4px_0_#000] -rotate-3">
-               <activeEvent.icon size={48} className="text-black" />
-             </div>
-           </div>
-           
-           <div className="flex-1 text-black font-bold leading-relaxed overflow-y-auto text-[16px] whitespace-pre-wrap px-2">
-             {activeEvent.desc}
-           </div>
-           
-           <div className="mt-8 flex flex-col gap-3">
-             {activeEvent.options.map((opt: any, idx: number) => (
-               <button 
-                 key={idx} 
-                 onClick={() => handleOptionSelect(activeEvent.id)}
-                 className={`py-3.5 border-[3px] border-black font-black text-black text-[17px] shadow-[4px_4px_0_#000] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all ${idx === 0 ? 'bg-[#ffeb3b]' : 'bg-[#e0e0e0]'}`}
-               >
-                 {opt.label}
-               </button>
-             ))}
-           </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex-1 overflow-y-auto bg-[#252632] pb-6 flex flex-col relative overflow-hidden">
-      <div className="bg-[#1e293b] text-white text-center py-3 font-bold text-xl border-b-4 border-[#0f172a] relative z-20 shadow-lg flex-shrink-0">
-        <div className="absolute inset-0 flex justify-center items-center opacity-30 pointer-events-none overflow-hidden">
-           <div className="w-24 h-24 border-[6px] border-black rounded-full absolute -top-8 left-10"></div>
-           <div className="w-32 h-32 border-[6px] border-black rounded-full absolute -bottom-16 right-0"></div>
-        </div>
-        <span className="relative z-10 drop-shadow-[0_2px_0_#000] font-black tracking-widest text-2xl">推演</span>
-      </div>
-
-      {events.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center z-10">
-          <div className="w-24 h-24 bg-[#3a3b46] rounded-full flex items-center justify-center mb-4 border-4 border-black shadow-[0_4px_0_#000]">
-            <CheckCircle size={48} className="text-[#a1a1aa]" />
-          </div>
-          <h2 className="text-white text-2xl font-black mb-2 tracking-widest" style={{ textShadow: '0 2px 0 #000' }}>今年风平浪静</h2>
-          <p className="text-[#a1a1aa] font-bold">没有发生什么大事件，享受平静的生活吧。</p>
-        </div>
-      ) : (
-        <div className="flex-1 relative flex items-center justify-center p-6 mt-4 perspective-[1000px]">
-          {events.map((event, index) => {
-            const isTop = index === events.length - 1;
-            const reverseIndex = events.length - 1 - index;
-            
-            const rotation = reverseIndex % 2 === 0 ? (reverseIndex * 2) : -(reverseIndex * 2);
-            const yOffset = reverseIndex * -12;
-            const xOffset = reverseIndex % 2 === 0 ? reverseIndex * 4 : reverseIndex * -4;
-
-            return (
-              <div 
-                key={event.id}
-                onClick={() => {
-                  if (isTop) setActiveEvent(event);
-                }}
-                className={`absolute w-full max-w-[320px] h-[460px] bg-[#f4ebd0] border-[3px] border-black p-4 flex flex-col transition-all duration-300 ${isTop ? 'cursor-pointer hover:-translate-y-2 hover:shadow-[8px_12px_0_#000] shadow-[6px_8px_0_#000]' : 'shadow-[2px_2px_0_#000]'}`}
-                style={{ 
-                  zIndex: index,
-                  transform: `translate(${xOffset}px, ${yOffset}px) rotate(${rotation}deg) scale(${1 - reverseIndex * 0.03})`,
-                  opacity: reverseIndex > 2 ? 0 : 1 
-                }}
-              >
-                <div className="border-b-[3px] border-black pb-3 mb-3 flex flex-col items-center">
-                  <h1 className="font-serif text-3xl font-black text-black tracking-widest text-center" style={{ textShadow: '2px 2px 0px rgba(0,0,0,0.1)' }}>人生快报</h1>
-                  <div className="flex justify-between w-full text-xs font-bold border-t-[2px] border-b-[2px] border-black py-1 mt-2">
-                    <span>{event.date}</span>
-                    <span>NO. {9824 + index}</span>
-                  </div>
-                </div>
-
-                <div className="flex-1 flex flex-col">
-                  <h2 className="text-xl font-black text-black leading-tight mb-4 text-center px-2">{event.headline}</h2>
-                  
-                  <div className="flex flex-col items-center gap-3 mb-3 flex-1">
-                    <div className="w-20 h-20 bg-black/5 border-[2px] border-black flex items-center justify-center flex-shrink-0 -rotate-2">
-                      <event.icon size={36} className="text-black" />
-                    </div>
-                    <p className="text-[13px] font-bold text-gray-800 line-clamp-6 leading-relaxed text-justify px-2">
-                      {event.desc}
-                    </p>
-                  </div>
-                  
-                  {isTop && (
-                    <div className="mt-auto flex justify-center pb-2">
-                      <span className="bg-black text-white px-4 py-2 text-sm font-bold animate-pulse shadow-[2px_2px_0_#000] border-2 border-transparent">
-                        点击阅读详情 &gt;
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const MapTab = () => (
-  <div className="flex-1 overflow-y-auto bg-[#252632] pb-6 flex flex-col">
-    <div className="bg-[#a62a2a] text-white text-center py-3 font-bold text-xl border-b-4 border-[#6e1d1d] relative z-10 shadow-lg">
-      <div className="absolute inset-0 flex justify-center items-center opacity-30 pointer-events-none overflow-hidden">
-         <div className="w-24 h-24 border-[6px] border-black rounded-full absolute -top-8"></div>
-         <div className="w-32 h-32 border-[6px] border-black rounded-full absolute -bottom-16"></div>
-      </div>
-      <span className="relative z-10 drop-shadow-[0_2px_0_#000] font-black tracking-widest text-2xl">地图</span>
-    </div>
-    
-    <div className="p-4 space-y-4">
-      <div className="h-32 bg-gradient-to-r from-[#cd8d32] to-[#f1c356] rounded-xl border-4 border-black relative overflow-hidden shadow-[0_4px_0_#000]">
-        <div className="absolute -left-4 -bottom-4 w-28 h-28 bg-[#b47a28] rounded-full opacity-70 border-[6px] border-[#91621f]"></div>
-        <div className="absolute top-4 left-16 w-14 h-14 bg-[#facc15] rotate-12 border-4 border-[#ca8a04] opacity-80 rounded shadow-inner"></div>
-        <div className="absolute bottom-4 left-1/3 w-8 h-8 bg-[#fcd34d] rotate-45 border-2 border-[#d97706] opacity-90 rounded"></div>
-        
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end z-10">
-          <h2 className="text-[#ffe066] text-[28px] font-black tracking-widest mb-1" style={{ textShadow: '-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 4px 0 #000' }}>
-            金币矿洞
-          </h2>
-          <div className="bg-[#4d3215] text-[#ffe066] text-xs px-2 py-0.5 rounded border border-black font-extrabold shadow-[0_2px_0_#000]">
-            第1层
-          </div>
-        </div>
-      </div>
-
-      <div className="h-32 bg-gradient-to-r from-[#9853eb] to-[#da87f5] rounded-xl border-4 border-black relative overflow-hidden shadow-[0_4px_0_#000]">
-        <div className="absolute -left-2 top-0 w-32 h-full bg-[#7a3cc2] skew-x-12 opacity-50 border-r-4 border-black"></div>
-        <div className="absolute left-6 -bottom-6 w-24 h-32 bg-[#c084fc] rotate-[30deg] border-[6px] border-[#a855f7] opacity-80 rounded-xl shadow-lg"></div>
-        <div className="absolute left-28 top-2 w-12 h-16 bg-[#e879f9] -rotate-12 border-[3px] border-[#c026d3] opacity-80 rounded-lg"></div>
-
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end z-10">
-          <h2 className="text-[#ffb3f0] text-[28px] font-black tracking-widest mb-1" style={{ textShadow: '-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 4px 0 #000' }}>
-            水晶山谷
-          </h2>
-          <div className="bg-[#3c1d57] text-[#ffb3f0] text-xs px-2 py-0.5 rounded border border-black font-extrabold shadow-[0_2px_0_#000]">
-            第1层
-          </div>
-        </div>
-      </div>
-
-      <div className="h-32 bg-gradient-to-r from-[#504085] to-[#8869b2] rounded-xl border-4 border-black relative overflow-hidden shadow-[0_4px_0_#000]">
-        <div className="absolute left-16 top-1/2 -translate-y-1/2 w-28 h-28 bg-[#392e62] rounded-full flex items-center justify-center border-[6px] border-[#251e44] shadow-inner">
-          <div className="w-14 h-14 bg-[#8c33de] rounded-full blur-md"></div>
-          <div className="absolute w-6 h-6 bg-white rotate-45"></div>
-        </div>
-        <div className="absolute -right-4 -top-8 w-40 h-40 bg-[#423371] rotate-12 opacity-60 border-l-[6px] border-[#251e44]"></div>
-
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end z-10">
-          <h2 className="text-[#ff6a6a] text-[28px] font-black tracking-widest mb-1" style={{ textShadow: '-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 4px 0 #000' }}>
-            无尽深渊
-          </h2>
-          <div className="bg-[#31254d] text-white text-xs px-2 py-0.5 rounded border border-black font-extrabold shadow-[0_2px_0_#000]">
-            今日剩余2次
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
 const TABS = [
   { id: 'role', label: '角色', icon: User, badge: false },
   { id: 'bag', label: '功能', icon: Briefcase, badge: false },
   { id: 'combat', label: '推演', icon: Swords, badge: false },
   { id: 'log', label: '日志', icon: BookOpen, badge: true },
-  { id: 'map', label: '地图', icon: MapIcon, badge: false },
+  { id: 'map', label: '家族', icon: MapIcon, badge: false },
 ];
 
 const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (id: string) => void }) => {
@@ -923,34 +466,44 @@ const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTa
           <div 
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex flex-col justify-center items-center relative border-r-[3px] border-black last:border-r-0 cursor-pointer select-none transition-all duration-300 ease-out overflow-hidden ${
+            className={`flex flex-col justify-center items-center relative border-r-[3px] border-black last:border-r-0 cursor-pointer select-none transition-all duration-200 ease-out overflow-visible ${
               isActive 
                 ? 'flex-[2.2] bg-[#fcd34d]' 
                 : 'flex-1 bg-[#474854] hover:bg-[#535669]'
             }`}
           >
             {isActive && (
-              <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(circle, #f59e0b 2.5px, transparent 2.5px)', backgroundSize: '16px 16px', backgroundPosition: 'center' }}></div>
+              <div className="absolute inset-0 opacity-40 pointer-events-none overflow-hidden" style={{ backgroundImage: 'radial-gradient(circle, #f59e0b 2.5px, transparent 2.5px)', backgroundSize: '16px 16px', backgroundPosition: 'center' }}></div>
             )}
             
-            <div className={`relative flex flex-col items-center justify-center z-10 w-full h-full`}>
-              <div className={`transition-all duration-300 ease-out ${isActive ? '-translate-y-2.5 scale-[1.35]' : 'translate-y-0 scale-100'}`}>
+            <div className="relative flex flex-col items-center justify-center w-full h-full">
+              {/* Icon Container - Lower z-index (z-10) and enlarged icon size */}
+              <div className={`relative z-10 transition-all duration-200 ${isActive ? '-translate-y-2 scale-110' : 'translate-y-0 scale-100'}`}>
                 <div className="relative">
                   <tab.icon 
-                    size={28} 
-                    className="drop-shadow-[0_2px_0_rgba(0,0,0,1)]" 
-                    fill={isActive ? (tab.id === 'map' ? '#8bc6f4' : tab.id === 'role' ? '#ff6a6a' : tab.id === 'log' ? '#c084fc' : tab.id === 'combat' ? '#a3a3a3' : '#d97706') : '#858796'}
+                    size={isActive ? 38 : 32} 
+                    className="drop-shadow-[0_2px_0_rgba(0,0,0,0.8)]" 
+                    fill={isActive ? (tab.id === 'map' ? '#8bc6f4' : tab.id === 'role' ? '#ff6a6a' : tab.id === 'log' ? '#c084fc' : tab.id === 'combat' ? '#a3a3a3' : '#d97706') : '#94a3b8'}
                     stroke="black"
-                    strokeWidth={isActive ? 2 : 2.5}
+                    strokeWidth={2}
                   />
                   {tab.badge && (
-                    <div className={`absolute ${isActive ? '-top-0.5 -right-0.5' : '-top-1 -right-1.5'} w-3.5 h-3.5 bg-[#ef4444] rounded-full border-[2px] border-black z-20`}></div>
+                    <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#ef4444] rounded-full border-[2px] border-black z-20"></div>
                   )}
                 </div>
               </div>
-              <div className={`absolute bottom-1 transition-all duration-300 ease-out ${isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}>
-                 <span className="text-white font-black text-[15px] tracking-widest" style={{ textShadow: '-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 3px 0 #000' }}>{tab.label}</span>
-              </div>
+
+              {/* Text Container - Only visible when active, higher z-index (z-20) overlapping bottom of icon */}
+              {isActive && (
+                <div className="absolute bottom-0.5 z-20 pointer-events-none transition-all duration-200">
+                   <span 
+                     className="text-white font-black text-[13px] sm:text-[14px] tracking-wider block whitespace-nowrap" 
+                     style={{ textShadow: '-1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 3px 0 #000, 0 0 4px #000' }}
+                   >
+                     {tab.label}
+                   </span>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -959,53 +512,2827 @@ const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTa
   );
 };
 
+const getFallbackRankList = (boardNum: number, currentName: string, myCoins: number) => {
+  if (boardNum === 1) {
+    const baseList = [
+      { rank: 1, score: 9850000, nickname: '亚历山大·瓦伦丁', avatar: '' },
+      { rank: 2, score: 5200000, nickname: '维克多·工匠大师', avatar: '' },
+      { rank: 3, score: 3100000, nickname: '哔哩哔哩高级硬币官', avatar: '' },
+      { rank: 4, score: myCoins, nickname: currentName + ' (你)', avatar: '' },
+      { rank: 5, score: 890000, nickname: '罗兰船长', avatar: '' },
+      { rank: 6, score: 650000, nickname: '卡罗尼亚女伯爵', avatar: '' },
+      { rank: 7, score: 420000, nickname: '蒸汽机械师埃里克', avatar: '' },
+    ];
+    baseList.sort((a, b) => b.score - a.score);
+    const sortedList = baseList.map((item, idx) => ({ ...item, rank: idx + 1 }));
+    const myItem = sortedList.find((i) => i.nickname.includes('(你)'));
+    return {
+      list: sortedList,
+      myRank: { ranked: true, rank: myItem ? myItem.rank : 4, score: myCoins },
+    };
+  } else {
+    const baseList = [
+      { rank: 1, score: 25800, nickname: '皇家竞技场常胜皇', avatar: '' },
+      { rank: 2, score: 21000, nickname: '齿轮战术家', avatar: '' },
+      { rank: 3, score: 18500, nickname: currentName + ' (你)', avatar: '' },
+      { rank: 4, score: 15200, nickname: '卡罗尼亚突击兵', avatar: '' },
+      { rank: 5, score: 9800, nickname: '萌新机械师', avatar: '' },
+    ];
+    baseList.sort((a, b) => b.score - a.score);
+    const sortedList = baseList.map((item, idx) => ({ ...item, rank: idx + 1 }));
+    const myItem = sortedList.find((i) => i.nickname.includes('(你)'));
+    return {
+      list: sortedList,
+      myRank: { ranked: true, rank: myItem ? myItem.rank : 3, score: 18500 },
+    };
+  }
+};
+
+// 30天毫秒数 (用于计算1个月内改名限制)
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+// 90天毫秒数 (用于政治与合规敏感词多次违规冻结3个月)
+const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+
+// 格式化解封日期显示函数
+const formatUnlockTime = (timestamp: number): string => {
+  const d = new Date(timestamp);
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1;
+  const date = d.getDate();
+  const hours = d.getHours() < 10 ? '0' + d.getHours() : d.getHours();
+  const minutes = d.getMinutes() < 10 ? '0' + d.getMinutes() : d.getMinutes();
+  const seconds = d.getSeconds() < 10 ? '0' + d.getSeconds() : d.getSeconds();
+  return `${year}年${month}月${date}日 ${hours}:${minutes}:${seconds}`;
+};
+
+// 获取过去30天内的改名时间戳
+const getRecentNameChanges = (timestamps: number[]): number[] => {
+  const now = Date.now();
+  return timestamps.filter((t) => now - t < THIRTY_DAYS_MS);
+};
+
+interface ProfileModalProps {
+  onClose: () => void;
+  playerName: string;
+  setPlayerName: (name: string) => void;
+  coins: number;
+  setCoins: React.Dispatch<React.SetStateAction<number>>;
+  equippedClothing: string;
+  onOpenAuth?: () => void;
+  onLogout?: () => void;
+  onResetLife?: () => void;
+  authUser?: FirebaseUser | AppUser | null;
+  avatarSource: string;
+  setAvatarSource: (source: string) => void;
+  bilibiliAvatar: string | null;
+  setBilibiliAvatar: (avatar: string | null) => void;
+  isAvatarModalOpen: boolean;
+  setIsAvatarModalOpen: (open: boolean) => void;
+  renderAvatarContent: () => React.ReactNode;
+}
+
+const ProfileModal = ({
+  onClose,
+  playerName,
+  setPlayerName,
+  coins,
+  setCoins,
+  equippedClothing,
+  onOpenAuth,
+  onLogout,
+  onResetLife,
+  authUser,
+  avatarSource,
+  setAvatarSource,
+  bilibiliAvatar,
+  setBilibiliAvatar,
+  isAvatarModalOpen,
+  setIsAvatarModalOpen,
+  renderAvatarContent,
+}: ProfileModalProps) => {
+  const [subTab, setSubTab] = useState<'info' | 'rank' | 'achievement' | 'settings' | 'cdkey'>('info');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(playerName);
+  const [copiedUid, setCopiedUid] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  // Name Change Timestamps (localStorage persisted)
+  const [nameChangeTimestamps, setNameChangeTimestamps] = useState<number[]>(() => {
+    try {
+      const saved = localStorage.getItem('amigo_name_change_timestamps');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // 政治与合规敏感词违规尝试计数 (达到3次锁定3个月)
+  const [politicalViolationCount, setPoliticalViolationCount] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('amigo_political_violation_count');
+      return saved ? parseInt(saved, 10) : 0;
+    } catch (e) {
+      return 0;
+    }
+  });
+
+  // 改名冻结截止时间戳
+  const [nameFreezeUntil, setNameFreezeUntil] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('amigo_name_freeze_until');
+      return saved ? parseInt(saved, 10) : 0;
+    } catch (e) {
+      return 0;
+    }
+  });
+
+  // 敏感词违规与改名冻结警告弹窗控制状态
+  const [freezeModalInfo, setFreezeModalInfo] = useState<{
+    show: boolean;
+    isFrozen: boolean;
+    violationCount: number;
+    matchedWord?: string;
+  } | null>(null);
+
+  // 政治与合规敏感词违规改名历史记录 (localStorage 持久化)
+  const [politicalViolationLogs, setPoliticalViolationLogs] = useState<Array<{
+    id: string;
+    attemptedName: string;
+    matchedWord: string;
+    category: string;
+    timestamp: number;
+  }>>(() => {
+    try {
+      const saved = localStorage.getItem('amigo_political_violation_logs');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // 弹窗内部当前视图: 'info' (合规说明) | 'history' (违规记录)
+  const [modalTab, setModalTab] = useState<'info' | 'history'>('info');
+
+  const addViolationLog = (attemptedName: string, matchedWord: string, category: string) => {
+    const newLog = {
+      id: Date.now().toString() + '_' + Math.floor(Math.random() * 1000),
+      attemptedName,
+      matchedWord,
+      category,
+      timestamp: Date.now(),
+    };
+    setPoliticalViolationLogs(prev => {
+      const updated = [newLog, ...prev];
+      try {
+        localStorage.setItem('amigo_political_violation_logs', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  const recentNameChanges = getRecentNameChanges(nameChangeTimestamps);
+  const remainingQuota = Math.max(0, 2 - recentNameChanges.length);
+
+  // Rank List States
+  const [board, setBoard] = useState<number>(1); // 1: 财富榜, 2: 珍藏榜, 3: 推演榜
+  const [period, setPeriod] = useState<'all' | 'month' | 'week' | 'day'>('week');
+  const [rankList, setRankList] = useState<Array<{ rank: number; score: number; nickname: string; avatar: string }>>([]);
+  const [myRank, setMyRank] = useState<{ ranked: boolean; rank: number; score: number }>({ ranked: false, rank: 0, score: 0 });
+  const [isSdkLoading, setIsSdkLoading] = useState(false);
+
+  // Settings States
+  const [bgmEnabled, setBgmEnabled] = useState(true);
+  const [sfxEnabled, setSfxEnabled] = useState(true);
+  const [highFps, setHighFps] = useState(true);
+  
+  // CDKey state
+  const [cdkeyInput, setCdkeyInput] = useState('');
+  const [redeemedCodes, setRedeemedCodes] = useState<string[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // Sync Bilibili profile
+  const handleSyncBilibiliProfile = async () => {
+    if (nameFreezeUntil > Date.now()) {
+      setFreezeModalInfo({
+        show: true,
+        isFrozen: true,
+        violationCount: politicalViolationCount,
+      });
+      showToast('⚠️ 角色改名功能处于冻结状态，无法同步B站昵称');
+      return;
+    }
+
+    let targetName = '';
+    let avatarUrl = '';
+    let isMockEnv = false;
+
+    try {
+      const { profile, isMock } = await getBilibiliUserProfile();
+      if (profile && (profile.nickname || profile.avatar)) {
+        targetName = profile.nickname || 'B站玩家';
+        avatarUrl = profile.avatar || '';
+        isMockEnv = isMock;
+      }
+    } catch (err: any) {
+      console.warn('getBilibiliUserProfile error:', err);
+      showToast('获取B站资料未授权或使用默认昵称');
+      return;
+    }
+
+    if (!targetName) {
+      targetName = '哔哩哔哩探险家_' + Math.floor(100 + Math.random() * 900);
+      avatarUrl = 'https://i0.hdslb.com/bfs/face/member/noface.jpg';
+    }
+
+    if (targetName) {
+      const validation = validatePlayerName(targetName);
+      if (!validation.valid) {
+        if (validation.category === '政治与合规敏感') {
+          const newCount = politicalViolationCount + 1;
+          setPoliticalViolationCount(newCount);
+          try {
+            localStorage.setItem('amigo_political_violation_count', newCount.toString());
+          } catch (e) {}
+
+          addViolationLog(targetName, validation.word || '违规词汇', validation.category || '政治与合规敏感');
+          setModalTab('info');
+
+          if (newCount >= 3) {
+            const freezeUntilTime = Date.now() + NINETY_DAYS_MS;
+            setNameFreezeUntil(freezeUntilTime);
+            try {
+              localStorage.setItem('amigo_name_freeze_until', freezeUntilTime.toString());
+            } catch (e) {}
+
+            setFreezeModalInfo({
+              show: true,
+              isFrozen: true,
+              violationCount: newCount,
+              matchedWord: validation.word,
+            });
+          } else {
+            setFreezeModalInfo({
+              show: true,
+              isFrozen: false,
+              violationCount: newCount,
+              matchedWord: validation.word,
+            });
+          }
+        }
+        showToast(`⚠️ B站昵称无法同步：${validation.reason}`);
+        if (avatarUrl) setBilibiliAvatar(avatarUrl);
+        return;
+      }
+
+      setPlayerName(targetName);
+      if (avatarUrl) {
+        setBilibiliAvatar(avatarUrl);
+        setAvatarSource('social');
+      }
+      showToast(`🎉 已成功同步B站资料: ${targetName} ${isMockEnv ? '(本地 Mock 模式)' : ''}`);
+    }
+  };
+
+  // Refresh Rank Data from Toy SDK or Fallback
+  const refreshRankData = async (targetBoard = board, targetPeriod = period) => {
+    setIsSdkLoading(true);
+    try {
+      const list = await getBilibiliRankList(targetBoard, targetPeriod, 20);
+      setRankList(list);
+      const mine = await getBilibiliMyRank(targetBoard, targetPeriod, coins);
+      if (mine) setMyRank(mine);
+    } catch (err) {
+      const fallback = getFallbackRankList(targetBoard, playerName, coins);
+      setRankList(fallback.list);
+      setMyRank(fallback.myRank);
+    } finally {
+      setIsSdkLoading(false);
+    }
+  };
+
+  // Submit Score to Toy SDK
+  const handleSubmitScore = async () => {
+    let scoreToSubmit = coins;
+    if (board === 3) scoreToSubmit = 18500;
+
+    try {
+      const res = await submitBilibiliScore(board, scoreToSubmit);
+      showToast(`⚡ 成绩已成功上报并同步! 最高分: ${(res.score || scoreToSubmit).toLocaleString()} ${res.isMock ? '(Mock 模式)' : ''}`);
+      refreshRankData(board, period);
+    } catch (err) {
+      showToast(`⚡ 分数提交成功！获得最新战报分: ${scoreToSubmit.toLocaleString()}`);
+      refreshRankData(board, period);
+    }
+  };
+
+  React.useEffect(() => {
+    if (subTab === 'rank') {
+      refreshRankData(board, period);
+    }
+  }, [subTab, board, period]);
+
+  const handleSaveName = () => {
+    const trimmed = nameInput.trim();
+    if (trimmed === playerName) {
+      setIsEditingName(false);
+      return;
+    }
+
+    const now = Date.now();
+
+    // 0. 检查改名功能是否处于 3个月 冻结管制状态
+    if (nameFreezeUntil > now) {
+      setFreezeModalInfo({
+        show: true,
+        isFrozen: true,
+        violationCount: politicalViolationCount,
+      });
+      showToast(`🚨 改名功能已封禁冻结！解封时间：${formatUnlockTime(nameFreezeUntil)}`);
+      return;
+    }
+
+    // 1. 敏感词规则校验
+    const validation = validatePlayerName(nameInput);
+    if (!validation.valid) {
+      if (validation.category === '政治与合规敏感') {
+        const newCount = politicalViolationCount + 1;
+        setPoliticalViolationCount(newCount);
+        try {
+          localStorage.setItem('amigo_political_violation_count', newCount.toString());
+        } catch (e) {}
+
+        addViolationLog(nameInput, validation.word || '违规词汇', validation.category || '政治与合规敏感');
+        setModalTab('info');
+
+        if (newCount >= 3) {
+          // 连续3次违规尝试：冻结改名 3个月
+          const freezeTime = now + NINETY_DAYS_MS;
+          setNameFreezeUntil(freezeTime);
+          try {
+            localStorage.setItem('amigo_name_freeze_until', freezeTime.toString());
+          } catch (e) {}
+
+          setFreezeModalInfo({
+            show: true,
+            isFrozen: true,
+            violationCount: newCount,
+            matchedWord: validation.word,
+          });
+          showToast(`🚨 违规尝试已达 3 次！角色改名功能已被系统冻结 3 个月！`);
+        } else {
+          // 1次或2次尝试：显示弹窗预警
+          setFreezeModalInfo({
+            show: true,
+            isFrozen: false,
+            violationCount: newCount,
+            matchedWord: validation.word,
+          });
+          showToast(`⚠️ 警告：检测到政治与合规敏感词！(已违规 ${newCount}/3 次)`);
+        }
+      } else {
+        showToast(`❌ 改名失败：${validation.reason}`);
+      }
+      return;
+    }
+
+    // 2. 一个月改名频次校验 (≤ 2次)
+    const recentChanges = getRecentNameChanges(nameChangeTimestamps);
+    if (recentChanges.length >= 2) {
+      const earliestChange = Math.min(...recentChanges);
+      const unlockTime = new Date(earliestChange + THIRTY_DAYS_MS);
+      const monthStr = unlockTime.getMonth() + 1;
+      const dayStr = unlockTime.getDate();
+      const hourStr = unlockTime.getHours();
+      const minStr = unlockTime.getMinutes() < 10 ? '0' + unlockTime.getMinutes() : unlockTime.getMinutes();
+      const dateStr = `${monthStr}月${dayStr}日 ${hourStr}:${minStr}`;
+      
+      showToast(`❌ 改名失败：1个月内修改不能超过2次！解封时间：${dateStr}`);
+      return;
+    }
+
+    // 3. 记入修改历史并保存
+    const updatedTimestamps = [...recentChanges, now];
+    setNameChangeTimestamps(updatedTimestamps);
+    try {
+      localStorage.setItem('amigo_name_change_timestamps', JSON.stringify(updatedTimestamps));
+    } catch (e) {}
+
+    setPlayerName(trimmed);
+    setIsEditingName(false);
+    const remaining = 2 - updatedTimestamps.length;
+    showToast(`🎉 昵称成功修改为 [${trimmed}]！(本月剩余改名次数: ${remaining}/2)`);
+  };
+
+  // Real UID calculation logic: Firebase UID or persistent local/bilibili UID
+  const fullUid = authUser?.uid
+    ? authUser.uid
+    : (function() {
+        try {
+          let local = localStorage.getItem('amigo_local_uid');
+          if (!local) {
+            local = String(Math.floor(10000000 + Math.random() * 90000000));
+            localStorage.setItem('amigo_local_uid', local);
+          }
+          return local;
+        } catch (e) {
+          return '88492015';
+        }
+      })();
+
+  const displayUid = authUser?.uid
+    ? (authUser.uid.length > 8 ? authUser.uid.substring(0, 8).toUpperCase() : authUser.uid)
+    : fullUid;
+
+  const handleCopyUid = () => {
+    navigator.clipboard?.writeText(fullUid);
+    setCopiedUid(true);
+    showToast(`已复制真实完整 UID: ${fullUid}`);
+    setTimeout(() => setCopiedUid(false), 2000);
+  };
+
+  const handleRedeemCdkey = () => {
+    const code = cdkeyInput.trim().toUpperCase();
+    if (!code) {
+      showToast('请输入有效的礼包兑换码！');
+      return;
+    }
+    if (redeemedCodes.includes(code)) {
+      showToast('该兑换码已被使用过！');
+      return;
+    }
+
+    if (code === 'VALENTINE' || code === '2026' || code === '666666' || code === 'GIFT2026') {
+      setCoins(prev => prev + 50000);
+      setRedeemedCodes([...redeemedCodes, code]);
+      setCdkeyInput('');
+      showToast('🎉 兑换成功！获得 50,000金币！');
+    } else {
+      showToast('❌ 无效的兑换码，请输入 GIFT2026 或 666666 试用');
+    }
+  };
+
+  return (
+    <div className="absolute inset-0 bg-[#252632] flex flex-col z-50 animate-in slide-in-from-bottom-4 duration-200 overflow-hidden">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-black/90 text-yellow-300 border-2 border-yellow-500 text-xs font-black px-4 py-2 rounded-xl shadow-[0_4px_0_#000] animate-in fade-in slide-in-from-top-2 duration-200 text-center max-w-[85%]">
+          {toast}
+        </div>
+      )}
+
+      {/* Top Banner Curtain Bar */}
+      <div className="relative w-full h-16 z-20 drop-shadow-[0_4px_4px_rgba(0,0,0,0.25)] flex-shrink-0">
+        <div className="absolute inset-0 flex">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className={`flex-1 h-full ${i % 2 === 0 ? 'bg-[#0f4b99]' : 'bg-[#1553a6]'} relative`}>
+               <div className={`absolute -bottom-4 left-0 w-full h-8 rounded-b-full ${i % 2 === 0 ? 'bg-[#0f4b99]' : 'bg-[#1553a6]'}`}></div>
+            </div>
+          ))}
+        </div>
+        <div className="absolute inset-0 flex items-center px-4 pt-1 z-30">
+          <button onClick={onClose} className="p-1.5 bg-[#0f4b99] border-2 border-[#072a66] rounded-xl active:scale-95 shadow-[0_2px_0_#072a66] cursor-pointer">
+            <ChevronLeft size={24} className="text-white drop-shadow-md" strokeWidth={3} />
+          </button>
+          <div className="flex-1 flex justify-center items-center -ml-10 pointer-events-none">
+             <span className="text-white text-3xl font-black tracking-widest" style={{ textShadow: '-2px -2px 0 #072a66, 2px -2px 0 #072a66, -2px 2px 0 #072a66, 2px 2px 0 #072a66, 0 4px 6px rgba(0,0,0,0.6)' }}>
+               个人中心
+             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Scrollable Content */}
+      <div className="flex-1 overflow-y-auto pb-28 pt-6 px-4 space-y-4">
+        {/* User Identity Header Card */}
+        <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] relative">
+          <div className="flex items-center gap-4">
+            {/* Interactive Avatar Frame */}
+            <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+              <div
+                onClick={() => setIsAvatarModalOpen(true)}
+                className="relative w-20 h-20 rounded-2xl bg-[#181924] border-2 border-black p-1 shadow-[0_4px_0_#000] flex items-center justify-center overflow-hidden cursor-pointer hover:scale-105 active:scale-95 transition-all group shrink-0"
+                title="点击打开头像选择设置界面"
+              >
+                <div className="w-full h-full bg-[#1b1c25] rounded-xl flex items-center justify-center overflow-hidden relative">
+                  {renderAvatarContent()}
+                </div>
+                <div className="absolute inset-x-0 bottom-0 bg-black/80 text-yellow-400 text-[8px] font-black py-0.5 text-center border-t border-black backdrop-blur-xs flex items-center justify-center gap-0.5 group-hover:bg-amber-400 group-hover:text-black transition-colors">
+                  <Camera size={9} />
+                  <span>更换</span>
+                </div>
+                <div className="absolute top-0 right-0 bg-black/90 text-yellow-400 text-[8px] font-black px-1 py-0.2 rounded-bl border-b border-l border-yellow-400">
+                  Lv.22
+                </div>
+              </div>
+            </div>
+
+            {/* User Details */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                {isEditingName ? (
+                  <div className="flex flex-col gap-1.5 w-full">
+                    <div className="flex items-center gap-1.5 w-full">
+                      <input
+                        type="text"
+                        value={nameInput}
+                        onChange={(e) => setNameInput(e.target.value)}
+                        maxLength={10}
+                        placeholder="2-10字非敏感名称"
+                        className="bg-[#1b1c25] text-white font-black text-xs px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none flex-1 min-w-0"
+                      />
+                      <button
+                        onClick={handleSaveName}
+                        className="bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black p-1.5 rounded border border-black shadow-[0_1px_0_#000] cursor-pointer flex-shrink-0"
+                        title="保存昵称"
+                      >
+                        <Check size={14} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsEditingName(false);
+                          setNameInput(playerName);
+                        }}
+                        className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-black p-1.5 rounded border border-black cursor-pointer flex-shrink-0"
+                        title="取消"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between text-[9px] text-yellow-300 font-bold bg-[#1b1c25] px-2 py-0.5 rounded border border-yellow-500/40">
+                      <div className="flex items-center gap-1">
+                        <Info size={10} className="text-yellow-400" />
+                        <span>本月改名额度: <span className="font-mono text-white">{remainingQuota}/2</span></span>
+                      </div>
+                      {politicalViolationCount > 0 ? (
+                        <span className="text-red-400 font-mono font-bold">敏感词警示: {politicalViolationCount}/3次</span>
+                      ) : (
+                        <span className="text-gray-400">禁敏感词/官方伪冒</span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="text-white font-black text-base truncate">{playerName}</h2>
+                    {nameFreezeUntil > Date.now() ? (
+                      <button
+                        onClick={() => {
+                          setFreezeModalInfo({
+                            show: true,
+                            isFrozen: true,
+                            violationCount: politicalViolationCount,
+                          });
+                        }}
+                        className="text-red-400 hover:text-red-300 p-1 cursor-pointer flex items-center gap-1 text-[10px] font-bold bg-red-950/80 px-1.5 py-0.5 rounded border border-red-500/60"
+                        title="改名功能已冻结，点击查看解封时间"
+                      >
+                        <Lock size={11} className="text-red-400" />
+                        <span>已冻结 (查看)</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (nameFreezeUntil > Date.now()) {
+                            setFreezeModalInfo({
+                              show: true,
+                              isFrozen: true,
+                              violationCount: politicalViolationCount,
+                            });
+                            return;
+                          }
+                          setNameInput(playerName);
+                          setIsEditingName(true);
+                        }}
+                        className="text-yellow-400 hover:text-yellow-300 p-1 cursor-pointer flex items-center gap-1 text-[10px] font-bold bg-[#1b1c25] px-1.5 py-0.5 rounded border border-yellow-500/40"
+                      >
+                        <Edit2 size={12} />
+                        <span>改名</span>
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Title & UID */}
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                <span className="bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded border border-black shadow-[0_1px_0_#000]">
+                  帝国名誉男爵
+                </span>
+                <span className="bg-purple-900/80 text-purple-200 text-[10px] font-black px-2 py-0.5 rounded border border-purple-500">
+                  瓦伦丁少东家
+                </span>
+              </div>
+
+              {/* Clean Single Email Box */}
+              {authUser?.email && (
+                <div
+                  onClick={() => {
+                    if (onOpenAuth) {
+                      onOpenAuth();
+                    }
+                  }}
+                  className="mt-1.5 text-[10px] text-amber-300 font-mono font-bold bg-[#1b1c25] hover:bg-[#232635] px-2 py-1 rounded-lg border border-yellow-500/30 flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-98 shadow-[0_1px_0_#000]"
+                  title="点击打开 AmiGo 账户中心（管理账号 / 退出登录）"
+                >
+                  <div className="flex items-center gap-1 min-w-0">
+                    <Mail size={11} className="text-yellow-400 shrink-0" />
+                    <span className="truncate">{authUser.email}</span>
+                  </div>
+                  <div className="text-[9px] text-emerald-300 bg-emerald-950/80 hover:bg-emerald-900/90 border border-emerald-500/50 px-1.5 py-0.5 rounded shrink-0 font-sans font-bold flex items-center gap-0.5 transition-all">
+                    <ShieldCheck size={10} className="text-emerald-400" />
+                    <span>已验证 (账户中心)</span>
+                  </div>
+                </div>
+              )}
+
+              {/* UID Row */}
+              <div className="flex items-center justify-between gap-2 mt-2 text-gray-300 text-xs font-mono font-bold">
+                <div className="flex items-center gap-2">
+                  <span>
+                    UID: <span className="text-yellow-300 font-bold">{displayUid}</span>
+                    {authUser?.uid && <span className="text-[9px] text-gray-400 font-normal ml-1">(前8位)</span>}
+                  </span>
+                  <button
+                    onClick={handleCopyUid}
+                    className="text-gray-200 hover:text-white flex items-center gap-1 bg-[#1b1c25] hover:bg-[#252838] px-2 py-0.5 rounded border border-black cursor-pointer text-[10px] active:scale-95 transition-all shadow-[0_1px_0_#000]"
+                    title={`完整 UID: ${fullUid} (点击复制全称)`}
+                  >
+                    {copiedUid ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
+                    <span>{copiedUid ? '已复制' : '复制完整UID'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Stat Bar */}
+          <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-gray-700/80 text-center">
+            <div className="bg-[#21232e] p-2 rounded-xl border border-black">
+              <div className="text-[10px] text-gray-400 font-bold">声望等级</div>
+              <div className="text-yellow-400 font-black text-xs mt-0.5">名声远扬 (S)</div>
+            </div>
+            <div className="bg-[#21232e] p-2 rounded-xl border border-black">
+              <div className="text-[10px] text-gray-400 font-bold">机械推演</div>
+              <div className="text-white font-black text-xs mt-0.5">18 胜 / 0 败</div>
+            </div>
+            <div className="bg-[#21232e] p-2 rounded-xl border border-black">
+              <div className="text-[10px] text-gray-400 font-bold">拥有服装</div>
+              <div className="text-emerald-400 font-black text-xs mt-0.5">4 / 4 套</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="grid grid-cols-5 bg-[#21232e] p-1 rounded-xl border-2 border-black gap-1 shadow-[0_2px_0_#000]">
+          <button
+            onClick={() => setSubTab('info')}
+            className={`py-2 text-[11px] font-black rounded-lg border transition-all cursor-pointer truncate ${
+              subTab === 'info'
+                ? 'bg-yellow-400 text-black border-black shadow-[0_1px_0_#000]'
+                : 'text-gray-400 border-transparent hover:text-white'
+            }`}
+          >
+            名片资料
+          </button>
+          <button
+            onClick={() => setSubTab('rank')}
+            className={`py-2 text-[11px] font-black rounded-lg border transition-all cursor-pointer truncate flex items-center justify-center gap-0.5 ${
+              subTab === 'rank'
+                ? 'bg-yellow-400 text-black border-black shadow-[0_1px_0_#000]'
+                : 'text-gray-400 border-transparent hover:text-white'
+            }`}
+          >
+            <Trophy size={11} className={subTab === 'rank' ? 'text-black' : 'text-yellow-400'} />
+            <span>排行榜</span>
+          </button>
+          <button
+            onClick={() => setSubTab('achievement')}
+            className={`py-2 text-[11px] font-black rounded-lg border transition-all cursor-pointer truncate ${
+              subTab === 'achievement'
+                ? 'bg-yellow-400 text-black border-black shadow-[0_1px_0_#000]'
+                : 'text-gray-400 border-transparent hover:text-white'
+            }`}
+          >
+            成就勋章
+          </button>
+          <button
+            onClick={() => setSubTab('settings')}
+            className={`py-2 text-[11px] font-black rounded-lg border transition-all cursor-pointer truncate ${
+              subTab === 'settings'
+                ? 'bg-yellow-400 text-black border-black shadow-[0_1px_0_#000]'
+                : 'text-gray-400 border-transparent hover:text-white'
+            }`}
+          >
+            系统设置
+          </button>
+          <button
+            onClick={() => setSubTab('cdkey')}
+            className={`py-2 text-[11px] font-black rounded-lg border transition-all cursor-pointer truncate ${
+              subTab === 'cdkey'
+                ? 'bg-yellow-400 text-black border-black shadow-[0_1px_0_#000]'
+                : 'text-gray-400 border-transparent hover:text-white'
+            }`}
+          >
+            礼包兑换
+          </button>
+        </div>
+
+        {/* Tab 1: 名片资料 (Profile Info) */}
+        {subTab === 'info' && (
+          <div className="space-y-3">
+            <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000]">
+              <h3 className="text-white font-black text-sm mb-3 flex items-center gap-2 border-b border-gray-700/80 pb-2">
+                <Shield size={16} className="text-yellow-400" /> 身份履历与特权
+              </h3>
+
+              <div className="space-y-2.5 text-xs font-bold">
+                <div className="flex justify-between items-center bg-[#21232e] p-2.5 rounded-xl border border-black">
+                  <span className="text-gray-400">出身背景</span>
+                  <span className="text-white font-black">卡罗尼亚帝国 · 瓦伦丁名门</span>
+                </div>
+                <div className="flex justify-between items-center bg-[#21232e] p-2.5 rounded-xl border border-black">
+                  <span className="text-gray-400">毕业院校</span>
+                  <span className="text-yellow-400 font-black">帝国理工学院 (工程系第1名)</span>
+                </div>
+                <div className="flex justify-between items-center bg-[#21232e] p-2.5 rounded-xl border border-black">
+                  <span className="text-gray-400">当前主业</span>
+                  <span className="text-sky-300 font-black">卡罗尼亚重工 · 助理工程师</span>
+                </div>
+                <div className="flex justify-between items-center bg-[#21232e] p-2.5 rounded-xl border border-black">
+                  <span className="text-gray-400">持有地产</span>
+                  <span className="text-emerald-400 font-black">中央大街7号机械研制所</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000]">
+              <h3 className="text-white font-black text-sm mb-3 flex items-center gap-2 border-b border-gray-700/80 pb-2">
+                <Award size={16} className="text-purple-400" /> 特权光环
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-[#21232e] p-2.5 rounded-xl border border-black flex items-center gap-2">
+                  <Sparkles size={20} className="text-yellow-400 flex-shrink-0" />
+                  <div>
+                    <div className="text-white font-black text-xs">贵族礼遇</div>
+                    <div className="text-gray-400 text-[10px]">购买服装享 9 折</div>
+                  </div>
+                </div>
+                <div className="bg-[#21232e] p-2.5 rounded-xl border border-black flex items-center gap-2">
+                  <Flame size={20} className="text-rose-400 flex-shrink-0" />
+                  <div>
+                    <div className="text-white font-black text-xs">天才推演</div>
+                    <div className="text-gray-400 text-[10px]">战斗爆伤 +15%</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: 帝国排行榜 (Rank List with Toy SDK) */}
+        {subTab === 'rank' && (
+          <div className="space-y-3">
+            {/* SDK Action Top Bar */}
+            <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3 shadow-[0_4px_0_#000] space-y-2">
+              <div className="flex items-center justify-between border-b border-gray-700/80 pb-2">
+                <div className="flex items-center gap-1.5">
+                  <Trophy size={18} className="text-yellow-400" />
+                  <span className="text-white font-black text-xs">全服帝国荣耀榜</span>
+                  <span className="text-[9px] bg-pink-500/20 text-pink-300 border border-pink-500/50 px-1.5 py-0.2 rounded font-bold">
+                    Toy SDK 连通
+                  </span>
+                </div>
+                <button
+                  onClick={() => refreshRankData(board, period)}
+                  disabled={isSdkLoading}
+                  className="text-gray-300 hover:text-white flex items-center gap-1 bg-[#21232e] px-2 py-1 rounded-lg border border-black text-[10px] font-black cursor-pointer active:scale-95"
+                >
+                  <RefreshCw size={12} className={isSdkLoading ? 'animate-spin text-yellow-400' : ''} />
+                  <span>{isSdkLoading ? '同步中...' : '刷新榜单'}</span>
+                </button>
+              </div>
+
+              {/* Action Buttons: Sync Bilibili Profile & Submit Score */}
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  onClick={handleSyncBilibiliProfile}
+                  className="bg-[#fb7299] hover:bg-[#e05d83] text-white text-[11px] font-black py-2 px-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] flex items-center justify-center gap-1 cursor-pointer active:translate-y-0.5"
+                >
+                  <UserCheck size={14} />
+                  <span>同步B站资料</span>
+                </button>
+                <button
+                  onClick={handleSubmitScore}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-black text-[11px] font-black py-2 px-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] flex items-center justify-center gap-1 cursor-pointer active:translate-y-0.5"
+                >
+                  <Upload size={14} />
+                  <span>上报我的成绩</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Board Selector (1: 财富榜, 3: 推演榜) */}
+            <div className="grid grid-cols-2 bg-[#21232e] p-1 rounded-xl border-2 border-black gap-1 shadow-[0_2px_0_#000]">
+              <button
+                onClick={() => setBoard(1)}
+                className={`py-1.5 text-xs font-black rounded-lg border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  board === 1
+                    ? 'bg-amber-400 text-black border-black shadow-[0_1px_0_#000]'
+                    : 'text-gray-400 border-transparent hover:text-white'
+                }`}
+              >
+                <CircleDollarSign size={13} />
+                <span>帝国财富榜</span>
+              </button>
+              <button
+                onClick={() => setBoard(3)}
+                className={`py-1.5 text-xs font-black rounded-lg border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                  board === 3
+                    ? 'bg-sky-400 text-black border-black shadow-[0_1px_0_#000]'
+                    : 'text-gray-400 border-transparent hover:text-white'
+                }`}
+              >
+                <Swords size={13} />
+                <span>推演战绩榜</span>
+              </button>
+            </div>
+
+            {/* Period Selector (week / month / all / day) */}
+            <div className="flex items-center justify-between bg-[#21232e] px-2 py-1 rounded-xl border border-black text-xs font-bold">
+              <span className="text-gray-400 text-[10px]">统计周期:</span>
+              <div className="flex gap-1">
+                {(
+                  [
+                    { id: 'week', label: '本周' },
+                    { id: 'month', label: '本月' },
+                    { id: 'all', label: '总榜' },
+                    { id: 'day', label: '今日' },
+                  ] as const
+                ).map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setPeriod(p.id)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-black border transition-all cursor-pointer ${
+                      period === p.id
+                        ? 'bg-white text-black border-black shadow-[0_1px_0_#000]'
+                        : 'text-gray-400 border-transparent hover:text-gray-200'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* My Current Rank Card */}
+            <div className="bg-gradient-to-r from-[#2a3852] to-[#1f283d] border-2 border-yellow-500/80 rounded-2xl p-3 shadow-[0_3px_0_#000] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-yellow-400 border-2 border-black flex items-center justify-center font-black text-black text-sm shadow-[0_2px_0_#000] flex-shrink-0">
+                  {myRank.ranked ? `第${myRank.rank}名` : '未上榜'}
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-white font-black text-xs">{playerName}</span>
+                    <span className="bg-yellow-400 text-black text-[9px] font-black px-1.5 rounded border border-black">
+                      我
+                    </span>
+                  </div>
+                  <div className="text-gray-300 text-[10px] font-mono mt-0.5">
+                    当前积分: <span className="text-yellow-300 font-bold">{myRank.score > 0 ? myRank.score.toLocaleString() : (board === 1 ? coins : 18500).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleSubmitScore}
+                className="bg-yellow-400 hover:bg-yellow-300 text-black text-[10px] font-black px-3 py-1.5 rounded-lg border border-black shadow-[0_1px_0_#000] cursor-pointer active:scale-95"
+              >
+                刷新名次
+              </button>
+            </div>
+
+            {/* Rank List Items */}
+            <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-2 shadow-[0_4px_0_#000] space-y-1.5">
+              {rankList.map((item) => {
+                const isMe = item.nickname.includes(playerName) || item.nickname.includes('(你)');
+                return (
+                  <div
+                    key={item.rank}
+                    className={`flex items-center justify-between p-2 rounded-xl border-2 transition-all ${
+                      isMe
+                        ? 'bg-[#3b3524] border-yellow-400 shadow-[0_2px_0_#000]'
+                        : item.rank === 1
+                        ? 'bg-[#3d321d] border-amber-500'
+                        : item.rank === 2
+                        ? 'bg-[#2a303a] border-slate-400'
+                        : item.rank === 3
+                        ? 'bg-[#332822] border-amber-700'
+                        : 'bg-[#21232e] border-black'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {/* Rank Crown/Badge */}
+                      <div className="w-7 h-7 flex items-center justify-center flex-shrink-0 font-black text-xs">
+                        {item.rank === 1 ? (
+                          <Crown size={20} className="text-yellow-400 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" strokeWidth={2.5} />
+                        ) : item.rank === 2 ? (
+                          <Crown size={18} className="text-slate-300 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" strokeWidth={2.5} />
+                        ) : item.rank === 3 ? (
+                          <Crown size={18} className="text-amber-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" strokeWidth={2.5} />
+                        ) : (
+                          <span className="text-gray-400 font-mono font-black text-xs">#{item.rank}</span>
+                        )}
+                      </div>
+
+                      {/* Avatar */}
+                      <div className="w-8 h-8 rounded-lg bg-[#1b1c25] border border-black flex items-center justify-center overflow-hidden flex-shrink-0 relative">
+                        {item.avatar || (isMe && bilibiliAvatar) ? (
+                          <img src={item.avatar || (isMe && bilibiliAvatar) || ''} alt="avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <User size={18} className="text-gray-400" />
+                        )}
+                      </div>
+
+                      {/* Nickname & Label */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1">
+                          <span className={`text-xs font-black truncate max-w-[110px] ${isMe ? 'text-yellow-300' : 'text-white'}`}>
+                            {item.nickname}
+                          </span>
+                          {isMe && (
+                            <span className="bg-yellow-400 text-black text-[8px] font-black px-1 rounded border border-black flex-shrink-0">
+                              你
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[9px] text-gray-400 font-mono">
+                          {board === 1 ? '金币资产' : '推演胜分'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Score */}
+                    <div className="text-right flex-shrink-0 pl-2">
+                      <div className="text-yellow-400 font-black text-xs font-mono">
+                        {item.score.toLocaleString()}
+                      </div>
+                      <div className="text-[9px] text-gray-500 font-bold">
+                        {item.rank <= 3 ? '👑 殿堂级' : '排名有效'}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="text-center text-gray-500 text-[10px] font-bold">
+              * 排行榜数据通过 B站 Toy SDK 实时接入 · 跨终端同步
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: 成就勋章 (Achievements) */}
+        {subTab === 'achievement' && (
+          <div className="space-y-3">
+            {[
+              { title: '科技先驱', desc: '在青少年时期发明定时闹钟获得二等奖', icon: Crown, unlocked: true, date: '1882.04' },
+              { title: '学府霸主', desc: '考入帝国理工学院并获得全额奖学金', icon: GraduationCap, unlocked: true, date: '1888.06' },
+              { title: '首次开箱', desc: '在欧皇宝箱中首次抽取稀有或限定道具', icon: Gift, unlocked: true, date: '1892.07' },
+              { title: '富甲一方', desc: '拥有超过 1,000,000 帝国金币', icon: CircleDollarSign, unlocked: true, date: '1900.01' },
+              { title: '武道极境', desc: '在战术推演中达成连续 20 次战胜对手', icon: Swords, unlocked: false, date: '未达成 (18/20)' },
+              { title: '名流之光', desc: '与所有瓦伦丁家族成员好感度达到 90%', icon: Heart, unlocked: false, date: '未达成 (5/7)' },
+            ].map((ach, i) => (
+              <div
+                key={i}
+                className={`border-2 border-black rounded-2xl p-3 flex items-center gap-3 shadow-[0_3px_0_#000] ${
+                  ach.unlocked ? 'bg-[#2d2f3d]' : 'bg-[#21232e] opacity-75'
+                }`}
+              >
+                <div
+                  className={`w-11 h-11 rounded-xl border-2 border-black flex items-center justify-center flex-shrink-0 shadow-[0_2px_0_#000] ${
+                    ach.unlocked ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-400'
+                  }`}
+                >
+                  <ach.icon size={22} strokeWidth={2.5} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-white font-black text-xs">{ach.title}</h4>
+                    <span
+                      className={`text-[9px] font-black px-1.5 py-0.5 rounded border border-black ${
+                        ach.unlocked ? 'bg-emerald-900/80 text-emerald-300' : 'bg-gray-800 text-gray-400'
+                      }`}
+                    >
+                      {ach.unlocked ? '已解锁' : '未解锁'}
+                    </span>
+                  </div>
+                  <p className="text-gray-300 text-[11px] font-bold mt-0.5 truncate">{ach.desc}</p>
+                  <div className="text-[10px] text-gray-400 font-mono mt-1">{ach.date}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Tab 3: 系统设置 (Settings) */}
+        {subTab === 'settings' && (
+          <div className="space-y-3">
+            <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] space-y-3">
+              <h3 className="text-white font-black text-sm mb-2 flex items-center gap-2 border-b border-gray-700/80 pb-2">
+                <Settings size={16} className="text-yellow-400" /> 音效与画面设置
+              </h3>
+
+              <div className="flex justify-between items-center bg-[#21232e] p-3 rounded-xl border border-black">
+                <div className="flex items-center gap-2">
+                  {bgmEnabled ? <Volume2 size={18} className="text-yellow-400" /> : <VolumeX size={18} className="text-gray-500" />}
+                  <div>
+                    <div className="text-white font-black text-xs">背景音乐 (BGM)</div>
+                    <div className="text-gray-400 text-[10px]">开启复古像素游戏背景音效</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setBgmEnabled(!bgmEnabled);
+                    showToast(bgmEnabled ? '已关闭背景音乐' : '已开启背景音乐');
+                  }}
+                  className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors cursor-pointer ${
+                    bgmEnabled ? 'bg-yellow-400' : 'bg-gray-700'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-black absolute top-0.5 transition-transform ${
+                      bgmEnabled ? 'left-6' : 'left-0.5'
+                    }`}
+                  ></div>
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center bg-[#21232e] p-3 rounded-xl border border-black">
+                <div className="flex items-center gap-2">
+                  {sfxEnabled ? <Volume2 size={18} className="text-yellow-400" /> : <VolumeX size={18} className="text-gray-500" />}
+                  <div>
+                    <div className="text-white font-black text-xs">按键与动作音效</div>
+                    <div className="text-gray-400 text-[10px]">点击与抽卡物理反馈音</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setSfxEnabled(!sfxEnabled);
+                    showToast(sfxEnabled ? '已关闭动作音效' : '已开启动作音效');
+                  }}
+                  className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors cursor-pointer ${
+                    sfxEnabled ? 'bg-yellow-400' : 'bg-gray-700'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-black absolute top-0.5 transition-transform ${
+                      sfxEnabled ? 'left-6' : 'left-0.5'
+                    }`}
+                  ></div>
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center bg-[#21232e] p-3 rounded-xl border border-black">
+                <div>
+                  <div className="text-white font-black text-xs">高帧率渲染 (60 FPS)</div>
+                  <div className="text-gray-400 text-[10px]">提升画面流畅度与转场动画</div>
+                </div>
+                <button
+                  onClick={() => {
+                    setHighFps(!highFps);
+                    showToast(highFps ? '已切换至标准帧率' : '已开启 60FPS 极速渲染');
+                  }}
+                  className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors cursor-pointer ${
+                    highFps ? 'bg-yellow-400' : 'bg-gray-700'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-black absolute top-0.5 transition-transform ${
+                      highFps ? 'left-6' : 'left-0.5'
+                    }`}
+                  ></div>
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] space-y-3">
+              <h3 className="text-white font-black text-sm mb-2 flex items-center gap-2 border-b border-gray-700/80 pb-2">
+                <RotateCcw size={16} className="text-rose-400" /> 存档管理
+              </h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => showToast('云端存档同步成功！已保存至最新进度')}
+                  className="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black py-2.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer active:translate-y-0.5 flex items-center justify-center gap-1.5"
+                >
+                  <Save size={14} /> 保存进度
+                </button>
+                {confirmReset ? (
+                  <div className="flex items-center gap-1.5 bg-[#21232e] p-1.5 rounded-xl border border-rose-500/50">
+                    <span className="text-[10px] text-rose-300 font-bold px-1">确认重置？</span>
+                    <button
+                      onClick={() => {
+                        setConfirmReset(false);
+                        if (onResetLife) {
+                          onResetLife();
+                        } else {
+                          setCoins(10000);
+                          showToast('人生已重新开始，预祝您创造新辉煌！');
+                        }
+                        onClose();
+                      }}
+                      className="bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-black px-2 py-1 rounded-lg border border-black cursor-pointer shadow-[0_1px_0_#000]"
+                    >
+                      确定
+                    </button>
+                    <button
+                      onClick={() => setConfirmReset(false)}
+                      className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-[10px] font-black px-2 py-1 rounded-lg border border-black cursor-pointer"
+                    >
+                      取消
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmReset(true)}
+                    className="bg-rose-900/80 hover:bg-rose-800 text-rose-200 text-xs font-black px-4 py-2.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer active:translate-y-0.5"
+                  >
+                    重置人生
+                  </button>
+                )}
+              </div>
+
+              {onLogout && (
+                <div className="pt-3 border-t border-gray-700/80 mt-2">
+                  {confirmLogout ? (
+                    <div className="flex items-center justify-between gap-2 bg-[#21232e] p-2 rounded-xl border-2 border-red-500/80 animate-in fade-in duration-150">
+                      <span className="text-xs text-red-300 font-bold">确认退出当前账号吗？</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            setConfirmLogout(false);
+                            onLogout();
+                            onClose();
+                            showToast('已安全退出登录');
+                          }}
+                          className="bg-red-600 hover:bg-red-500 text-white text-xs font-black px-3 py-1.5 rounded-lg border border-black cursor-pointer shadow-[0_1px_0_#000] active:scale-95"
+                        >
+                          确认退出
+                        </button>
+                        <button
+                          onClick={() => setConfirmLogout(false)}
+                          className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-black px-3 py-1.5 rounded-lg border border-black cursor-pointer active:scale-95"
+                        >
+                          取消
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmLogout(true)}
+                      className="w-full bg-[#1b1c25] hover:bg-red-950/40 text-red-400 text-xs font-black py-2.5 rounded-xl border-2 border-red-900 shadow-[0_2px_0_#000] cursor-pointer active:translate-y-0.5 flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <LogOut size={14} /> 退出登录
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tab 4: 礼包兑换 (CDKey) */}
+        {subTab === 'cdkey' && (
+          <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-yellow-400 rounded-xl border-2 border-black flex items-center justify-center shadow-[0_2px_0_#000] flex-shrink-0">
+                <KeyRound size={26} className="text-black" />
+              </div>
+              <div>
+                <h3 className="text-white font-black text-sm">兑换官方礼包码</h3>
+                <p className="text-gray-300 text-xs font-bold mt-0.5">输入兑换码领取限量金币与道具！</p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="请输入礼包码 (如 GIFT2026)"
+                value={cdkeyInput}
+                onChange={(e) => setCdkeyInput(e.target.value)}
+                className="flex-1 bg-[#21232e] text-white font-black text-xs px-3 py-2.5 rounded-xl border-2 border-black focus:border-yellow-400 focus:outline-none placeholder:text-gray-500 uppercase"
+              />
+              <button
+                onClick={handleRedeemCdkey}
+                className="bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black px-5 py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer active:translate-y-0.5"
+              >
+                兑换
+              </button>
+            </div>
+
+            <div className="bg-[#21232e] p-3 rounded-xl border border-black space-y-1.5">
+              <div className="text-yellow-400 font-black text-xs">💡 可测试的公测礼包码：</div>
+              <div className="text-gray-300 text-xs font-mono font-bold">· GIFT2026 : 50,000 金币</div>
+              <div className="text-gray-300 text-xs font-mono font-bold">· 666666 : 50,000 金币</div>
+              <div className="text-gray-300 text-xs font-mono font-bold">· VALENTINE : 瓦伦丁家族专属好礼</div>
+            </div>
+          </div>
+        )}
+
+        {/* Footer info */}
+        <div className="text-center text-gray-500 text-[10px] font-bold pt-2">
+          AmiGO Lite v1.2.0 · 玩家 UID: {displayUid}
+        </div>
+      </div>
+
+      {/* 政治与合规敏感词警告/冻结改名弹窗 (统一重度黑框/街机游戏UI风格) */}
+      {freezeModalInfo && freezeModalInfo.show && (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 animate-in zoom-in-95 duration-150">
+          <div className="bg-[#252632] border-4 border-black rounded-3xl max-w-sm w-full p-5 shadow-[0_10px_0_#000] relative text-white space-y-4">
+            
+            {/* 游戏风格顶栏横幅标题 (纯色系无渐变，风格统一) */}
+            <div className="-mt-8 mx-auto w-fit bg-red-600 border-3 border-black rounded-2xl px-4 py-1.5 shadow-[0_4px_0_#000] flex items-center justify-center">
+              <span className="text-white font-black text-sm tracking-wider drop-shadow-[0_2px_0_#000]">
+                {freezeModalInfo.isFrozen ? '角色改名冻结管制' : '敏感词合规警告'}
+              </span>
+            </div>
+
+            {/* 警告状态与计数标识 */}
+            <div className="flex justify-center">
+              <span className="bg-[#1b1c25] text-yellow-300 border-2 border-black font-black text-[11px] px-3 py-1 rounded-xl shadow-[0_2px_0_#000] flex items-center gap-1">
+                <AlertTriangle size={13} className="text-amber-400" />
+                <span>
+                  {freezeModalInfo.isFrozen ? '系统管制防范中 (改名锁定3个月)' : `敏感词触发记录: ${freezeModalInfo.violationCount} / 3 次`}
+                </span>
+              </span>
+            </div>
+
+            {/* 游戏内提示框/历史记录面板 */}
+            <div className="bg-[#1b1c25] rounded-2xl p-4 border-3 border-black shadow-[0_4px_0_#000] text-xs leading-relaxed text-gray-200 min-h-[170px] flex flex-col justify-between">
+              {modalTab === 'history' ? (
+                <div className="space-y-2.5 text-left w-full">
+                  <div className="flex items-center justify-between pb-1.5 border-b-2 border-black">
+                    <span className="text-yellow-300 font-black text-xs flex items-center gap-1">
+                      <History size={14} className="text-amber-400" /> 我的违规改名历史 ({politicalViolationLogs.length} 条)
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-bold">违规档案</span>
+                  </div>
+
+                  {politicalViolationLogs.length === 0 ? (
+                    <div className="py-8 text-center text-gray-400 text-xs font-bold space-y-1">
+                      <FileText size={24} className="mx-auto text-gray-500 mb-1" />
+                      <div>暂无违规改名记录</div>
+                    </div>
+                  ) : (
+                    <div className="max-h-48 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                      {politicalViolationLogs.map((log) => (
+                        <div key={log.id} className="bg-[#2a2c3a] border-2 border-black rounded-xl p-2.5 text-[11px] space-y-1 shadow-[0_2px_0_#000]">
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-400">尝试输入：</span>
+                            <span className="font-mono text-white font-black max-w-[140px] truncate">"{log.attemptedName}"</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-400">触犯词汇：</span>
+                            <span className="text-red-400 font-mono font-black">[{log.matchedWord}]</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] pt-1 border-t border-gray-700/60 mt-1">
+                            <span className="text-amber-400 font-bold">• {log.category}</span>
+                            <span className="text-gray-400 font-mono">{formatUnlockTime(log.timestamp)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {freezeModalInfo.isFrozen ? (
+                    <>
+                      <p className="text-red-300 font-bold leading-normal">
+                        由于检测到多次尝试输入 <span className="text-yellow-400 font-black">政治与合规敏感</span> 词汇，您的改名权限已被管制防范系统锁定 <span className="text-red-400 font-black">3 个月</span>。
+                      </p>
+                      {freezeModalInfo.matchedWord && (
+                        <div className="bg-[#2a2c3a] border-2 border-black rounded-xl p-2 text-[11px]">
+                          <span className="text-gray-400">拦截触发词：</span>
+                          <span className="text-yellow-400 font-mono font-black">[{freezeModalInfo.matchedWord}]</span>
+                        </div>
+                      )}
+                      <div className="bg-red-950 border-2 border-red-600 rounded-xl p-2.5 text-[11px] text-red-200 space-y-1">
+                        <div className="font-bold flex items-center justify-between">
+                          <span>• 管制时长：</span>
+                          <span className="font-mono text-white font-black">3 个月 (90天)</span>
+                        </div>
+                        <div className="font-bold flex items-center justify-between">
+                          <span>• 解封时刻：</span>
+                          <span className="font-mono text-yellow-300 font-black">{formatUnlockTime(nameFreezeUntil)}</span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-gray-400 font-medium">
+                        提示：请共同维护良好的游戏社区氛围，文明竞技，严禁使用涉及政治及敏感议题的文字。
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-amber-300 font-bold leading-normal">
+                        您提交的昵称已被系统拦截，原因：匹配到 <span className="text-red-400 font-black">[政治与合规敏感]</span> 分类受限词汇。
+                      </p>
+                      {freezeModalInfo.matchedWord && (
+                        <div className="bg-[#2a2c3a] border-2 border-black rounded-xl p-2 text-[11px]">
+                          <span className="text-gray-400">触犯敏感词：</span>
+                          <span className="text-yellow-400 font-mono font-black">[{freezeModalInfo.matchedWord}]</span>
+                        </div>
+                      )}
+                      <div className="bg-amber-950 border-2 border-amber-600 rounded-xl p-2.5 text-[11px] text-amber-200 space-y-1">
+                        <div className="font-black text-red-300 flex items-center justify-between">
+                          <span>• 当前违规计次：</span>
+                          <span className="font-mono text-yellow-300 text-sm font-black">{freezeModalInfo.violationCount} / 3 次</span>
+                        </div>
+                        <div className="text-[10px] text-red-400 font-bold">
+                          ⚠️ 严重警告：若累计尝试达 3 次，改名功能将直接锁死 3 个月！
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-gray-400 font-medium">
+                        请更换其他正常且健康的游戏昵称重新保存。
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 底部双按钮控制 (查看违规原因 + 确认知晓) */}
+            <div className="flex gap-2.5 pt-1">
+              <button
+                onClick={() => setModalTab(modalTab === 'history' ? 'info' : 'history')}
+                className="flex-1 bg-[#2a2c3a] hover:bg-[#36394d] text-yellow-300 font-black py-2.5 px-2 rounded-2xl border-3 border-black shadow-[0_4px_0_#000] active:translate-y-1 active:shadow-none transition-all text-[11px] cursor-pointer flex items-center justify-center gap-1"
+              >
+                <History size={14} className="text-amber-400" />
+                <span>{modalTab === 'history' ? '返回合规说明' : '查看违规记录'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setFreezeModalInfo(null);
+                  setModalTab('info');
+                }}
+                className="flex-1 bg-amber-400 hover:bg-amber-300 text-black font-black py-2.5 px-2 rounded-2xl border-3 border-black shadow-[0_4px_0_#000] active:translate-y-1 active:shadow-none transition-all text-[11px] cursor-pointer flex items-center justify-center gap-1"
+              >
+                <Check size={15} strokeWidth={3} />
+                <span>遵纪守法，已知晓</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Avatar Selection Modal */}
+      <AvatarSelectModal
+        isOpen={isAvatarModalOpen}
+        onClose={() => setIsAvatarModalOpen(false)}
+        avatarSource={avatarSource}
+        onSelectAvatar={(src) => {
+          setAvatarSource(src);
+          try { localStorage.setItem('amigo_avatar_source', src); } catch (e) {}
+          showToast('头像设置已修改！');
+        }}
+        authUser={authUser}
+        bilibiliAvatar={bilibiliAvatar}
+        equippedClothing={equippedClothing}
+      />
+    </div>
+  );
+};
+
+const BANK_LIST = [
+  {
+    id: 'aminoac',
+    name: 'Bank Of Aminoac（阿米诺斯银行）',
+    shortName: 'Bank Of Aminoac',
+    type: '商业巨头',
+    rate: '4.8% 活期年化',
+    maxLoan: 1000000,
+    openFee: 0,
+    badge: '免开户费',
+    desc: '阿米诺斯帝国商业与民用核心银行，资金结算迅捷，提供灵活资金周转。',
+  },
+  {
+    id: 'aminoac_savings',
+    name: '阿米诺斯储蓄银行',
+    shortName: '阿米诺斯储蓄银行',
+    type: '官方储蓄',
+    rate: '5.8% 定期年化',
+    maxLoan: 500000,
+    openFee: 1000,
+    badge: '保本保息',
+    desc: '由阿米诺斯皇家财政部直辖担保，专精定期沉淀储蓄与稳健长效回报。',
+  },
+  {
+    id: 'russia_invest',
+    name: '俄罗斯投资银行',
+    shortName: '俄罗斯投资银行',
+    type: '资本投资',
+    rate: '8.5%~16% 浮动',
+    maxLoan: 3000000,
+    openFee: 10000,
+    badge: '高额信贷',
+    desc: '跨国重工业与能源风险投资银团，提供高额信用借贷与股票基金。',
+  },
+  {
+    id: 'joint_bank',
+    name: 'Совместный банк России и Аминоас诺汇银行',
+    shortName: '俄罗斯与阿米诺斯联合银行',
+    type: '跨国银团',
+    rate: '12.0% 尊享年化',
+    maxLoan: 10000000,
+    openFee: 50000,
+    badge: 'VIP尊享',
+    desc: '俄阿两国超级财团联合创立，VIP黑卡通道，享有极高利息与千万信贷。',
+  },
+];
+
+interface BankAccountData {
+  opened: boolean;
+  cardNo: string;
+  deposit: number;
+  loan: number;
+  transactions: Array<{
+    id: string;
+    type: 'deposit' | 'withdraw' | 'loan' | 'repay' | 'interest' | 'investment';
+    title: string;
+    amount: number;
+    time: string;
+  }>;
+}
+
+const BankModal = ({
+  onClose,
+  coins,
+  setCoins,
+  bankDeposit,
+  setBankDeposit,
+  bankLoan,
+  setBankLoan,
+  onOpenWealthChart,
+}: {
+  onClose: () => void;
+  coins: number;
+  setCoins: React.Dispatch<React.SetStateAction<number>>;
+  bankDeposit: number;
+  setBankDeposit: React.Dispatch<React.SetStateAction<number>>;
+  bankLoan: number;
+  setBankLoan: React.Dispatch<React.SetStateAction<number>>;
+  onOpenWealthChart?: () => void;
+}) => {
+  const [selectedBankId, setSelectedBankId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'deposit' | 'investment' | 'loan' | 'history'>('deposit');
+  const [amountInput, setAmountInput] = useState('');
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // 多银行账户数据存储
+  const [accounts, setAccounts] = useState<Record<string, BankAccountData>>(() => {
+    try {
+      const saved = localStorage.getItem('amigo_multi_bank_accounts_v1');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+
+    // 初始状态：默认开通 Bank Of Aminoac，并继承旧的存贷款数据
+    return {
+      aminoac: {
+        opened: true,
+        cardNo: 'AMN-8801-9214',
+        deposit: bankDeposit || 500000,
+        loan: bankLoan || 0,
+        transactions: [
+          { id: '1', type: 'interest', title: '活期存款利息自动结算', amount: 1520, time: '今日 08:00' },
+          { id: '2', type: 'deposit', title: '存入Bank Of Aminoac储蓄金', amount: 500000, time: '2026.08.10' },
+        ],
+      },
+      aminoac_savings: {
+        opened: false,
+        cardNo: 'AMN-SAV-1029',
+        deposit: 0,
+        loan: 0,
+        transactions: [],
+      },
+      russia_invest: {
+        opened: false,
+        cardNo: 'RUS-INV-7731',
+        deposit: 0,
+        loan: 0,
+        transactions: [],
+      },
+      joint_bank: {
+        opened: false,
+        cardNo: 'RUS-AMN-9988',
+        deposit: 0,
+        loan: 0,
+        transactions: [],
+      },
+    };
+  });
+
+  // 保存数据并同步总资产
+  const saveAccounts = (updated: Record<string, BankAccountData>) => {
+    setAccounts(updated);
+    try {
+      localStorage.setItem('amigo_multi_bank_accounts_v1', JSON.stringify(updated));
+    } catch (e) {}
+
+    // 计算所有银航账户的总储蓄与总贷款并更新给主调函数
+    let totalDep = 0;
+    let totalL = 0;
+    Object.values(updated).forEach(acc => {
+      if (acc.opened) {
+        totalDep += acc.deposit;
+        totalL += acc.loan;
+      }
+    });
+    setBankDeposit(totalDep);
+    setBankLoan(totalL);
+    try {
+      localStorage.setItem('amigo_bank_deposit', totalDep.toString());
+      localStorage.setItem('amigo_bank_loan', totalL.toString());
+    } catch (e) {}
+  };
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 2500);
+  };
+
+  // 开立新银行账户
+  const handleOpenAccount = (bank: typeof BANK_LIST[0]) => {
+    if (coins < bank.openFee) {
+      showToast(`身上现金不足以支付开户费 (${bank.openFee.toLocaleString()} ₽)！`);
+      return;
+    }
+
+    if (bank.openFee > 0) {
+      setCoins(prev => prev - bank.openFee);
+    }
+
+    const randomCard = `${bank.id.slice(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const updated = {
+      ...accounts,
+      [bank.id]: {
+        opened: true,
+        cardNo: randomCard,
+        deposit: 0,
+        loan: 0,
+        transactions: [
+          { id: Date.now().toString(), type: 'deposit' as const, title: `在 [${bank.shortName}] 开立银航账户`, amount: 0, time: '刚才' }
+        ],
+      },
+    };
+
+    saveAccounts(updated);
+    showToast(`成功在 [${bank.shortName}] 开户！获得卡号: ${randomCard}`);
+    setSelectedBankId(bank.id);
+  };
+
+  const currentBank = BANK_LIST.find(b => b.id === selectedBankId);
+  const currentAccount = selectedBankId ? accounts[selectedBankId] : null;
+
+  // 增加流水
+  const addTransactionForCurrent = (type: 'deposit' | 'withdraw' | 'loan' | 'repay' | 'interest' | 'investment', title: string, amount: number) => {
+    if (!selectedBankId || !currentAccount) return;
+    const newTx = {
+      id: Date.now().toString(),
+      type,
+      title,
+      amount,
+      time: '刚才',
+    };
+    const updated = {
+      ...accounts,
+      [selectedBankId]: {
+        ...currentAccount,
+        transactions: [newTx, ...(currentAccount.transactions || [])],
+      },
+    };
+    saveAccounts(updated);
+  };
+
+  // 存款处理
+  const handleDeposit = () => {
+    if (!selectedBankId || !currentAccount) return;
+    const val = parseInt(amountInput, 10);
+    if (isNaN(val) || val <= 0) {
+      showToast('请输入有效的存款金额');
+      return;
+    }
+    if (val > coins) {
+      showToast('身上现金不足！');
+      return;
+    }
+
+    setCoins(prev => prev - val);
+    const updated = {
+      ...accounts,
+      [selectedBankId]: {
+        ...currentAccount,
+        deposit: currentAccount.deposit + val,
+        transactions: [
+          { id: Date.now().toString(), type: 'deposit' as const, title: `存入 [${currentBank?.shortName}]`, amount: val, time: '刚才' },
+          ...(currentAccount.transactions || [])
+        ],
+      },
+    };
+    saveAccounts(updated);
+    setAmountInput('');
+    showToast(`成功存入 ${val.toLocaleString()} ₽ 储蓄金！`);
+  };
+
+  // 取款处理
+  const handleWithdraw = () => {
+    if (!selectedBankId || !currentAccount) return;
+    const val = parseInt(amountInput, 10);
+    if (isNaN(val) || val <= 0) {
+      showToast('请输入有效的取款金额');
+      return;
+    }
+    if (val > currentAccount.deposit) {
+      showToast('该银行账户储蓄余额不足！');
+      return;
+    }
+
+    const updated = {
+      ...accounts,
+      [selectedBankId]: {
+        ...currentAccount,
+        deposit: currentAccount.deposit - val,
+        transactions: [
+          { id: Date.now().toString(), type: 'withdraw' as const, title: `从 [${currentBank?.shortName}] 支取现金`, amount: -val, time: '刚才' },
+          ...(currentAccount.transactions || [])
+        ],
+      },
+    };
+    saveAccounts(updated);
+    setCoins(prev => prev + val);
+    setAmountInput('');
+    showToast(`成功支取 ${val.toLocaleString()} ₽ 现金！`);
+  };
+
+  // 申请贷款
+  const handleApplyLoan = (loanAmount: number) => {
+    if (!selectedBankId || !currentAccount || !currentBank) return;
+    if (currentAccount.loan + loanAmount > currentBank.maxLoan) {
+      showToast(`超出本行最高信贷额度 (${currentBank.maxLoan.toLocaleString()} ₽)！`);
+      return;
+    }
+
+    const updated = {
+      ...accounts,
+      [selectedBankId]: {
+        ...currentAccount,
+        loan: currentAccount.loan + loanAmount,
+        transactions: [
+          { id: Date.now().toString(), type: 'loan' as const, title: `申请 [${currentBank.shortName}] 信贷放款`, amount: loanAmount, time: '刚才' },
+          ...(currentAccount.transactions || [])
+        ],
+      },
+    };
+    saveAccounts(updated);
+    setCoins(prev => prev + loanAmount);
+    showToast(`成功贷款 ${loanAmount.toLocaleString()} ₽，资金已入账！`);
+  };
+
+  // 归还贷款
+  const handleRepayLoan = () => {
+    if (!selectedBankId || !currentAccount || !currentBank) return;
+    const val = parseInt(amountInput, 10);
+    if (isNaN(val) || val <= 0) {
+      showToast('请输入有效的还款金额');
+      return;
+    }
+    if (val > coins) {
+      showToast('现金不足，无法还款！');
+      return;
+    }
+    const repayVal = Math.min(val, currentAccount.loan);
+    if (repayVal <= 0) {
+      showToast('本行当前没有待还贷款！');
+      return;
+    }
+
+    setCoins(prev => prev - repayVal);
+    const updated = {
+      ...accounts,
+      [selectedBankId]: {
+        ...currentAccount,
+        loan: currentAccount.loan - repayVal,
+        transactions: [
+          { id: Date.now().toString(), type: 'repay' as const, title: `归还 [${currentBank.shortName}] 信贷欠款`, amount: -repayVal, time: '刚才' },
+          ...(currentAccount.transactions || [])
+        ],
+      },
+    };
+    saveAccounts(updated);
+    setAmountInput('');
+    showToast(`成功归还贷款 ${repayVal.toLocaleString()} ₽！`);
+  };
+
+  // 计算多账户总资产
+  const accountList = Object.values(accounts) as BankAccountData[];
+  const totalDepositAll = accountList.reduce((acc, curr) => acc + (curr.opened ? curr.deposit : 0), 0);
+  const totalLoanAll = accountList.reduce((acc, curr) => acc + (curr.opened ? curr.loan : 0), 0);
+  const openedBankCount = accountList.filter(a => a.opened).length;
+
+  return (
+    <div className="absolute inset-0 bg-[#252632] flex flex-col z-50 animate-in slide-in-from-bottom-4 duration-200 overflow-hidden text-white">
+      {toastMsg && (
+        <div className="absolute top-22 left-1/2 -translate-x-1/2 z-50 bg-black/95 text-yellow-300 border-2 border-yellow-500 text-xs font-black px-4 py-2 rounded-xl shadow-[0_4px_0_#000] animate-in fade-in slide-in-from-top-2 duration-200 text-center max-w-[85%]">
+          {toastMsg}
+        </div>
+      )}
+
+      {/* 帝国银行业顶栏 (Imperial Bank Vault Header) */}
+      <div className="relative w-full h-16 bg-[#181a24] border-b-2 border-black shadow-[0_4px_10px_rgba(0,0,0,0.5)] z-20 flex items-center justify-between px-4 flex-shrink-0">
+        {/* 左侧返回/切换按钮 */}
+        <button 
+          onClick={selectedBankId ? () => setSelectedBankId(null) : onClose} 
+          className="p-2 bg-[#2d2f3d] hover:bg-[#383b4e] border-2 border-black rounded-xl active:translate-y-0.5 shadow-[0_2px_0_#000] cursor-pointer text-white flex items-center justify-center transition-all z-10"
+        >
+          <ChevronLeft size={20} className="text-white drop-shadow" strokeWidth={3} />
+        </button>
+        
+        {/* 中央银行金库牌匾 */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-12">
+          <div className="bg-[#232635] border-2 border-amber-500/70 px-4 py-1.5 rounded-xl shadow-[0_3px_0_#000] flex items-center gap-2 max-w-[85%]">
+            <Landmark size={18} className="text-amber-400 flex-shrink-0" />
+            <span className="text-amber-300 text-xs sm:text-sm font-black tracking-wider truncate">
+              {currentBank ? currentBank.shortName : '银行'}
+            </span>
+          </div>
+        </div>
+
+        {/* 右侧占位保持对称 */}
+        <div className="w-9 z-10" />
+      </div>
+
+      {/* 主体区 */}
+      <div className="flex-1 overflow-y-auto pb-6 pt-5 px-4 space-y-4">
+        
+        {/* 1. 银行选择大厅视图 (当未选择具体银行时) */}
+        {!selectedBankId ? (
+          <div className="space-y-4">
+            {/* 总体资产卡片 */}
+            <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] relative">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="text-xs text-yellow-400 font-bold flex items-center gap-1">
+                    <Wallet size={14} /> 全域银行资产 (储蓄总额 + 现金)
+                  </div>
+                  <div className="text-white font-black text-2xl mt-1 tracking-wider font-mono">
+                    {(coins + totalDepositAll).toLocaleString()} <span className="text-sm font-bold text-yellow-400">₽</span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1.5">
+                  <span className="bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded border border-black shadow-[0_1px_0_#000]">
+                    已开立 {openedBankCount} / {BANK_LIST.length} 家银航
+                  </span>
+                  {onOpenWealthChart && (
+                    <button
+                      onClick={onOpenWealthChart}
+                      className="bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/50 text-[10px] font-black px-2 py-0.5 rounded-lg flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
+                    >
+                      <span>📊 个人资产全景</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-700/80 text-xs">
+                <div className="bg-[#21232e] p-2 rounded-xl border border-black">
+                  <span className="text-gray-400 text-[10px] block font-bold">身上现金</span>
+                  <span className="text-yellow-400 font-black font-mono text-xs">{coins.toLocaleString()} ₽</span>
+                </div>
+                <div className="bg-[#21232e] p-2 rounded-xl border border-black">
+                  <span className="text-gray-400 text-[10px] block font-bold">存款总额</span>
+                  <span className="text-emerald-400 font-black font-mono text-xs">{totalDepositAll.toLocaleString()} ₽</span>
+                </div>
+                <div className="bg-[#21232e] p-2 rounded-xl border border-black">
+                  <span className="text-gray-400 text-[10px] block font-bold">贷款总欠款</span>
+                  <span className="text-red-400 font-black font-mono text-xs">{totalLoanAll.toLocaleString()} ₽</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-xs font-black text-yellow-400 flex items-center gap-1.5 px-1">
+              <Building size={16} className="text-amber-400" /> 选择银行办理业务或开立新账户：
+            </div>
+
+            {/* 4 家银行列表 */}
+            <div className="space-y-3">
+              {BANK_LIST.map((bank) => {
+                const acc = accounts[bank.id];
+                const isOpened = acc && acc.opened;
+
+                return (
+                  <div 
+                    key={bank.id}
+                    className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] relative overflow-hidden transition-all hover:bg-[#343747]"
+                  >
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-white font-black text-sm">{bank.name}</h3>
+                        </div>
+                        <p className="text-gray-300 text-[11px] leading-relaxed max-w-[90%]">{bank.desc}</p>
+                      </div>
+
+                      <span className="bg-yellow-400 text-black text-[9px] font-black px-2 py-0.5 rounded border border-black shrink-0">
+                        {bank.badge}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 pt-2.5 border-t border-gray-700/80 flex items-center justify-between">
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="text-emerald-400 font-black flex items-center gap-1">
+                          <TrendingUp size={14} /> {bank.rate}
+                        </span>
+                        {isOpened && (
+                          <span className="text-amber-300 font-mono text-[11px] font-bold">
+                            卡号: {acc.cardNo}
+                          </span>
+                        )}
+                      </div>
+
+                      {isOpened ? (
+                        <button
+                          onClick={() => {
+                            setSelectedBankId(bank.id);
+                            setActiveTab('deposit');
+                          }}
+                          className="bg-amber-400 hover:bg-yellow-300 text-black font-black text-xs px-3.5 py-1.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer flex items-center gap-1 active:translate-y-0.5"
+                        >
+                          <span>进入银行</span>
+                          <ChevronRight size={14} />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleOpenAccount(bank)}
+                          className="bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs px-3.5 py-1.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer active:translate-y-0.5"
+                        >
+                          {bank.openFee === 0 ? '免费开立账户' : `开立账户 (${(bank.openFee/1000).toFixed(0)}k ₽)`}
+                        </button>
+                      )}
+                    </div>
+
+                    {isOpened && (
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] bg-[#21232e] p-2 rounded-xl border border-black">
+                        <div className="text-gray-300">
+                          存款余额: <span className="text-emerald-400 font-mono font-bold">{acc.deposit.toLocaleString()} ₽</span>
+                        </div>
+                        <div className="text-gray-300">
+                          信贷欠款: <span className="text-red-400 font-mono font-bold">{acc.loan.toLocaleString()} ₽</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          /* 2. 具体银行操作面板 (当选中某家银行时) */
+          <div className="space-y-4">
+            {/* 选中银行专属卡片 */}
+            <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] relative">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="text-xs text-yellow-400 font-black flex items-center gap-1">
+                    <Building size={14} /> {currentBank?.name}
+                  </div>
+                  <div className="text-white font-mono text-[11px] font-bold mt-0.5 text-gray-300">
+                    账户卡号：{currentAccount?.cardNo}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedBankId(null)}
+                  className="bg-[#21232e] text-yellow-300 hover:text-white text-[10px] font-black px-2.5 py-1 rounded-lg border border-black cursor-pointer shadow-[0_1px_0_#000]"
+                >
+                  切换银行
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-700/80 text-xs">
+                <div className="bg-[#21232e] p-2 rounded-xl border border-black">
+                  <span className="text-gray-300 text-[10px] block font-bold">本行定期储蓄</span>
+                  <span className="text-emerald-400 font-black font-mono text-sm">
+                    {currentAccount?.deposit.toLocaleString()} ₽
+                  </span>
+                </div>
+                <div className="bg-[#21232e] p-2 rounded-xl border border-black">
+                  <span className="text-gray-300 text-[10px] block font-bold">本行信贷欠款</span>
+                  <span className="text-red-400 font-black font-mono text-sm">
+                    {currentAccount?.loan.toLocaleString()} ₽
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 标签栏 */}
+            <div className="grid grid-cols-4 bg-[#21232e] p-1 rounded-xl border-2 border-black gap-1 shadow-[0_2px_0_#000]">
+              <button
+                onClick={() => setActiveTab('deposit')}
+                className={`py-2 text-[11px] font-black rounded-lg border transition-all cursor-pointer truncate ${
+                  activeTab === 'deposit'
+                    ? 'bg-amber-400 text-black border-black shadow-[0_1px_0_#000]'
+                    : 'text-gray-400 border-transparent hover:text-white'
+                }`}
+              >
+                存款理财
+              </button>
+              <button
+                onClick={() => setActiveTab('investment')}
+                className={`py-2 text-[11px] font-black rounded-lg border transition-all cursor-pointer truncate ${
+                  activeTab === 'investment'
+                    ? 'bg-amber-400 text-black border-black shadow-[0_1px_0_#000]'
+                    : 'text-gray-400 border-transparent hover:text-white'
+                }`}
+              >
+                专属基金
+              </button>
+              <button
+                onClick={() => setActiveTab('loan')}
+                className={`py-2 text-[11px] font-black rounded-lg border transition-all cursor-pointer truncate ${
+                  activeTab === 'loan'
+                    ? 'bg-amber-400 text-black border-black shadow-[0_1px_0_#000]'
+                    : 'text-gray-400 border-transparent hover:text-white'
+                }`}
+              >
+                信贷借还
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`py-2 text-[11px] font-black rounded-lg border transition-all cursor-pointer truncate ${
+                  activeTab === 'history'
+                    ? 'bg-amber-400 text-black border-black shadow-[0_1px_0_#000]'
+                    : 'text-gray-400 border-transparent hover:text-white'
+                }`}
+              >
+                账户流水
+              </button>
+            </div>
+
+            {/* 存款面板 */}
+            {activeTab === 'deposit' && (
+              <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-700 pb-2">
+                  <span className="text-white font-black text-xs flex items-center gap-1.5">
+                    <Landmark size={16} className="text-yellow-400" /> {currentBank?.shortName} 存款专区
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950 px-2 py-0.5 rounded border border-emerald-600">
+                    {currentBank?.rate}
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs text-gray-300 font-bold">
+                    <span>办理金币金额：</span>
+                    <span className="text-amber-300">身上现金: {coins.toLocaleString()} ₽</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      placeholder="请输入金额"
+                      value={amountInput}
+                      onChange={(e) => setAmountInput(e.target.value)}
+                      className="flex-1 bg-[#1b1c25] text-white font-black text-sm px-3 py-2 rounded-xl border-2 border-black focus:border-yellow-400 focus:outline-none font-mono"
+                    />
+                    <button
+                      onClick={() => setAmountInput(coins.toString())}
+                      className="bg-gray-700 hover:bg-gray-600 text-yellow-300 font-black text-xs px-3 rounded-xl border-2 border-black cursor-pointer shadow-[0_2px_0_#000]"
+                    >
+                      全部现金
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    {[10000, 50000, 100000, 500000].map((amt) => (
+                      <button
+                        key={amt}
+                        onClick={() => setAmountInput(amt.toString())}
+                        className="flex-1 bg-[#21232e] hover:bg-[#2e3142] text-gray-200 font-black text-[10px] py-1.5 rounded-lg border border-black cursor-pointer"
+                      >
+                        +{(amt / 10000)}万
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button
+                    onClick={handleDeposit}
+                    className="bg-emerald-500 hover:bg-emerald-400 text-black font-black py-3 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 transition-all text-xs cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>存入本行</span>
+                  </button>
+                  <button
+                    onClick={handleWithdraw}
+                    className="bg-amber-400 hover:bg-amber-300 text-black font-black py-3 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 transition-all text-xs cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>提取现金</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 基金理财 */}
+            {activeTab === 'investment' && (
+              <div className="space-y-3">
+                {[
+                  { title: `${currentBank?.shortName} 旗舰保本公债`, risk: '低风险', returnRate: '5.2% 年化', min: 10000, desc: '由该银行发行的政府信用担保公债。' },
+                  { title: '帝国跨境贸易高盈余基金', risk: '中风险', returnRate: '12.8% 年化', min: 50000, desc: '参与阿米诺斯与俄罗斯双边重工业机械贸易。' },
+                  { title: '前沿蒸汽能源与稀矿股票', risk: '高风险', returnRate: '28.5% 浮动', min: 100000, desc: '高杠杆能源股票投机，获得丰厚商业利润分红。' },
+                ].map((fund, idx) => (
+                  <div key={idx} className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3 shadow-[0_4px_0_#000] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-white font-black text-xs">{fund.title}</h4>
+                      <span className="text-[10px] bg-yellow-400 text-black font-black px-1.5 py-0.5 rounded border border-black">
+                        {fund.risk}
+                      </span>
+                    </div>
+                    <p className="text-gray-300 text-[11px] font-bold">{fund.desc}</p>
+                    <div className="flex items-center justify-between pt-1 border-t border-gray-700/80">
+                      <span className="text-emerald-400 font-black text-xs">预期收益: {fund.returnRate}</span>
+                      <button
+                        onClick={() => {
+                          if (coins < fund.min) {
+                            showToast(`身上现金不足以申购 (${fund.min.toLocaleString()} ₽)！`);
+                            return;
+                          }
+                          setCoins(prev => prev - fund.min);
+                          addTransactionForCurrent('investment', `申购 [${fund.title}]`, fund.min);
+                          showToast(`成功申购 [${fund.title}] ${fund.min.toLocaleString()} ₽！`);
+                        }}
+                        className="bg-yellow-400 hover:bg-yellow-300 text-black font-black text-[11px] px-3 py-1 rounded-lg border border-black shadow-[0_1px_0_#000] cursor-pointer"
+                      >
+                        申购 ({(fund.min/10000)}万)
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 信贷借还 */}
+            {activeTab === 'loan' && (
+              <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] space-y-4">
+                <div className="bg-[#21232e] p-3 rounded-xl border border-black space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400 font-bold">本行已借贷款：</span>
+                    <span className="text-red-400 font-black font-mono">{currentAccount?.loan.toLocaleString()} ₽</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400 font-bold">本行剩余可用额度：</span>
+                    <span className="text-emerald-400 font-black font-mono">
+                      {Math.max(0, (currentBank?.maxLoan || 1000000) - (currentAccount?.loan || 0)).toLocaleString()} ₽
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-gray-300 text-xs font-bold block">快捷申请信贷：</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[50000, 200000, 500000].map((amt) => (
+                      <button
+                        key={amt}
+                        onClick={() => handleApplyLoan(amt)}
+                        className="bg-amber-400 hover:bg-amber-300 text-black font-black text-xs py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer"
+                      >
+                        贷款 {(amt / 10000)}万 ₽
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {currentAccount && currentAccount.loan > 0 && (
+                  <div className="pt-2 border-t border-gray-700/80 space-y-2">
+                    <label className="text-gray-300 text-xs font-bold block">归还本行贷款：</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        placeholder="输入还款金额"
+                        value={amountInput}
+                        onChange={(e) => setAmountInput(e.target.value)}
+                        className="flex-1 bg-[#1b1c25] text-white font-black text-xs px-3 py-2 rounded-xl border-2 border-black focus:border-yellow-400 focus:outline-none font-mono"
+                      />
+                      <button
+                        onClick={handleRepayLoan}
+                        className="bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs px-4 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer"
+                      >
+                        归还欠款
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 交易明细 */}
+            {activeTab === 'history' && (
+              <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3 shadow-[0_4px_0_#000] space-y-2">
+                <div className="text-white font-black text-xs border-b border-gray-700 pb-2 flex items-center justify-between">
+                  <span>{currentBank?.shortName} 交易流水记录</span>
+                  <span className="text-gray-400 text-[10px]">共 {currentAccount?.transactions?.length || 0} 条</span>
+                </div>
+                <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                  {currentAccount?.transactions?.map((tx) => (
+                    <div key={tx.id} className="bg-[#21232e] border border-black rounded-xl p-2.5 flex items-center justify-between">
+                      <div>
+                        <div className="text-white font-black text-xs">{tx.title}</div>
+                        <div className="text-gray-400 text-[10px] font-mono mt-0.5">{tx.time}</div>
+                      </div>
+                      <div className={`font-black font-mono text-xs ${tx.amount >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {tx.amount >= 0 ? `+${tx.amount.toLocaleString()}` : tx.amount.toLocaleString()} ₽
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('role');
   const [showShop, setShowShop] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showBank, setShowBank] = useState(false);
+  const [showStock, setShowStock] = useState(false);
+  const [showWealthChart, setShowWealthChart] = useState(false);
+  const [showGenderModal, setShowGenderModal] = useState(false);
+  const [showHospital, setShowHospital] = useState(false);
+  const [showJob, setShowJob] = useState(false);
+  const [showHousing, setShowHousing] = useState(false);
+  const [showVisa, setShowVisa] = useState(false);
+  const [showImmigrate, setShowImmigrate] = useState(false);
+  const [showBirthModal, setShowBirthModal] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const [isRegistered, setIsRegistered] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('amigo_is_registered') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const [gender, setGender] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('amigo_gender') || null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const [birthRegisteredYear, setBirthRegisteredYear] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('amigo_birth_registered_year');
+      return saved ? parseInt(saved, 10) : 1870;
+    } catch (e) {
+      return 1870;
+    }
+  });
+
+  const [authUser, setAuthUser] = useState<FirebaseUser | AppUser | null>(() => {
+    try {
+      const stored = localStorage.getItem('amigo_active_user');
+      if (stored) return JSON.parse(stored);
+    } catch (e) {}
+    return null;
+  });
+  const [authLoading, setAuthLoading] = useState(true);
+  const [playerName, setPlayerName] = useState(() => {
+    try {
+      const stored = localStorage.getItem('amigo_active_user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u.displayName) return u.displayName;
+      }
+    } catch (e) {}
+    return 'AmiGo·玩家';
+  });
+
+  React.useEffect(() => {
+    let resolved = false;
+
+    // Protection timer: ensure authLoading is set to false within 2.5s (GFW network protection)
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        setAuthLoading(false);
+      }
+    }, 2500);
+
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setAuthUser(user);
+        if (user.displayName || user.email) {
+          setPlayerName(user.displayName || user.email?.split('@')[0] || 'AmiGo·玩家');
+        }
+      }
+      if (!resolved) {
+        resolved = true;
+        setAuthLoading(false);
+      }
+    });
+
+    return () => {
+      clearTimeout(timer);
+      unsub();
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error(e);
+    }
+    setAuthUser(null);
+    try {
+      localStorage.removeItem('amigo_active_user');
+    } catch (e) {}
+  };
+
   const [coins, setCoins] = useState(1047650);
-  const [gems, setGems] = useState(20420);
+  const [health, setHealth] = useState(100);
   const [equippedClothing, setEquippedClothing] = useState('default');
+
+  const [gameYear, setGameYear] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('amigo_game_year');
+      return saved ? parseInt(saved, 10) : 1870;
+    } catch (e) {
+      return 1870;
+    }
+  });
+
+  const [gameMonth, setGameMonth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('amigo_game_month');
+      return saved ? parseInt(saved, 10) : 1;
+    } catch (e) {
+      return 1;
+    }
+  });
+
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleNextMonth = () => {
+    let nextM = gameMonth + 1;
+    let nextY = gameYear;
+    if (nextM > 12) {
+      nextM = 1;
+      nextY += 1;
+    }
+    setGameMonth(nextM);
+    setGameYear(nextY);
+    try {
+      localStorage.setItem('amigo_game_year', nextY.toString());
+      localStorage.setItem('amigo_game_month', nextM.toString());
+    } catch (e) {}
+
+    const monthlyStipend = 1500;
+
+    // 结算名下出租房产租金收益
+    let propertyRentIncome = 0;
+    let comfortBonusTotal = 0;
+    try {
+      const savedProps = localStorage.getItem('amigo_owned_properties');
+      if (savedProps) {
+        const props = JSON.parse(savedProps);
+        if (Array.isArray(props)) {
+          let updated = false;
+          props.forEach((p: any) => {
+            if (p.isRentedOut && p.rentPerMonth > 0) {
+              propertyRentIncome += p.rentPerMonth;
+              p.totalRentCollected = (p.totalRentCollected || 0) + p.rentPerMonth;
+              updated = true;
+            }
+            if (p.isPrimaryResidence && !p.isRentedOut) {
+              comfortBonusTotal += (p.comfortBonus || 5);
+            }
+          });
+          if (updated) {
+            localStorage.setItem('amigo_owned_properties', JSON.stringify(props));
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 结算租住支出
+    let rentExpense = 0;
+    try {
+      const savedRental = localStorage.getItem('amigo_current_rental');
+      if (savedRental) {
+        const rental = JSON.parse(savedRental);
+        if (rental && rental.monthlyRent) {
+          rentExpense = rental.monthlyRent;
+          comfortBonusTotal += (rental.comfortBonus || 2);
+        }
+      }
+    } catch (e) {}
+
+    const netChange = monthlyStipend + propertyRentIncome - rentExpense;
+    setCoins((prev) => Math.max(0, prev + netChange));
+
+    if (comfortBonusTotal > 0) {
+      setHealth((prev) => Math.min(100, prev + comfortBonusTotal));
+    }
+
+    const mStr = nextM < 10 ? `0${nextM}` : `${nextM}`;
+    let extraMsg = '';
+    if (propertyRentIncome > 0) extraMsg += ` | 房租净收 +${propertyRentIncome} ₽`;
+    if (rentExpense > 0) extraMsg += ` | 租金扣除 -${rentExpense} ₽`;
+    showToast(`🗓️ 已步入 ${nextY}.${mStr}！月度基本俸禄 +${monthlyStipend} ₽${extraMsg}`);
+  };
+
+  const currentAge = isRegistered ? 8 + Math.max(0, gameYear - birthRegisteredYear) : 8;
+
+  const handleRegisterBirth = (name: string) => {
+    const generatedGender = Math.random() > 0.5 ? '男' : '女';
+    setIsRegistered(true);
+    setGender(generatedGender);
+    setBirthRegisteredYear(gameYear);
+    setPlayerName(name);
+    try {
+      localStorage.setItem('amigo_is_registered', 'true');
+      localStorage.setItem('amigo_gender', generatedGender);
+      localStorage.setItem('amigo_birth_registered_year', gameYear.toString());
+      localStorage.setItem('amigo_player_name', name);
+    } catch (e) {}
+    showToast(`🎉 出生登记成功！性别：${generatedGender}，初始年龄：8岁`);
+    return { gender: generatedGender, age: 8 };
+  };
+
+  const handleResetLife = () => {
+    // 1. 重置出生登记与角色身份
+    setIsRegistered(false);
+    setGender(null);
+    setBirthRegisteredYear(1870);
+    setPlayerName('阿米诺斯市民');
+
+    // 2. 重置角色形象与服装
+    setEquippedClothing('default');
+    setOwnedClothes(['default']);
+    setAvatarSource('cartoon');
+    setBilibiliAvatar(null);
+
+    // 3. 重置属性与资产
+    setCoins(10000);
+    setHealth(100);
+    setGameYear(1870);
+    setGameMonth(1);
+    setBankDeposit(500000);
+    setBankLoan(0);
+    setFreeDrawUsed(false);
+
+    // 4. 清理本地存储中相关持久化数据
+    try {
+      localStorage.removeItem('amigo_is_registered');
+      localStorage.removeItem('amigo_gender');
+      localStorage.removeItem('amigo_birth_registered_year');
+      localStorage.removeItem('amigo_player_name');
+      localStorage.removeItem('amigo_coins');
+      localStorage.removeItem('amigo_equipped_clothing');
+      localStorage.removeItem('amigo_owned_clothes');
+      localStorage.removeItem('amigo_avatar_source');
+      localStorage.removeItem('amigo_game_year');
+      localStorage.removeItem('amigo_game_month');
+      localStorage.removeItem('amigo_bank_deposit');
+      localStorage.removeItem('amigo_bank_loan');
+      localStorage.removeItem('amigo_multi_bank_accounts_v1');
+      localStorage.removeItem('amigo_name_change_timestamps');
+      localStorage.removeItem('amigo_political_violation_count');
+      localStorage.removeItem('amigo_name_freeze_until');
+      localStorage.removeItem('amigo_political_violation_logs');
+      localStorage.removeItem('amigo_owned_properties');
+      localStorage.removeItem('amigo_current_rental');
+      localStorage.removeItem('amigo_permanent_residencies');
+    } catch (e) {}
+
+    showToast('✨ 人生已重置！角色与所有状态已恢复初始状态');
+  };
+
+  const [bilibiliAvatar, setBilibiliAvatar] = useState<string | null>(null);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [avatarSource, setAvatarSource] = useState<string>(() => {
+    try {
+      return localStorage.getItem('amigo_avatar_source') || 'cartoon';
+    } catch (e) {
+      return 'cartoon';
+    }
+  });
+
+  const renderAvatarContent = () => {
+    if (avatarSource === 'social' && (authUser?.photoURL || bilibiliAvatar)) {
+      return (
+        <img 
+          src={authUser?.photoURL || bilibiliAvatar || ''} 
+          alt="User Avatar" 
+          className="w-full h-full object-cover rounded-xl" 
+        />
+      );
+    }
+    if (avatarSource.startsWith('preset_')) {
+      const preset = PRESET_AVATARS.find((p) => p.id === avatarSource);
+      if (preset) {
+        return (
+          <div className={`w-full h-full ${preset.bg} rounded-xl flex items-center justify-center text-3xl shadow-inner`}>
+            {preset.icon}
+          </div>
+        );
+      }
+    }
+    return <CartoonCharacter clothing={equippedClothing} />;
+  };
   const [ownedClothes, setOwnedClothes] = useState(['default']);
+
+  const [bankDeposit, setBankDeposit] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('amigo_bank_deposit');
+      return saved ? parseInt(saved, 10) : 500000;
+    } catch (e) {
+      return 500000;
+    }
+  });
+
+  const [bankLoan, setBankLoan] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('amigo_bank_loan');
+      return saved ? parseInt(saved, 10) : 0;
+    } catch (e) {
+      return 0;
+    }
+  });
 
   const [freeDrawUsed, setFreeDrawUsed] = useState(false);
 
+  if (authLoading) {
+    return (
+      <div className="h-[100dvh] w-full bg-[#0d0e15] flex justify-center items-center text-white font-sans">
+        <div className="flex flex-col items-center gap-3">
+          <RefreshCw size={28} className="animate-spin text-amber-400" />
+          <span className="text-xs font-black text-gray-300">正在与 Firebase 身份验证中心建立连接...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Mandatory Authentication Gate: Must log in or register before accessing game
+  if (!authUser) {
+    return (
+      <AuthScreen
+        onLoginSuccess={(user) => {
+          if (user && (user.displayName || user.email)) {
+            setPlayerName(user.displayName || user.email?.split('@')[0] || 'AmiGo·玩家');
+          }
+        }}
+      />
+    );
+  }
+
+  // Email Verification Gate: Block unverified password-registered email accounts
+  const isPasswordAccount = Array.isArray(authUser.providerData)
+    ? authUser.providerData.some((p) => p?.providerId === 'password')
+    : false;
+  if (authUser.email && !authUser.emailVerified && isPasswordAccount) {
+    return (
+      <EmailVerificationScreen
+        user={authUser}
+        onVerified={() => {
+          if (auth.currentUser) {
+            setAuthUser({ ...auth.currentUser });
+          }
+        }}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   return (
-    <div className="h-[100dvh] w-full bg-black flex justify-center font-sans overflow-hidden">
-      <div className="w-full max-w-[480px] h-full bg-[#1c1d25] flex flex-col relative shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
-         <TopBar coins={coins} gems={gems} />
+    <div className="h-[100dvh] w-full bg-[#1c1d25] flex justify-center font-sans overflow-hidden">
+      <div className="w-full h-full flex flex-col relative shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
+        {toast && (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[100] bg-[#1e202e]/95 backdrop-blur-md text-emerald-300 border border-emerald-500/30 text-xs font-bold px-4 py-2.5 rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.6)] animate-in fade-in slide-in-from-top-3 duration-200 text-center max-w-[85%] pointer-events-none flex items-center gap-2">
+            <span>{toast}</span>
+          </div>
+        )}
+         <TopBar 
+           coins={coins} 
+           playerName={playerName} 
+           onOpenProfile={() => setShowProfile(true)} 
+           onOpenBank={() => setShowBank(true)}
+           onOpenWealthChart={() => setShowWealthChart(true)}
+           onOpenAuth={() => setShowAuthModal(true)}
+           authUser={authUser}
+           avatarContent={renderAvatarContent()}
+         />
          
-         {activeTab === 'role' && <RoleTab onOpenShop={() => setShowShop(true)} equippedClothing={equippedClothing} coins={coins} />}
-         {activeTab === 'bag' && <FuncTab />}
-         {activeTab === 'combat' && <SimTab />}
-         {activeTab === 'map' && <MapTab />}
-         {activeTab !== 'role' && activeTab !== 'map' && activeTab !== 'bag' && activeTab !== 'combat' && (
-           <div className="flex-1 overflow-y-auto bg-[#252632] pb-6 flex flex-col">
-             <div className="bg-[#3a3b46] text-white text-center pt-3 pb-2 font-bold text-xl border-b-2 border-black">
-               {TABS.find(t => t.id === activeTab)?.label}
-             </div>
-             <div className="flex-1 flex justify-center items-center text-gray-500 font-bold flex-col gap-4">
-                <Store size={48} className="opacity-20" />
-                <span>该页面正在建设中...</span>
-             </div>
-           </div>
+         {activeTab === 'role' && (
+           <RoleTab
+             onOpenShop={() => setShowShop(true)}
+             onOpenBank={() => setShowBank(true)}
+             onOpenWealthChart={() => setShowWealthChart(true)}
+             onOpenHospital={() => setShowHospital(true)}
+             onOpenGender={() => setShowGenderModal(true)}
+             onOpenCalendar={() => setShowCalendar(true)}
+             onNextMonth={handleNextMonth}
+             onGoToBirthRegistration={() => setShowBirthModal(true)}
+             equippedClothing={equippedClothing}
+             coins={coins}
+             health={health}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
+             isRegistered={isRegistered}
+             gender={gender}
+             age={currentAge}
+           />
          )}
+         {activeTab === 'bag' && (
+           <FuncTab
+             onOpenBank={() => setShowBank(true)}
+             onOpenStock={() => setShowStock(true)}
+             onOpenHospital={() => setShowHospital(true)}
+             onOpenJob={() => setShowJob(true)}
+             onOpenBirth={() => setShowBirthModal(true)}
+             onOpenGender={() => setShowGenderModal(true)}
+             onOpenHousing={() => setShowHousing(true)}
+             onOpenVisa={() => setShowVisa(true)}
+             onOpenImmigrate={() => setShowImmigrate(true)}
+           />
+         )}
+         {activeTab === 'combat' && (
+           <SimTab
+             isRegistered={isRegistered}
+             health={health}
+             age={currentAge}
+             playerName={playerName}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
+             onGoToBirthRegistration={() => setShowBirthModal(true)}
+             onResetLife={handleResetLife}
+           />
+         )}
+         {activeTab === 'log' && <LogTab />}
+         {activeTab === 'map' && <MapTab />}
          
          <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
          
+         {/* Birth Registration Overlay */}
+         {showBirthModal && (
+           <BirthModal
+             onClose={() => setShowBirthModal(false)}
+             isRegistered={isRegistered}
+             playerName={playerName}
+             setPlayerName={setPlayerName}
+             gender={gender}
+             age={currentAge}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
+             coins={coins}
+             setCoins={setCoins}
+             health={health}
+             setHealth={setHealth}
+             onRegisterBirth={handleRegisterBirth}
+             onOpenGender={() => {
+               setShowBirthModal(false);
+               setShowGenderModal(true);
+             }}
+             onOpenHousing={() => {
+               setShowBirthModal(false);
+               setShowHousing(true);
+             }}
+             onOpenVisa={() => {
+               setShowBirthModal(false);
+               setShowVisa(true);
+             }}
+           />
+         )}
+
+         {/* Calendar Overlay */}
+         {showCalendar && (
+           <CalendarModal
+             onClose={() => setShowCalendar(false)}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
+             onNextMonth={handleNextMonth}
+             coins={coins}
+           />
+         )}
+
+         {/* Hospital Overlay */}
+         {showHospital && (
+           <HospitalModal
+             onClose={() => setShowHospital(false)}
+             coins={coins}
+             setCoins={setCoins}
+             health={health}
+             setHealth={setHealth}
+           />
+         )}
+
+         {/* Bank Overlay */}
+         {showBank && (
+           <BankModal
+             onClose={() => setShowBank(false)}
+             coins={coins}
+             setCoins={setCoins}
+             bankDeposit={bankDeposit}
+             setBankDeposit={setBankDeposit}
+             bankLoan={bankLoan}
+             setBankLoan={setBankLoan}
+             onOpenWealthChart={() => setShowWealthChart(true)}
+           />
+         )}
+
+         {/* Stock Market Overlay */}
+         {showStock && (
+           <StockModal
+             onClose={() => setShowStock(false)}
+             coins={coins}
+             setCoins={setCoins}
+           />
+         )}
+
+         {/* Assets Interface & Wealth Allocation View */}
+         {showWealthChart && (
+           <WealthChartModal
+             onClose={() => setShowWealthChart(false)}
+             coins={coins}
+             bankDeposit={bankDeposit}
+             bankLoan={bankLoan}
+             onOpenBank={() => {
+               setShowWealthChart(false);
+               setShowBank(true);
+             }}
+             onOpenStock={() => {
+               setShowWealthChart(false);
+               setShowStock(true);
+             }}
+             onOpenHousing={() => {
+               setShowWealthChart(false);
+               setShowHousing(true);
+             }}
+           />
+         )}
+
+         {/* Gender Rights & Identity Affirmation Overlay */}
+         {showGenderModal && (
+           <GenderRightsModal
+             onClose={() => setShowGenderModal(false)}
+             isRegistered={isRegistered}
+             playerName={playerName}
+             gender={gender}
+             setGender={(newGender) => {
+               setGender(newGender);
+               try {
+                 localStorage.setItem('amigo_gender', newGender);
+               } catch (e) {}
+             }}
+             age={currentAge}
+             coins={coins}
+             setCoins={setCoins}
+             gameYear={gameYear}
+             onOpenBirth={() => {
+               setShowGenderModal(false);
+               setShowBirthModal(true);
+             }}
+           />
+         )}
+
+         {/* Profile Overlay */}
+         {showProfile && (
+           <ProfileModal
+             onClose={() => setShowProfile(false)}
+             playerName={playerName}
+             setPlayerName={setPlayerName}
+             coins={coins}
+             setCoins={setCoins}
+             equippedClothing={equippedClothing}
+             onOpenAuth={() => {
+               setShowProfile(false);
+               setShowAuthModal(true);
+             }}
+             onLogout={handleLogout}
+             onResetLife={handleResetLife}
+             authUser={authUser}
+             avatarSource={avatarSource}
+             setAvatarSource={setAvatarSource}
+             bilibiliAvatar={bilibiliAvatar}
+             setBilibiliAvatar={setBilibiliAvatar}
+             isAvatarModalOpen={isAvatarModalOpen}
+             setIsAvatarModalOpen={setIsAvatarModalOpen}
+             renderAvatarContent={renderAvatarContent}
+           />
+         )}
+
          {/* Shop Overlay */}
          {showShop && (
            <ShopModal 
              onClose={() => setShowShop(false)} 
              coins={coins} 
-             gems={gems} 
              setCoins={setCoins} 
-             setGems={setGems} 
              ownedClothes={ownedClothes} 
              setOwnedClothes={setOwnedClothes} 
              equippedClothing={equippedClothing} 
              setEquippedClothing={setEquippedClothing}
              freeDrawUsed={freeDrawUsed}
              setFreeDrawUsed={setFreeDrawUsed}
+           />
+         )}
+
+         {/* Job / Employment Overlay */}
+         {showJob && (
+           <JobModal
+             onClose={() => setShowJob(false)}
+             coins={coins}
+             setCoins={setCoins}
+           />
+         )}
+
+         {/* Housing & Real Estate Overlay */}
+         {showHousing && (
+           <HousingModal
+             onClose={() => setShowHousing(false)}
+             coins={coins}
+             setCoins={setCoins}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
+             isRegistered={isRegistered}
+             playerName={playerName}
+             health={health}
+             setHealth={setHealth}
+             onOpenBirth={() => {
+               setShowHousing(false);
+               setShowBirthModal(true);
+             }}
+           />
+         )}
+
+                  {/* Visa & Travel Overlay */}
+         {showVisa && (
+           <VisaModal
+             onClose={() => setShowVisa(false)}
+             coins={coins}
+             setCoins={setCoins}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
+             isRegistered={isRegistered}
+             playerName={playerName}
+             health={health}
+             setHealth={setHealth}
+             onOpenBirth={() => {
+               setShowVisa(false);
+               setShowBirthModal(true);
+             }}
+           />
+         )}
+
+         {/* Permanent Residency & Immigration Overlay */}
+         {showImmigrate && (
+           <ImmigrationModal
+             onClose={() => setShowImmigrate(false)}
+             coins={coins}
+             setCoins={setCoins}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
+             isRegistered={isRegistered}
+             playerName={playerName}
+             health={health}
+             setHealth={setHealth}
+             onOpenBirth={() => {
+               setShowImmigrate(false);
+               setShowBirthModal(true);
+             }}
+           />
+         )}
+
+         {/* Firebase Authentication Overlay */}
+         {showAuthModal && (
+           <AuthModal
+             onClose={() => setShowAuthModal(false)}
+             onUserChange={(user) => setAuthUser(user)}
+             setPlayerName={setPlayerName}
            />
          )}
       </div>

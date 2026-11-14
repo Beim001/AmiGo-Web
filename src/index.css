@@ -1,6 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Yellowtail&family=Dancing+Script:wght@700&family=Pacifico&family=Caveat:wght@700&display=swap');
 @import "tailwindcss";
 
-body {
-  font-family: 'ZCOOL KuaiLe', sans-serif;
+:root {
+  --font-sans: 'ZCOOL KuaiLe', cursive, sans-serif;
+}
+
+*, ::before, ::after {
+  font-family: 'ZCOOL KuaiLe', cursive, sans-serif;
+}
+
+html, body, button, input, select, textarea {
+  font-family: 'ZCOOL KuaiLe', cursive, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Special font rule for AmiGo Lite calligraphy header to override global default */
+.font-amigo-title {
+  font-family: 'Yellowtail', 'Dancing Script', 'Pacifico', 'Caveat', cursive !important;
 }
