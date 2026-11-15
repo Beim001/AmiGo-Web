@@ -17,6 +17,8 @@ import {
   BadgeCheck,
 } from 'lucide-react';
 import { validatePlayerName } from '../utils/sensitiveWords';
+import { CharacterAvatar } from './CharacterAvatar';
+import { Appearance, APPEARANCE_PARTS, randomAppearance } from '../lib/appearance';
 
 export interface BirthModalProps {
   onClose: () => void;
@@ -32,7 +34,7 @@ export interface BirthModalProps {
   health?: number;
   setHealth?: React.Dispatch<React.SetStateAction<number>>;
   /** 出生登记：name 为「名·姓」或只有名；preferredSurname 为玩家填写的姓（留空则随机家族姓） */
-  onRegisterBirth: (name: string, preferredSurname?: string) => { gender: string; age: number; classLabel?: string; surname?: string; name?: string };
+  onRegisterBirth: (name: string, preferredSurname?: string, appearance?: Appearance) => { gender: string; age: number; classLabel?: string; surname?: string; name?: string };
   onOpenGender?: () => void;
   onOpenHousing?: () => void;
   onOpenVisa?: () => void;
@@ -62,6 +64,9 @@ export const BirthModal: React.FC<BirthModalProps> = ({
   const [inputName, setInputName] = useState(splitName(initialName).given);
   const [inputSurname, setInputSurname] = useState(isRegistered ? splitName(initialName).surname : '');
   const fullNameOf = (given: string, surname: string) => (surname ? `${given}·${surname}` : given);
+  // 捏脸（第 61 题）：出生登记时自由选择；性别登记时才随机决定，胡子只对男性显示
+  const [face, setFace] = useState<Appearance>(() => randomAppearance(null));
+  const cycle = (key: keyof Appearance, n: number, dir: number) => setFace((f) => ({ ...f, [key]: (((f[key] as number) ?? 0) + dir + n) % n }));
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
@@ -129,7 +134,7 @@ export const BirthModal: React.FC<BirthModalProps> = ({
 
     // 首次登记完全随机确定性别
     if (!isRegistered) {
-      const regRes = onRegisterBirth(trimmed, surname);
+      const regRes = onRegisterBirth(trimmed, surname, face);
       if (regRes.name) {
         const parts = splitName(regRes.name);
         setInputName(parts.given);
@@ -369,6 +374,41 @@ export const BirthModal: React.FC<BirthModalProps> = ({
                   </div>
                 )}
               </div>
+
+              {!isRegistered && (
+                <div className="bg-[#232635] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-black text-white">捏脸</span>
+                    <button
+                      type="button"
+                      onClick={() => setFace(randomAppearance(null))}
+                      className="text-[11px] bg-[#181a24] hover:bg-[#2b2e40] text-gray-300 font-bold px-2.5 py-1 rounded-lg border border-black cursor-pointer"
+                    >
+                      随机
+                    </button>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="w-24 h-28 bg-[#181a24] rounded-xl border border-black relative shrink-0">
+                      <CharacterAvatar clothing="default" appearance={face} age={20} gender={face.beard > 0 ? '男' : null} />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      {APPEARANCE_PARTS.map((p) => (
+                        <div key={p.key} className="flex items-center gap-1 text-[11px] font-black text-white">
+                          <span className="w-8 text-gray-400">{p.label}</span>
+                          <button type="button" onClick={() => cycle(p.key, p.options.length, -1)} className="px-1.5 bg-[#181a24] rounded border border-black cursor-pointer">
+                            ◀
+                          </button>
+                          <span className="flex-1 text-center">{p.options[face[p.key] ?? 0]}</span>
+                          <button type="button" onClick={() => cycle(p.key, p.options.length, 1)} className="px-1.5 bg-[#181a24] rounded border border-black cursor-pointer">
+                            ▶
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-500 font-bold mt-2">预览为成年后的样子。五官与肤色出生后不能再改，发型、发色、胡子可以在商城的理发店修改。胡子只有男性显示；少数人天生「倾国倾城」，会使用特殊外貌。</p>
+                </div>
+              )}
 
               {/* Notice Card */}
               <div className="bg-[#232635] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] text-xs text-gray-300 space-y-2">

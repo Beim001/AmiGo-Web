@@ -28,6 +28,9 @@ interface DevToolsPanelProps {
   simpleMode: boolean;
   onToggleSimpleMode: () => void;
   /** 快进时智能安排（自动看病、推演、送礼与人生选择） */
+  /** 外貌（第 61 题） */
+  onRandomAppearance: () => void;
+  onToggleBeauty: () => void;
   /** 抗体（第 53 题） */
   antibodyText: string;
   onGrantAllAntibodies: () => void;
@@ -80,6 +83,8 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
   onToggleSmartFastForward,
   antibodyText,
   onGrantAllAntibodies,
+  onRandomAppearance,
+  onToggleBeauty,
   onClearAntibodies,
   onClearAchievements,
   giftTotal,
@@ -315,6 +320,15 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
             </button>
           </div>
           <div className="text-[9px] text-gray-500 font-bold mt-1.5">好感 ≤30% 的父母不给零花；在职（含童工）时改发俸禄。</div>
+          <div className={`${label} mt-2`}>外貌</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button disabled={!isRegistered} onClick={onRandomAppearance} className={btn}>
+              随机外貌
+            </button>
+            <button disabled={!isRegistered} onClick={onToggleBeauty} className={btn}>
+              切换倾国倾城
+            </button>
+          </div>
           <div className={`${label} mt-2`}>抗体：{antibodyText}</div>
           <div className="grid grid-cols-2 gap-1.5">
             <button disabled={!isRegistered} onClick={onGrantAllAntibodies} className={btn}>

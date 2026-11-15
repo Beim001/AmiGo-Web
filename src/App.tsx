@@ -13,11 +13,14 @@ import { SimTab } from './components/SimTab';
 import { LogTab } from './components/LogTab';
 import { FamilyTab } from './components/FamilyTab';
 import { MarriageModal } from './components/MarriageModal';
-import { FamilyState, INITIAL_FAMILY_STATE, demoteFamily, monthlyFamilyLife, childLifespan, ageAt, checkCoup, generateSpouseCandidates, marry, MARRIAGE_FEE, MARRIAGE_MIN_AGE, SPOUSE_MEMBER_ID, canInteract, applyInteraction, GIFT_COST, promoteFamily, getHeirlooms, addHeirloom, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
+import { FamilyState, INITIAL_FAMILY_STATE, demoteFamily, monthlyFamilyLife, childLifespan, ageAt, checkCoup, INTIMACY_MULTIPLIER, generateSpouseCandidates, marry, MARRIAGE_FEE, MARRIAGE_MIN_AGE, SPOUSE_MEMBER_ID, canInteract, applyInteraction, GIFT_COST, promoteFamily, getHeirlooms, addHeirloom, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
 import { randomTraits, affinityBonus, withBirthPrivilege, rollMaintenance, fertileMaxAge, MAINTENANCE_COST, FERTILITY_TRAITS, SIMPLE_MAINTENANCE_CHANCE, SIMPLE_MAINTENANCE_RESERVE, PLAYER_TRAITS_KEY, diseaseTraitMultiplier, decayReduction, salaryMultiplier, depositInterestMultiplier, traitNames, traitById } from './lib/traits';
 import { REPUTATION_KEY, REP, HIGH_SALARY, clampReputation, reputationLevel, CHARITY_KEY, CHARITY_UNIT, charityRemaining } from './lib/reputation';
 import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, formatRealTime, unlockAllForTesting, clearAchievementsForTesting, hasAllAchievements, CREDITS_SEEN_KEY, CREDITS_RANK_KEY, readGiftsGiven, recordGiftsGiven } from './lib/achievements';
 import { CreditsRoll } from './components/CreditsRoll';
+import { CharacterAvatar } from './components/CharacterAvatar';
+import { CLOTHING } from './data/clothing';
+import { Appearance, APPEARANCE_KEY, BARBER_PARTS, BARBER_COST, APPEARANCE_PARTS, randomAppearance, rollBeauty, applyBeauty, BEAUTY_TRAIT } from './lib/appearance';
 import { SeasonRankPanel } from './components/SeasonRankPanel';
 import { currentSeason } from './data/seasons';
 import { ensureSeason, seasonScore, completionMs, seasonAchievements, readSeasonSimPoints, addSeasonSimPoints, markSeasonLazy, isSeasonLazy, markSeasonCheat, isSeasonCheat } from './lib/season';
@@ -338,11 +341,26 @@ const RARITY_STYLE: Record<Rarity, { text: string; badge: string }> = {
 };
 
 // 商城服饰（不含初始服装 default）；品质暂按售价划分
-const SHOP_ITEMS: Array<{ id: string; name: string; effect: string; currency: string; price: number; rarity: Rarity; icon: React.ReactNode; bg: string; iconBg: string }> = [
-  { id: 'knight', name: '骑士盔甲', effect: '防御力+10', currency: 'coin', price: 2000, rarity: 'advanced', icon: <Shirt size={26} className="text-gray-700 absolute fill-gray-400" strokeWidth={2}/>, bg: 'bg-[#b4f0c0]', iconBg: 'bg-[#cbd5e1]' },
-  { id: 'mage', name: '法师长袍', effect: '魔力+15', currency: 'coin', price: 50000, rarity: 'limited', icon: <Shirt size={26} className="text-purple-900 absolute fill-purple-700" strokeWidth={2}/>, bg: 'bg-[#c8e8ff]', iconBg: 'bg-[#93c5fd]' },
-  { id: 'casual', name: '休闲卫衣', effect: '魅力+5', currency: 'coin', price: 8000, rarity: 'rare', icon: <Shirt size={26} className="text-orange-700 absolute fill-orange-400" strokeWidth={2}/>, bg: 'bg-[#b4f0c0]', iconBg: 'bg-[#fde047]' }
-];
+// 商城服饰：来自服装目录（第 61 题，19 世纪风格），卡片图标为穿着该服装的角色缩略图
+const RARITY_BG: Record<Rarity, { bg: string; iconBg: string }> = {
+  advanced: { bg: 'bg-[#b4f0c0]', iconBg: 'bg-[#e2e8f0]' },
+  rare: { bg: 'bg-[#c8e8ff]', iconBg: 'bg-[#dbeafe]' },
+  limited: { bg: 'bg-[#fde68a]', iconBg: 'bg-[#fef3c7]' },
+};
+const SHOP_ITEMS: Array<{ id: string; name: string; effect: string; currency: string; price: number; rarity: Rarity; icon: React.ReactNode; bg: string; iconBg: string }> = CLOTHING.map((c) => ({
+  id: c.id,
+  name: c.name,
+  effect: c.effect,
+  currency: 'coin',
+  price: c.price,
+  rarity: c.rarity,
+  icon: (
+    <div className="absolute inset-0">
+      <CharacterAvatar clothing={c.id} />
+    </div>
+  ),
+  ...RARITY_BG[c.rarity],
+}));
 
 // 可拥有的服装总数 = 初始服装 + 商城服饰
 const TOTAL_CLOTHING_COUNT = SHOP_ITEMS.length + 1;
@@ -358,7 +376,16 @@ const ShopModal = ({
   freeDrawUsed,
   setFreeDrawUsed,
   setGiftInventory,
+  appearance,
+  setAppearance,
+  playerAge,
+  playerGender,
+  isRegistered,
 }: any) => {
+  // 理发店（第 61 题）：只能改发型、发色、胡子
+  const [barberDraft, setBarberDraft] = React.useState<Appearance | null>(appearance ?? null);
+  const barberChanged = !!(appearance && barberDraft && BARBER_PARTS.some((k) => barberDraft[k] !== appearance[k]));
+
 
 
   const [isDrawing, setIsDrawing] = React.useState(false);
@@ -558,6 +585,56 @@ const ShopModal = ({
               );
             })}
           </div>
+          {isRegistered && appearance && barberDraft && (
+            <>
+              <div className="flex justify-center mt-6">
+                <div className="bg-[#2d2f3d] text-center text-gray-300 py-1 px-12 rounded-full text-sm font-bold border-2 border-black shadow-[0_2px_0_#000]">
+                  理发店
+                </div>
+              </div>
+              <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3 mt-4 shadow-[0_4px_0_#000] flex gap-3">
+                <div className="w-24 h-28 bg-[#21232e] rounded-xl border border-black relative shrink-0">
+                  <CharacterAvatar clothing={equippedClothing} appearance={barberDraft} age={playerAge} gender={playerGender} />
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  {APPEARANCE_PARTS.filter((p) => BARBER_PARTS.includes(p.key) && (p.key !== 'beard' || playerGender === '男')).map((p) => (
+                    <div key={p.key} className="flex items-center gap-1 text-xs font-black text-white">
+                      <span className="w-8 text-gray-400">{p.label}</span>
+                      <button
+                        onClick={() => setBarberDraft((d) => (d ? { ...d, [p.key]: (d[p.key] - 1 + p.options.length) % p.options.length } : d))}
+                        className="px-2 bg-[#21232e] rounded border border-black cursor-pointer"
+                      >
+                        ◀
+                      </button>
+                      <span className="flex-1 text-center">{p.options[barberDraft[p.key]]}</span>
+                      <button
+                        onClick={() => setBarberDraft((d) => (d ? { ...d, [p.key]: (d[p.key] + 1) % p.options.length } : d))}
+                        className="px-2 bg-[#21232e] rounded border border-black cursor-pointer"
+                      >
+                        ▶
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    disabled={!barberChanged}
+                    onClick={() => {
+                      if (coins < BARBER_COST) {
+                        showShopToast(`余额不足！理发需要 ${BARBER_COST} ₽`);
+                        return;
+                      }
+                      setCoins((prev: number) => prev - BARBER_COST);
+                      setAppearance({ ...appearance, hair: barberDraft.hair, hairColor: barberDraft.hairColor, beard: barberDraft.beard, preset: undefined });
+                      showShopToast(`💇 理发完成（-${BARBER_COST} ₽）`);
+                    }}
+                    className="w-full bg-gradient-to-b from-[#ffe56c] to-[#f5b822] text-black text-xs font-black py-1.5 rounded-lg border-2 border-black shadow-[0_2px_0_#000] disabled:opacity-40 cursor-pointer"
+                  >
+                    理发 {BARBER_COST} ₽
+                  </button>
+                  <div className="text-[9px] text-gray-400 font-bold">五官与肤色是天生的，只能改发型、发色和胡子。</div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -3189,7 +3266,8 @@ export default function App() {
     let familyCash = 0; // 本月家族相关的现金变动
     let repDelta = 0;
     if (isRegistered && newHealth > 0) {
-      const birth = tryHaveChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits, gender, antibodies);
+      // 第 60 题：本月同房时生育概率提高
+      const birth = tryHaveChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits, gender, antibodies, fam.intimacyMonth === gameYear * 12 + gameMonth ? INTIMACY_MULTIPLIER : 1, appearance ?? undefined);
       if (birth.child) {
         fam = birth.state;
         repDelta += REP.child * birth.children.length;
@@ -3216,7 +3294,7 @@ export default function App() {
         } else {
           familyCash -= upkeep;
           notes.push(`供养情人 -${upkeep.toLocaleString()}`);
-          const secret = tryIllegitimateChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits, gender, antibodies);
+          const secret = tryIllegitimateChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits, gender, antibodies, appearance ?? undefined);
           if (secret.child) {
             fam = secret.state;
             notes.push(`🤫 私生${secret.child.gender === '女' ? '女' : '子'} ${secret.child.name} 降生`);
@@ -3372,7 +3450,7 @@ export default function App() {
   // 年龄可小于 8 岁（年幼的子嗣继承家业时）
   const currentAge = isRegistered ? Math.max(0, 8 + gameYear - birthRegisteredYear) : 8;
 
-  const handleRegisterBirth = (name: string, preferredSurname = '') => {
+  const handleRegisterBirth = (name: string, preferredSurname = '', chosenAppearance?: Appearance) => {
     const generatedGender = Math.random() > 0.5 ? '男' : '女';
     // 随机家族出身（undefined.md 第 18 题）：决定起始资产、父母家条件与家族成员
     // 第 56 题：家族沿用玩家填写的姓，留空则随机；皇族只有纳海王朝
@@ -3401,7 +3479,10 @@ export default function App() {
     } catch (e) {}
     clearLifeLog();
     setSimEvents([]);
-    const traits = withBirthPrivilege(cls.id, randomTraits());
+    // 第 61 题：捏脸结果；天生「倾国倾城」时改用预设外貌
+    const beauty = applyBeauty(withBirthPrivilege(cls.id, randomTraits()), rollBeauty(), chosenAppearance ?? randomAppearance(generatedGender as '男' | '女'), generatedGender as '男' | '女');
+    const traits = beauty.traits;
+    setAppearance(beauty.appearance);
     setPlayerTraits(traits);
     setPlayerLifespan(rollPlayerLifespan(cls.id, traits));
     setAntibodies([]);
@@ -3439,6 +3520,7 @@ export default function App() {
     // 第 53 题：子女、孙辈继承时带着自己的抗体；兄弟姐妹没有记录抗体
     const heirSource = family.children.find((c) => c.id === heirId) ?? family.children.flatMap((c) => c.kids ?? []).find((k) => k.id === heirId);
     setAntibodies(heirSource?.antibodies ?? []);
+    setAppearance(heirSource?.appearance ?? randomAppearance(heir.gender));
     // 第 17 题：玩家可选择把前任主角的人生大事写入族谱
     const records = keepRecords
       ? readLifeLog()
@@ -3555,6 +3637,7 @@ export default function App() {
     setMaintenanceLog({});
     setAntibodies([]);
     setGodMode(false);
+    setAppearance(null);
     setReputation(0);
     setGuardianship(null);
     setCharity(null);
@@ -3613,7 +3696,7 @@ export default function App() {
         );
       }
     }
-    return <CartoonCharacter clothing={equippedClothing} />;
+    return <CartoonCharacter clothing={equippedClothing} appearance={appearance} age={isRegistered ? currentAge : 25} gender={gender} />;
   };
   const [ownedClothes, setOwnedClothes] = useState<string[]>(() => loadStored('amigo_owned_clothes', ['default']));
 
@@ -3781,6 +3864,16 @@ export default function App() {
       .map((m) => ({ name: m.name, relation: m.relation, occupation: m.occupation, affinity: m.affinity, status: m.status }));
     return computeAllowance(parents, age, familyClass.id, !!family.playerIllegitimate);
   };
+
+  // 外貌（第 61 题）：出生登记时捏脸；旧存档没有外貌时随机生成
+  const [appearance, setAppearance] = useState<Appearance | null>(() => loadStored<Appearance | null>(APPEARANCE_KEY, null));
+  React.useEffect(() => saveStored(APPEARANCE_KEY, appearance), [appearance]);
+  React.useEffect(() => {
+    if (isRegistered && !appearance) {
+      const g = gender === '男' || gender === '女' ? gender : null;
+      setAppearance(g && playerTraits.includes(BEAUTY_TRAIT) ? applyBeauty(playerTraits, true, randomAppearance(g), g).appearance : randomAppearance(g));
+    }
+  }, [isRegistered, appearance]);
 
   // 抗体（第 53 题）：接种疫苗或传染病痊愈后按概率获得，有抗体的病不会再患
   const [antibodies, setAntibodies] = useState<string[]>(() => loadStored<string[]>(ANTIBODY_KEY, []));
@@ -4502,6 +4595,7 @@ export default function App() {
              isRegistered={isRegistered}
              gender={gender}
              age={currentAge}
+             appearance={appearance}
              childrenCount={family.children.length}
              diseaseName={currentDisease?.name}
              onOpenSuccession={() => setShowSuccession(true)}
@@ -4569,6 +4663,8 @@ export default function App() {
              lazy={usedSimpleMode}
              playerAntibodies={antibodies}
              onRetireTo={handleRetire}
+             playerAppearance={appearance}
+             equippedClothing={equippedClothing}
              setGiftInventory={setGiftInventory}
              auctionOpen={!!auction && auction.year === gameYear && auction.month === gameMonth}
              onOpenAuction={() => setShowAuction(true)}
@@ -4788,6 +4884,11 @@ export default function App() {
              freeDrawUsed={freeDrawUsed}
              setFreeDrawUsed={setFreeDrawUsed}
              setGiftInventory={setGiftInventory}
+             appearance={appearance}
+             setAppearance={setAppearance}
+             playerAge={currentAge}
+             playerGender={gender}
+             isRegistered={isRegistered}
            />
          )}
 
@@ -5007,6 +5108,19 @@ export default function App() {
              simpleMode={simpleMode}
              onToggleSimpleMode={() => setSimpleMode((v) => !v)}
              antibodyText={antibodies.length ? antibodyNames(antibodies).join('、') : '暂无'}
+             onRandomAppearance={() => {
+               const g = gender === '男' || gender === '女' ? gender : null;
+               setAppearance(randomAppearance(g));
+               showToast('🛠️ 已随机外貌');
+             }}
+             onToggleBeauty={() => {
+               const g = gender === '男' || gender === '女' ? gender : '女';
+               const has = playerTraits.includes(BEAUTY_TRAIT);
+               const r = applyBeauty(playerTraits, !has, randomAppearance(g), g);
+               setPlayerTraits(r.traits);
+               setAppearance(r.appearance);
+               showToast(has ? '🛠️ 已去掉「倾国倾城」' : '🛠️ 已获得「倾国倾城」');
+             }}
              onGrantAllAntibodies={() => {
                setAntibodies(DISEASES.filter((d) => d.infectious).map((d) => d.id));
                showToast('🛠️ 已获得全部传染病抗体');

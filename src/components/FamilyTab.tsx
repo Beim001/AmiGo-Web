@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { traitNames, affinityBonus, traitById } from '../lib/traits';
 import { antibodyNames } from '../lib/disease';
+import { CharacterAvatar } from './CharacterAvatar';
+import type { Appearance } from '../lib/appearance';
 import type { RankedFamily } from '../lib/familyRank';
 import { wealthScore } from '../lib/familyRank';
 import type { Guardianship } from '../lib/guardianship';
@@ -64,6 +66,9 @@ export interface FamilyTabProps {
   lazy?: boolean;
   /** 主角的抗体（第 53 题） */
   playerAntibodies?: string[];
+  /** 主角外貌与服装（第 61 题） */
+  playerAppearance?: Appearance | null;
+  equippedClothing?: string;
   /** 主动传位（第 58 题）：返回错误提示，成功返回 null */
   onRetireTo?: (heirId: string) => string | null;
   onOpenAuction?: () => void;
@@ -101,6 +106,8 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   playerAntibodies = [],
   onRetireTo,
   setGiftInventory,
+  playerAppearance = null,
+  equippedClothing = 'default',
 }) => {
   const [subTab, setSubTab] = useState<'tree' | 'ranking' | 'heirlooms' | 'chronicles'>('tree');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -596,6 +603,16 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                     ✦ {traitNames([id])[0]}
                   </span>
                 ))}
+              </div>
+            )}
+            {(selectedMember.isPlayer ? playerAppearance : selectedMember.appearance) && (
+              <div className="w-20 h-24 mx-auto mb-2 bg-[#21232e] rounded-xl border border-black relative">
+                <CharacterAvatar
+                  clothing={selectedMember.isPlayer ? equippedClothing : 'default'}
+                  appearance={selectedMember.isPlayer ? playerAppearance : selectedMember.appearance}
+                  age={selectedMember.age}
+                  gender={selectedMember.gender}
+                />
               </div>
             )}
             {selectedMember.isChild && selectedMember.ambition !== undefined && (

@@ -10,6 +10,7 @@
 import { randomTraits, inheritTraits, fertilityMultiplier, twinChanceFor, fertileMaxAge } from './traits';
 import { randomFullName, MALE_GIVEN_NAMES, FEMALE_GIVEN_NAMES } from './names';
 import { inheritAntibodies } from './disease';
+import { Appearance, randomAppearance, inheritAppearance, rollBeauty, applyBeauty } from './appearance';
 import { OwnedHeirloom, VALENTINE_DEFAULT_HEIRLOOMS } from './heirlooms';
 
 export type Gender = '男' | '女';
@@ -56,6 +57,8 @@ export interface Spouse {
   lifespan?: number;
   /** 抗体（第 53 题） */
   antibodies?: string[];
+  /** 外貌（第 61 题） */
+  appearance?: Appearance;
 }
 
 /** 情人（贵族、皇族已婚者可结识） */
@@ -106,6 +109,10 @@ export interface Child {
   antibodies?: string[];
   /** 出生时的野心值 0–50（第 59 题）；旧存档缺失时按 id 稳定推算 */
   ambition?: number;
+  /** 领养的孩子（第 60 题） */
+  adopted?: boolean;
+  /** 外貌（第 61 题）：出生时遗传父母 */
+  appearance?: Appearance;
 }
 
 export interface FamilyEvent {
@@ -175,6 +182,8 @@ export interface FamilyState {
   demotionStreak?: number;
   /** 子嗣 id → 野心高且对当家人不满的连续月数（第 59 题） */
   coupStreak?: Record<string, number>;
+  /** 最近一次「同房」的月份（年 × 12 + 月），该月生育概率提高（第 60 题） */
+  intimacyMonth?: number;
   /** 家族传家宝；旧存档没有此字段时，瓦伦丁家族默认持有三件祖传宝物 */
   heirlooms?: OwnedHeirloom[];
 }
@@ -319,6 +328,8 @@ export interface FamilyMemberView {
   antibodies?: string[];
   /** 野心值（第 59 题）；只有子嗣有 */
   ambition?: number;
+  /** 外貌（第 61 题）；配偶、子嗣、孙辈有 */
+  appearance?: Appearance;
 }
 
 const parentLabel = (gender: string | null | undefined) => (gender === '女' ? '母' : gender === '男' ? '父' : '家长');
@@ -404,6 +415,7 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
       desc: `${s.marriedYear} 年 ${s.marriedMonth} 月与你缔结婚姻，携手经营${origin.surname}家族的新一代。`,
       traits: ['伴侣', '家庭支柱'],
       traitIds: s.traits,
+      appearance: s.appearance,
     });
   }
 
@@ -417,7 +429,7 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
       id: c.id,
       name: c.name,
       gender: c.gender,
-      relation: c.illegitimate ? (c.gender === '女' ? '私生女' : '私生子') : c.gender === '女' ? '女儿' : '儿子',
+      relation: c.adopted ? (c.gender === '女' ? '养女' : '养子') : c.illegitimate ? (c.gender === '女' ? '私生女' : '私生子') : c.gender === '女' ? '女儿' : '儿子',
       generation: '子辈',
       age,
       status: dead ? '已故' : '在世',
@@ -431,6 +443,7 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
       traitIds: c.traits,
       antibodies: c.antibodies,
       ambition: childAmbition(c, gameYear, gameMonth),
+      appearance: c.appearance,
     });
   });
 
@@ -458,6 +471,7 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
         parents: `${c.name}（${c.gender === '女' ? '母' : '父'}）${k.otherParentName ? `、${k.otherParentName}（${k.otherParentGender === '女' ? '母' : '父'}）` : ''}`,
         traitIds: k.traits,
         antibodies: k.antibodies,
+        appearance: k.appearance,
       });
     });
   });
@@ -523,7 +537,7 @@ export const monthlyFamilyLife = (state: FamilyState, year: number, month: numbe
       if (cand) {
         child = {
           ...child,
-          spouse: { name: cand.name, gender: cand.gender, birthYear: year - cand.age, occupation: cand.occupation, marriedYear: year, marriedMonth: month, traits: cand.traits ?? [], lifespan: rollKinLifespan(rng) },
+          spouse: { name: cand.name, gender: cand.gender, birthYear: year - cand.age, occupation: cand.occupation, marriedYear: year, marriedMonth: month, traits: cand.traits ?? [], lifespan: rollKinLifespan(rng), appearance: spouseAppearance(cand, rng) },
         };
         notes.push({ title: `${c.name} 成家`, desc: `${c.name} 与 ${cand.name}（${cand.occupation}）结为夫妻。` });
       }
@@ -552,9 +566,18 @@ export const monthlyFamilyLife = (state: FamilyState, year: number, month: numbe
           birthMonth: month,
           otherParentName: sp.name,
           otherParentGender: sp.gender,
-          traits: inheritTraits(child.traits ?? [], sp.traits ?? [], rng),
           lifespan: rollKinLifespan(rng),
           antibodies: inheritAntibodies(child.antibodies ?? [], sp.antibodies ?? [], rng),
+          ...(() => {
+            const b = applyBeauty(
+              inheritTraits(child.traits ?? [], sp.traits ?? [], rng),
+              rollBeauty(child.traits ?? [], sp.traits ?? [], rng),
+              inheritAppearance(child.appearance, sp.appearance, gender, rng),
+              gender,
+              rng,
+            );
+            return { traits: b.traits, appearance: b.appearance };
+          })(),
         });
       }
       child = { ...child, kids: [...kids, ...born] };
@@ -571,6 +594,59 @@ export const monthlyFamilyLife = (state: FamilyState, year: number, month: numbe
     };
   }
   return { state: next, notes };
+};
+
+// ---------- 同房与领养（第 60 题，默认值） ----------
+// 同房：已婚即可，每月一次，当月生育概率 × INTIMACY_MULTIPLIER（仍受生育年龄、同性、不孕等限制）。
+// 领养：与现任配偶结婚满 ADOPTION_MARRIED_YEARS 年，且与这位配偶没有生育过孩子，可花 ADOPTION_FEE 领养 0–10 岁的孩子。
+
+export const INTIMACY_MULTIPLIER = 3;
+export const ADOPTION_MARRIED_YEARS = 20;
+export const ADOPTION_FEE = 5000;
+
+export const marriedYears = (state: FamilyState, year: number, month: number) =>
+  state.spouse ? (year * 12 + month - (state.spouse.marriedYear * 12 + state.spouse.marriedMonth)) / 12 : 0;
+
+/** 是否可以领养；不可以时返回原因 */
+export const adoptionBlocked = (state: FamilyState, year: number, month: number): string | null => {
+  const s = state.spouse;
+  if (!s) return '已婚才能领养';
+  if (state.children.length >= MAX_CHILDREN) return `子嗣已达 ${MAX_CHILDREN} 人上限`;
+  if (state.children.some((c) => !c.adopted && c.otherParentName === s.name)) return `你和 ${s.name} 已有亲生子女`;
+  const y = marriedYears(state, year, month);
+  if (y < ADOPTION_MARRIED_YEARS) return `婚后满 ${ADOPTION_MARRIED_YEARS} 年仍没有孩子才能领养（还需 ${Math.ceil(ADOPTION_MARRIED_YEARS - y)} 年）`;
+  return null;
+};
+
+/** 领养一个 0–10 岁的孩子（冠家族姓，随机特质） */
+export const adoptChild = (state: FamilyState, year: number, month: number, rng: () => number = Math.random): { state: FamilyState; child: Child } => {
+  const surname = getOrigin(state).surname;
+  const gender: Gender = rng() < 0.5 ? '男' : '女';
+  const age = Math.floor(rng() * 11);
+  const usedNames = new Set(state.children.map((c) => c.name));
+  const child: Child = {
+    id: `adopt_${year}_${month}_${state.children.length + 1}`,
+    name: randomFullName(gender, surname, rng, usedNames),
+    gender,
+    birthYear: year - age,
+    birthMonth: month,
+    ...(state.spouse ? { otherParentName: state.spouse.name, otherParentGender: state.spouse.gender } : {}),
+    ...(() => {
+      const b = applyBeauty(randomTraits(rng), rollBeauty([], [], rng), randomAppearance(gender, rng), gender, rng);
+      return { traits: b.traits, appearance: b.appearance };
+    })(),
+    lifespan: rollKinLifespan(rng),
+    ambition: Math.floor(rng() * (AMBITION_BASE_MAX + 1)),
+    adopted: true,
+  };
+  return {
+    child,
+    state: {
+      ...state,
+      children: [...state.children, child],
+      events: [...state.events, { year, month, title: '领养子嗣', desc: `领养了 ${age} 岁的${gender === '女' ? '女孩' : '男孩'} ${child.name}，${surname}家族又添一员。` }],
+    },
+  };
 };
 
 // ---------- 野心与逼宫（第 59 题，默认值） ----------
@@ -664,14 +740,20 @@ export const generateSpouseCandidates = (
     if (usedNames.has(name)) continue;
     usedNames.add(name);
     const age = Math.max(MARRIAGE_MIN_AGE, playerAge + Math.floor(rng() * 11) - 5);
-    candidates.push({ name, gender, age, occupation: pick(SPOUSE_OCCUPATIONS, rng), traits: randomTraits(rng) });
+    const traits = randomTraits(rng);
+    candidates.push({ name, gender, age, occupation: pick(SPOUSE_OCCUPATIONS, rng), traits: rollBeauty([], [], rng) ? [...traits, 'beauty'] : traits });
   }
   return candidates;
 };
 
+/** 配偶外貌：有「倾国倾城」用预设外貌，否则随机 */
+export const spouseAppearance = (c: { gender: Gender; traits?: string[] }, rng: () => number = Math.random): Appearance =>
+  applyBeauty(c.traits ?? [], (c.traits ?? []).includes('beauty'), randomAppearance(c.gender, rng), c.gender, rng).appearance;
+
 export const marry = (state: FamilyState, candidate: SpouseCandidate, year: number, month: number): FamilyState => ({
   ...state,
   spouse: {
+    appearance: spouseAppearance(candidate),
     lifespan: candidate.age + 30 + Math.floor(Math.random() * 30) > KIN_LIFESPAN_MAX ? KIN_LIFESPAN_MAX : Math.max(KIN_LIFESPAN_MIN, candidate.age + 30 + Math.floor(Math.random() * 30)),
     name: candidate.name,
     gender: candidate.gender,
@@ -716,6 +798,7 @@ interface OtherParent {
   gender: Gender;
   traits?: string[];
   antibodies?: string[];
+  appearance?: Appearance;
 }
 
 /** 生下 count 个孩子（同年同月，双胞胎时 count = 2） */
@@ -729,6 +812,7 @@ const giveBirth = (
   playerTraits: string[] = [],
   illegitimate = false,
   playerAntibodies: string[] = [],
+  playerAppearance?: Appearance,
 ): BirthResult => {
   const surname = getOrigin(state).surname;
   const usedNames = new Set(state.children.map((c) => c.name));
@@ -750,6 +834,16 @@ const giveBirth = (
       lifespan: rollKinLifespan(rng),
       antibodies: inheritAntibodies(playerAntibodies, other?.antibodies ?? [], rng),
       ambition: Math.floor(rng() * (AMBITION_BASE_MAX + 1)),
+      ...(() => {
+        const b = applyBeauty(
+          inheritTraits(playerTraits, other?.traits ?? [], rng),
+          rollBeauty(playerTraits, other?.traits ?? [], rng),
+          inheritAppearance(playerAppearance, other?.appearance, gender, rng),
+          gender,
+          rng,
+        );
+        return { traits: b.traits, appearance: b.appearance };
+      })(),
     });
   }
   const title = illegitimate ? '私生子女降生' : count === 2 ? '喜得双胞胎' : `喜得${born[0].gender === '女' ? '千金' : '麟儿'}`;
@@ -775,6 +869,9 @@ export const tryHaveChild = (
   playerTraits: string[] = [],
   playerGender: string | null = null,
   playerAntibodies: string[] = [],
+  /** 本月生育概率倍数（同房时为 INTIMACY_MULTIPLIER） */
+  chanceMultiplier = 1,
+  playerAppearance?: Appearance,
 ): BirthResult => {
   const none = { state, child: null, children: [] };
   const s = state.spouse;
@@ -784,9 +881,9 @@ export const tryHaveChild = (
   const spouseAge = year - s.birthYear;
   // 第 50 题：过了生育年龄（按性别与「精力旺盛」「富养」特质）不再生育
   if (playerAge > fertileMaxAge(playerGender, playerTraits) || spouseAge > fertileMaxAge(s.gender, s.traits) || state.children.length >= MAX_CHILDREN) return none;
-  if (rng() >= BIRTH_CHANCE * fertilityMultiplier(playerTraits, s.traits)) return none;
+  if (rng() >= BIRTH_CHANCE * fertilityMultiplier(playerTraits, s.traits) * chanceMultiplier) return none;
   const twins = rng() < twinChanceFor(TWIN_CHANCE, playerTraits, s.traits) && state.children.length + 2 <= MAX_CHILDREN;
-  return giveBirth(state, year, month, twins ? 2 : 1, rng, s, playerTraits, false, playerAntibodies);
+  return giveBirth(state, year, month, twins ? 2 : 1, rng, s, playerTraits, false, playerAntibodies, playerAppearance);
 };
 
 /** 开发测试工具：立即新增子嗣（忽略婚姻、年龄与人数上限） */
@@ -821,6 +918,7 @@ export const tryIllegitimateChild = (
   playerTraits: string[] = [],
   playerGender: string | null = null,
   playerAntibodies: string[] = [],
+  playerAppearance?: Appearance,
 ): BirthResult => {
   const none = { state, child: null, children: [] };
   const l = state.lover;
@@ -828,7 +926,7 @@ export const tryIllegitimateChild = (
   if (l && playerGender && l.gender === playerGender) return none;
   if (!l || playerAge > fertileMaxAge(playerGender, playerTraits) || year - l.birthYear > fertileMaxAge(l.gender, l.traits) || state.children.length >= MAX_CHILDREN) return none;
   if (rng() >= ILLEGITIMATE_CHANCE * fertilityMultiplier(playerTraits, l.traits)) return none;
-  return giveBirth(state, year, month, 1, rng, l, playerTraits, true, playerAntibodies);
+  return giveBirth(state, year, month, 1, rng, l, playerTraits, true, playerAntibodies, playerAppearance);
 };
 
 // ---------- 传家宝 ----------

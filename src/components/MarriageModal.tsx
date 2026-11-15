@@ -18,6 +18,11 @@ import {
   DIVORCE_FEE,
   MARRIAGE_MIN_AGE,
   MARRIAGE_FEE,
+  INTIMACY_MULTIPLIER,
+  ADOPTION_FEE,
+  ADOPTION_MARRIED_YEARS,
+  adoptionBlocked,
+  adoptChild,
   BIRTH_CHANCE,
   BIRTH_MAX_AGE,
   MAX_CHILDREN,
@@ -168,6 +173,53 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
           <p className="text-gray-400 text-[11px] font-bold leading-relaxed">
             婚后每推进一个月，有 {Math.round(BIRTH_CHANCE * 100)}% 的概率迎来新的家庭成员（女性 42 岁、男性 55 岁后不能生育；有「精力旺盛」或「富养」特质可延长到 50 / 65 岁，可在医院保养获得；同性伴侣不能生育）。
           </p>
+          {(() => {
+            const monthKey = gameYear * 12 + gameMonth;
+            const intimateNow = family.intimacyMonth === monthKey;
+            const adoptReason = adoptionBlocked(family, gameYear, gameMonth);
+            return (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    if (intimateNow) {
+                      showToast('这个月已经同房过了');
+                      return;
+                    }
+                    setFamily((prev) => ({ ...prev, intimacyMonth: monthKey }));
+                    showToast(`💞 你与 ${spouse.name} 同房，本月生育概率 ×${INTIMACY_MULTIPLIER}`);
+                  }}
+                  disabled={intimateNow}
+                  className="bg-rose-400 hover:bg-rose-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer disabled:opacity-50"
+                >
+                  {intimateNow ? '本月已同房' : `💞 同房（概率 ×${INTIMACY_MULTIPLIER}）`}
+                </button>
+                <button
+                  onClick={() => {
+                    if (adoptReason) {
+                      showToast(adoptReason);
+                      return;
+                    }
+                    if (coins < ADOPTION_FEE) {
+                      showToast(`现金不足！领养手续费 ${ADOPTION_FEE.toLocaleString()} ₽`);
+                      return;
+                    }
+                    const r = adoptChild(family, gameYear, gameMonth);
+                    setCoins((prev) => prev - ADOPTION_FEE);
+                    setFamily(r.state);
+                    addLifeLog('大事', `领养 ${r.child.name}`, `与 ${spouse.name} 婚后多年无子，领养了 ${gameYear - r.child.birthYear} 岁的${r.child.gender === '女' ? '女孩' : '男孩'}。`);
+                    showToast(`🏠 领养了 ${r.child.name}（${gameYear - r.child.birthYear} 岁）`);
+                  }}
+                  title={adoptReason ?? `手续费 ${ADOPTION_FEE.toLocaleString()} ₽`}
+                  className={`${adoptReason ? 'bg-gray-600 text-gray-300' : 'bg-sky-400 hover:bg-sky-300 text-black'} text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer`}
+                >
+                  🏠 领养（{ADOPTION_FEE.toLocaleString()} ₽）
+                </button>
+                <p className="col-span-2 text-[10px] text-gray-400 font-bold">
+                  {adoptReason ? `领养：${adoptReason}` : `你们婚后 ${ADOPTION_MARRIED_YEARS} 年仍没有孩子，可以领养。`}
+                </p>
+              </div>
+            );
+          })()}
           <button onClick={onOpenFamily} className={`${primaryBtn} w-full flex items-center justify-center gap-1`}>
             <Users size={14} /> 查看家族世系
           </button>

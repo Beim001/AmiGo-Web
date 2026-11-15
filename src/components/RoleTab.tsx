@@ -1,5 +1,7 @@
 import React from 'react';
 import { Store, Calendar, Sparkles } from 'lucide-react';
+import { CharacterAvatar, CharacterAvatarProps } from './CharacterAvatar';
+import type { Appearance } from '../lib/appearance';
 
 const AgeIcon = () => (
   <svg viewBox="0 0 24 24" width="22" height="22" className="drop-shadow-sm">
@@ -86,101 +88,12 @@ const StatCard = ({ title, value, unit, color, icon, onClick, className = '' }: 
   </div>
 );
 
-export const CartoonCharacter = ({ clothing }: { clothing: string }) => {
-  return (
-    <svg viewBox="0 0 100 120" className="w-full h-full drop-shadow-md z-10">
-      {/* Base Body - Legs */}
-      <rect x="36" y="82" width="8" height="18" rx="3" fill="#2C3E50" stroke="#1A2A38" strokeWidth="2" />
-      <rect x="56" y="82" width="8" height="18" rx="3" fill="#2C3E50" stroke="#1A2A38" strokeWidth="2" />
-      
-      {/* Shoes */}
-      <path d="M 32 98 h 16 v 6 h -16 z" fill="#111" />
-      <path d="M 52 98 h 16 v 6 h -16 z" fill="#111" />
-      
-      {/* Body / Clothes */}
-      {clothing === 'knight' && (
-        <g>
-          <rect x="30" y="52" width="40" height="34" rx="4" fill="#cbd5e1" stroke="#475569" strokeWidth="2" />
-          <path d="M 30 65 l 20 10 l 20 -10" fill="none" stroke="#475569" strokeWidth="2" />
-          <rect x="18" y="54" width="12" height="22" rx="4" fill="#94a3b8" stroke="#475569" strokeWidth="2" />
-          <rect x="70" y="54" width="12" height="22" rx="4" fill="#94a3b8" stroke="#475569" strokeWidth="2" />
-        </g>
-      )}
-      
-      {clothing === 'mage' && (
-        <g>
-          <path d="M 32 52 L 68 52 L 75 90 L 25 90 Z" fill="#c084fc" stroke="#7e22ce" strokeWidth="2" />
-          <rect x="45" y="52" width="10" height="38" fill="#a855f7" />
-          <rect x="16" y="54" width="16" height="20" rx="4" fill="#a855f7" stroke="#7e22ce" strokeWidth="2" />
-          <rect x="68" y="54" width="16" height="20" rx="4" fill="#a855f7" stroke="#7e22ce" strokeWidth="2" />
-        </g>
-      )}
-      
-      {clothing === 'casual' && (
-        <g>
-          <rect x="28" y="52" width="44" height="32" rx="6" fill="#facc15" stroke="#ca8a04" strokeWidth="2" />
-          <rect x="35" y="65" width="30" height="14" rx="4" fill="#fde047" stroke="#ca8a04" strokeWidth="2" />
-          <rect x="18" y="54" width="12" height="24" rx="4" fill="#facc15" stroke="#ca8a04" strokeWidth="2" />
-          <rect x="70" y="54" width="12" height="24" rx="4" fill="#facc15" stroke="#ca8a04" strokeWidth="2" />
-        </g>
-      )}
-
-      {clothing === 'default' && (
-        <g>
-          <rect x="30" y="52" width="40" height="30" rx="6" fill="#4A7A9C" stroke="#3A5F7A" strokeWidth="2" />
-          <rect x="20" y="54" width="8" height="22" rx="4" fill="#F5D0B8" stroke="#D4A88C" strokeWidth="2" />
-          <rect x="18" y="52" width="12" height="12" rx="2" fill="#4A7A9C" stroke="#3A5F7A" strokeWidth="2" />
-          <rect x="72" y="54" width="8" height="22" rx="4" fill="#F5D0B8" stroke="#D4A88C" strokeWidth="2" />
-          <rect x="70" y="52" width="12" height="12" rx="2" fill="#4A7A9C" stroke="#3A5F7A" strokeWidth="2" />
-        </g>
-      )}
-      
-      {/* Hands */}
-      {clothing !== 'default' && (
-        <g>
-           <circle cx="24" cy="78" r="5" fill="#F5D0B8" stroke="#D4A88C" strokeWidth="2" />
-           <circle cx="76" cy="78" r="5" fill="#F5D0B8" stroke="#D4A88C" strokeWidth="2" />
-        </g>
-      )}
-      
-      {/* Head Base */}
-      <circle cx="50" cy="30" r="22" fill="#F5D0B8" stroke="#D4A88C" strokeWidth="2" />
-      
-      {/* Eyes */}
-      <circle cx="42" cy="27" r="3.5" fill="#2C2C2C" />
-      <circle cx="58" cy="27" r="3.5" fill="#2C2C2C" />
-      
-      {/* Cheeks */}
-      <circle cx="38" cy="32" r="3" fill="#ff7e7e" opacity="0.6" />
-      <circle cx="62" cy="32" r="3" fill="#ff7e7e" opacity="0.6" />
-
-      {/* Mouth */}
-      <path d="M 44 35 Q 50 40 56 35" fill="none" stroke="#B8836A" strokeWidth="2.5" strokeLinecap="round" />
-      
-      {/* Headwear */}
-      {clothing === 'knight' && (
-        <g>
-          <path d="M 26 22 C 26 -2, 74 -2, 74 22 L 74 35 C 74 40, 26 40, 26 35 Z" fill="#cbd5e1" stroke="#475569" strokeWidth="2" />
-          <rect x="42" y="10" width="16" height="26" fill="#1e293b" />
-        </g>
-      )}
-      {clothing === 'mage' && (
-        <g>
-          <path d="M 15 20 L 85 20 L 50 -15 Z" fill="#7e22ce" stroke="#581c87" strokeWidth="2" />
-          <ellipse cx="50" cy="20" rx="38" ry="8" fill="#a855f7" stroke="#581c87" strokeWidth="2" />
-        </g>
-      )}
-      {clothing === 'casual' && (
-        <g>
-           <path d="M 28 30 C 28 0, 72 0, 72 30 L 72 35 C 72 35, 28 35, 28 35 Z" fill="#facc15" stroke="#ca8a04" strokeWidth="2" />
-           <path d="M 40 10 Q 50 20 60 10" fill="none" stroke="#ca8a04" strokeWidth="2" strokeLinecap="round"/>
-        </g>
-      )}
-    </svg>
-  );
-};
+/** 角色立绘：兼容旧调用（只传服装），新调用可传外貌、年龄与性别（第 61 题） */
+export const CartoonCharacter = (props: CharacterAvatarProps) => <CharacterAvatar {...props} />;
 
 export interface RoleTabProps {
+  /** 外貌（第 61 题） */
+  appearance?: Appearance | null;
   onOpenShop?: () => void;
   onOpenBank?: () => void;
   onOpenWealthChart?: () => void;
@@ -221,6 +134,7 @@ export const RoleTab: React.FC<RoleTabProps> = ({
   isRegistered = false,
   gender,
   age = 8,
+  appearance = null,
   childrenCount = 0,
   diseaseName,
   onOpenSuccession,
@@ -351,7 +265,7 @@ export const RoleTab: React.FC<RoleTabProps> = ({
               onClick={onOpenShop}
               title="点击人物进入装备与服饰商城"
             >
-              <CartoonCharacter clothing={equippedClothing} />
+              <CartoonCharacter clothing={equippedClothing} appearance={appearance} age={isRegistered ? age : 25} gender={gender} />
             </div>
 
             <div className="absolute bottom-1 z-30 flex items-center gap-2.5">

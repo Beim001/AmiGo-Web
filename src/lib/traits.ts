@@ -22,6 +22,7 @@ export const TRAITS: TraitDef[] = [
   { id: 'shrewd', name: '精明', desc: '银行存款利息 +20%' },
   { id: 'amiable', name: '亲和', desc: '家族互动好感度额外 +1' },
   { id: 'ambitious', name: '野心勃勃', desc: '成年后野心每年 +4；富商、贵族家族中野心高且对当家人不满时会逼宫' },
+  { id: 'beauty', name: '倾国倾城', desc: '天生的特殊外貌；随机 2%，父母一方有 8%，双方都有 40%', special: true },
   { id: 'vigorous', name: '精力旺盛', desc: '生育年龄上限延长到女 50 岁、男 65 岁', special: true },
   { id: 'pampered', name: '富养', desc: '生育年龄上限延长到女 50 岁、男 65 岁', special: true },
 ];
@@ -53,7 +54,8 @@ export const randomTraits = (rng: () => number = Math.random): string[] => fillR
 /** 子嗣遗传：父母每个特质各有 30% 概率遗传；不足 1 个时随机补足，最多 3 个 */
 export const inheritTraits = (a: string[] = [], b: string[] = [], rng: () => number = Math.random): string[] => {
   const result: string[] = [];
-  for (const id of [...new Set([...a, ...b])]) {
+  // 「倾国倾城」不走 30% 遗传，由 appearance.ts 的 rollBeauty 单独判定
+  for (const id of [...new Set([...a, ...b])].filter((t) => t !== 'beauty')) {
     if (result.length >= MAX_TRAITS) break;
     if (rng() < TRAIT_INHERIT_CHANCE && compatible(result, id)) result.push(id);
   }
