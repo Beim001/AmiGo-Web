@@ -28,6 +28,10 @@ interface DevToolsPanelProps {
   simpleMode: boolean;
   onToggleSimpleMode: () => void;
   /** 快进时智能安排（自动看病、推演、送礼与人生选择） */
+  /** 抗体（第 53 题） */
+  antibodyText: string;
+  onGrantAllAntibodies: () => void;
+  onClearAntibodies: () => void;
   smartFastForward: boolean;
   onToggleSmartFastForward: () => void;
   onClearAchievements: () => void;
@@ -74,6 +78,9 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
   onToggleSimpleMode,
   smartFastForward,
   onToggleSmartFastForward,
+  antibodyText,
+  onGrantAllAntibodies,
+  onClearAntibodies,
   onClearAchievements,
   giftTotal,
   giftsGiven,
@@ -308,6 +315,15 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
             </button>
           </div>
           <div className="text-[9px] text-gray-500 font-bold mt-1.5">好感 ≤30% 的父母不给零花；在职（含童工）时改发俸禄。</div>
+          <div className={`${label} mt-2`}>抗体：{antibodyText}</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button disabled={!isRegistered} onClick={onGrantAllAntibodies} className={btn}>
+              获得全部抗体
+            </button>
+            <button disabled={!isRegistered} onClick={onClearAntibodies} className={btn}>
+              清空抗体
+            </button>
+          </div>
         </>
       )}
 

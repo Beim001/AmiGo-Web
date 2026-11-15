@@ -124,6 +124,31 @@ export const claimCompletionRank = async (): Promise<number> => {
   return data.rank;
 };
 
+// ---------- 赛季排行（第 55 题） ----------
+
+export interface SeasonRow {
+  rank: number;
+  name: string;
+  score: number;
+  completedMs: number | null;
+  lazy: boolean;
+  isMe: boolean;
+}
+
+export interface SeasonBoard {
+  list: SeasonRow[];
+  me: { rank: number | null; score: number; completedMs: number | null; lazy: boolean } | null;
+}
+
+/** 上报本赛季成绩（仅已验证的邮箱账号） */
+export const submitSeasonScore = async (body: { season: string; score: number; completedMs: number | null; lazy: boolean }): Promise<void> => {
+  await call('/season/score', { method: 'PUT', body: JSON.stringify(body) });
+};
+
+/** 读取赛季排行：score 积分榜，speed 全成就速通榜 */
+export const fetchSeasonBoard = (season: string, board: 'score' | 'speed') =>
+  call<SeasonBoard>(`/season/leaderboard?season=${encodeURIComponent(season)}&board=${board}`);
+
 // ---------- 错误文案 ----------
 
 export const translateAuthError = (err: unknown): string => {

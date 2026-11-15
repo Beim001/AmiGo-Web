@@ -242,9 +242,39 @@ export interface SimEventInstance {
 export const eventDef = (inst: SimEventInstance): SimEventDef | undefined => SIM_EVENTS.find((e) => e.id === inst.defId);
 
 /** 每月抽取：50% 概率从符合条件的事件中随机抽一张，否则返回 null（本月无事发生） */
-export const rollMonthlyEvent = (ctx: SimContext, year: number, month: number, rng: () => number = Math.random): SimEventInstance | null => {
+// 同一事件的冷却：12 个月内不再出现，正在等待处理的事件也不会再抽到（避免一年内多条一模一样的日志）
+export const EVENT_COOLDOWN_MONTHS = 12;
+export const SIM_RECENT_KEY = 'amigo_sim_recent';
+
+/** 事件 id → 最近一次出现的月份（年 × 12 + 月） */
+export const readSimRecent = (): Record<string, number> => {
+  try {
+    const v = JSON.parse(localStorage.getItem(SIM_RECENT_KEY) || '{}');
+    return v && typeof v === 'object' ? v : {};
+  } catch {
+    return {};
+  }
+};
+
+export const recordSimRecent = (defId: string, year: number, month: number) => {
+  try {
+    localStorage.setItem(SIM_RECENT_KEY, JSON.stringify({ ...readSimRecent(), [defId]: year * 12 + month }));
+  } catch {}
+};
+
+export const rollMonthlyEvent = (
+  ctx: SimContext,
+  year: number,
+  month: number,
+  rng: () => number = Math.random,
+  recent: Record<string, number> = {},
+  pendingDefIds: string[] = [],
+): SimEventInstance | null => {
   if (rng() >= EVENT_CHANCE) return null;
-  const pool = SIM_EVENTS.filter((e) => e.when(ctx));
+  const now = year * 12 + month;
+  const pool = SIM_EVENTS.filter(
+    (e) => e.when(ctx) && !pendingDefIds.includes(e.id) && !(recent[e.id] !== undefined && now - recent[e.id] < EVENT_COOLDOWN_MONTHS),
+  );
   if (pool.length === 0) return null;
   const def = pool[Math.floor(rng() * pool.length)];
   return { uid: `${def.id}_${year}_${month}_${Math.floor(rng() * 1e6)}`, defId: def.id, year, month };

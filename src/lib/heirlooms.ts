@@ -80,11 +80,19 @@ export const LOTS_PER_AUCTION = 3;
 export interface AuctionLot {
   heirloomId: string;
   startPrice: number;
-  /** 其他竞买人的最高出价（不公开） */
+  /** 其他竞买人愿意出的最高价（不公开） */
   rivalMax: number;
-  /** 'open' 未出价 / 'won' 拍得 / 'lost' 落败 */
+  /** 'open' 竞拍中 / 'won' 拍得 / 'lost' 落败或放弃 */
   status: 'open' | 'won' | 'lost';
   paid?: number;
+  /** 当前最高出价（还没人出价时等于起拍价） */
+  currentPrice?: number;
+  /** 当前领先者 */
+  leader?: 'player' | 'rival' | null;
+  /** 一口价：直接买下 */
+  buyout?: number;
+  /** 每次最少加价 */
+  increment?: number;
 }
 
 export interface Auction {
@@ -123,14 +131,78 @@ export const generateAuction = (
     admitted: invited,
     lots: picked.map((h) => ({
       heirloomId: h.id,
-      startPrice: Math.round(h.value * 0.6),
+      startPrice: Math.round(h.value * START_RATIO),
       rivalMax: Math.round(h.value * (0.8 + rng() * 0.7)),
       status: 'open',
+      currentPrice: Math.round(h.value * START_RATIO),
+      leader: null,
+      buyout: Math.round(h.value * BUYOUT_RATIO),
+      increment: Math.max(100, Math.round(h.value * INCREMENT_RATIO)),
     })),
   };
 };
 
-/** 封闭式出价：出价不低于起拍价；不低于其他竞买人的最高出价即拍得 */
+// ---------- 加价竞拍（第 33 题修订） ----------
+// 起拍价为估价 60%，一口价为估价 160%，每次至少加价估价的 5%。
+// 玩家出价后，其他竞买人若还愿意出更高价就会跟价（不超过他们的心理价位）；没人再跟则按玩家的出价落槌。
+
+export const START_RATIO = 0.6;
+export const BUYOUT_RATIO = 1.6;
+export const INCREMENT_RATIO = 0.05;
+
+/** 兼容旧存档：补全加价竞拍需要的字段 */
+export const normalizeLot = (lot: AuctionLot): Required<Omit<AuctionLot, 'paid'>> & { paid?: number } => {
+  const h = heirloomById(lot.heirloomId);
+  const value = h?.value ?? lot.startPrice / START_RATIO;
+  return {
+    ...lot,
+    currentPrice: lot.currentPrice ?? lot.startPrice,
+    leader: lot.leader ?? null,
+    buyout: lot.buyout ?? Math.round(value * BUYOUT_RATIO),
+    increment: lot.increment ?? Math.max(100, Math.round(value * INCREMENT_RATIO)),
+  };
+};
+
+/** 玩家这一轮最少要出多少 */
+export const minNextBid = (lot: AuctionLot): number => {
+  const l = normalizeLot(lot);
+  return l.leader === null ? l.startPrice : l.currentPrice + l.increment;
+};
+
+export interface RaiseResult {
+  lot: AuctionLot;
+  /** 'won' 落槌拍得；'outbid' 被其他竞买人反超；'error' 出价无效 */
+  outcome: 'won' | 'outbid' | 'error';
+  error?: string;
+}
+
+/** 加价：出价 ≥ 最低加价；达到一口价按一口价成交 */
+export const raiseBid = (lot: AuctionLot, bid: number): RaiseResult => {
+  const l = normalizeLot(lot);
+  if (l.status !== 'open') return { lot, outcome: 'error', error: '这件拍品已经结束竞拍' };
+  if (l.leader === 'player') return { lot, outcome: 'error', error: '你已经是最高出价者' };
+  const min = minNextBid(l);
+  if (!Number.isFinite(bid) || bid < min) return { lot, outcome: 'error', error: `出价不能低于 ${min.toLocaleString()} ₽` };
+  if (bid >= l.buyout) return buyoutLot(l);
+  if (l.rivalMax > bid) {
+    // 其他竞买人跟价：在玩家出价上加一档，但不超过心理价位
+    const counter = Math.min(l.rivalMax, bid + l.increment);
+    return { lot: { ...l, currentPrice: counter, leader: 'rival' }, outcome: 'outbid' };
+  }
+  return { lot: { ...l, currentPrice: bid, leader: 'player', status: 'won', paid: bid }, outcome: 'won' };
+};
+
+/** 一口价直接买下 */
+export const buyoutLot = (lot: AuctionLot): RaiseResult => {
+  const l = normalizeLot(lot);
+  if (l.status !== 'open') return { lot, outcome: 'error', error: '这件拍品已经结束竞拍' };
+  return { lot: { ...l, currentPrice: l.buyout, leader: 'player', status: 'won', paid: l.buyout }, outcome: 'won' };
+};
+
+/** 放弃：拍品由其他竞买人拍走 */
+export const passLot = (lot: AuctionLot): AuctionLot => ({ ...normalizeLot(lot), status: 'lost', leader: 'rival' });
+
+/** 封闭式出价（旧规则，保留给旧代码与测试）：出价不低于起拍价；不低于其他竞买人的最高出价即拍得 */
 export const placeBid = (lot: AuctionLot, bid: number): { lot: AuctionLot; won: boolean; error?: string } => {
   if (lot.status !== 'open') return { lot, won: false, error: '这件拍品已经结束竞拍' };
   if (!Number.isFinite(bid) || bid < lot.startPrice) return { lot, won: false, error: `出价不能低于起拍价 ${lot.startPrice.toLocaleString()} ₽` };

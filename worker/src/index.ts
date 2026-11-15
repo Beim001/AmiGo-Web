@@ -370,6 +370,76 @@ app.post('/api/achievements/complete', async (c) => {
   return c.json({ ok: true, rank: row?.rank ?? null });
 });
 
+// ---------- 赛季排行（第 55 题） ----------
+
+const SEASON_RE = /^S\d{1,3}$/;
+const MAX_SEASON_SCORE = 10_000_000;
+const MAX_COMPLETION_MS = 10 * 365 * 24 * 60 * 60 * 1000;
+
+/** 上报本赛季成绩。积分取最新值；全成就用时保留第一次集齐时的值；偷懒标记一旦为真就不再取消 */
+app.put('/api/season/score', async (c) => {
+  const { user, error } = await requireVerifiedUser(c);
+  if (error) return error;
+  const body = await readJson(c);
+  const season = String(body.season ?? '');
+  const score = Number(body.score);
+  const completed = body.completedMs === null || body.completedMs === undefined ? null : Number(body.completedMs);
+  const lazy = body.lazy === true ? 1 : 0;
+  if (!SEASON_RE.test(season) || !Number.isInteger(score) || score < 0 || score > MAX_SEASON_SCORE) return fail(c, 400, 'BAD_REQUEST');
+  if (completed !== null && (!Number.isInteger(completed) || completed < 0 || completed > MAX_COMPLETION_MS)) return fail(c, 400, 'BAD_REQUEST');
+  await c.env.DB.prepare(
+    `INSERT INTO season_scores (user_id, season, score, completed_ms, lazy, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, season) DO UPDATE SET
+       score = excluded.score,
+       completed_ms = COALESCE(season_scores.completed_ms, excluded.completed_ms),
+       lazy = MAX(season_scores.lazy, excluded.lazy),
+       updated_at = excluded.updated_at`,
+  )
+    .bind(user.id, season, score, completed, lazy, Date.now())
+    .run();
+  return c.json({ ok: true });
+});
+
+/** 赛季排行：board=score（积分榜）或 speed（全成就速通榜，只含已集齐的玩家）；附带当前登录账号的名次 */
+app.get('/api/season/leaderboard', async (c) => {
+  const season = c.req.query('season') ?? '';
+  const board = c.req.query('board') === 'speed' ? 'speed' : 'score';
+  if (!SEASON_RE.test(season)) return fail(c, 400, 'BAD_REQUEST');
+  const where = board === 'speed' ? 'WHERE s.season = ? AND s.completed_ms IS NOT NULL' : 'WHERE s.season = ?';
+  const order = board === 'speed' ? 's.completed_ms ASC, s.updated_at ASC' : 's.score DESC, s.updated_at ASC';
+  const rows = await c.env.DB.prepare(
+    `SELECT s.user_id, u.display_name AS name, s.score, s.completed_ms, s.lazy FROM season_scores s JOIN users u ON u.id = s.user_id ${where} ORDER BY ${order} LIMIT 50`,
+  )
+    .bind(season)
+    .all<{ user_id: string; name: string; score: number; completed_ms: number | null; lazy: number }>();
+  const list = (rows.results ?? []).map((r, i) => ({ rank: i + 1, name: r.name, score: r.score, completedMs: r.completed_ms, lazy: r.lazy === 1, isMe: false, userId: r.user_id }));
+
+  let me: { rank: number | null; score: number; completedMs: number | null; lazy: boolean } | null = null;
+  const user = await currentUser(c);
+  if (user) {
+    const mine = await c.env.DB.prepare('SELECT score, completed_ms, lazy, updated_at FROM season_scores WHERE user_id = ? AND season = ?')
+      .bind(user.id, season)
+      .first<{ score: number; completed_ms: number | null; lazy: number; updated_at: number }>();
+    if (mine) {
+      let rank: number | null = null;
+      if (board === 'score') {
+        const better = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM season_scores WHERE season = ? AND (score > ? OR (score = ? AND updated_at < ?))')
+          .bind(season, mine.score, mine.score, mine.updated_at)
+          .first<{ n: number }>();
+        rank = (better?.n ?? 0) + 1;
+      } else if (mine.completed_ms !== null) {
+        const better = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM season_scores WHERE season = ? AND completed_ms IS NOT NULL AND completed_ms < ?')
+          .bind(season, mine.completed_ms)
+          .first<{ n: number }>();
+        rank = (better?.n ?? 0) + 1;
+      }
+      me = { rank, score: mine.score, completedMs: mine.completed_ms, lazy: mine.lazy === 1 };
+    }
+    list.forEach((r) => (r.isMe = r.userId === user.id));
+  }
+  return c.json({ ok: true, season, board, list: list.map(({ userId, ...r }) => r), me });
+});
+
 // 未知接口返回 JSON 404；其余请求交给前端静态文件
 app.all('/api/*', (c) => fail(c, 404, 'NOT_FOUND'));
 app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));

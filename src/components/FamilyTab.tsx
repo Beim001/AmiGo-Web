@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { traitNames, affinityBonus, traitById } from '../lib/traits';
+import { antibodyNames } from '../lib/disease';
 import type { RankedFamily } from '../lib/familyRank';
 import { wealthScore } from '../lib/familyRank';
 import type { Guardianship } from '../lib/guardianship';
@@ -61,6 +62,10 @@ export interface FamilyTabProps {
   auctionOpen?: boolean;
   /** 这一世用过简洁模式：排行榜上标「偷懒」 */
   lazy?: boolean;
+  /** 主角的抗体（第 53 题） */
+  playerAntibodies?: string[];
+  /** 主动传位（第 58 题）：返回错误提示，成功返回 null */
+  onRetireTo?: (heirId: string) => string | null;
   onOpenAuction?: () => void;
   /** 抽奖得到的礼物背包 */
   giftInventory?: GiftInventory;
@@ -93,12 +98,15 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   onOpenAuction,
   giftInventory = {},
   lazy = false,
+  playerAntibodies = [],
+  onRetireTo,
   setGiftInventory,
 }) => {
   const [subTab, setSubTab] = useState<'tree' | 'ranking' | 'heirlooms' | 'chronicles'>('tree');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState('');
+  const [confirmRetire, setConfirmRetire] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -590,6 +598,17 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                 ))}
               </div>
             )}
+            {selectedMember.isChild && selectedMember.ambition !== undefined && (
+              <div className={`text-[10px] font-bold mb-2 ${selectedMember.ambition >= 80 ? 'text-rose-300' : 'text-gray-400'}`}>
+                ⚔️ 野心 {selectedMember.ambition}
+                {selectedMember.ambition >= 80 && selectedMember.age >= 18 ? '（野心很大，好感过低时可能逼宫）' : ''}
+              </div>
+            )}
+            {(selectedMember.isPlayer ? playerAntibodies : selectedMember.antibodies ?? []).length > 0 && (
+              <div className="text-[10px] text-sky-300 font-bold mb-2">
+                🛡️ 抗体：{antibodyNames(selectedMember.isPlayer ? playerAntibodies : selectedMember.antibodies).join('、')}
+              </div>
+            )}
             <div className="flex flex-wrap gap-1.5 mb-4">
               {selectedMember.traits.map((trait, idx) => (
                 <span key={idx} className="bg-yellow-400/20 text-yellow-300 text-[10px] font-black px-2 py-0.5 rounded border border-yellow-500/50">
@@ -633,6 +652,23 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
               </div>
             )}
 
+            {onRetireTo && selectedMember.isChild && selectedMember.status !== '已故' && selectedMember.age >= 18 && age >= 50 && (
+              <button
+                onClick={() => {
+                  if (confirmRetire !== selectedMember.id) {
+                    setConfirmRetire(selectedMember.id);
+                    return;
+                  }
+                  setConfirmRetire(null);
+                  const err = onRetireTo(selectedMember.id);
+                  if (err) showToast(err);
+                  else setSelectedId(null);
+                }}
+                className="w-full mb-3 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
+              >
+                {confirmRetire === selectedMember.id ? `再点一次：确定把家业传给 ${selectedMember.name}？` : '👑 传位给 TA（退居幕后）'}
+              </button>
+            )}
             {!selectedMember.isPlayer && selectedMember.status !== '已故' && (
               <>
                 <div className="text-[11px] text-gray-300 font-bold mb-2">

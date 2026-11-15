@@ -13,25 +13,30 @@ import { SimTab } from './components/SimTab';
 import { LogTab } from './components/LogTab';
 import { FamilyTab } from './components/FamilyTab';
 import { MarriageModal } from './components/MarriageModal';
-import { FamilyState, INITIAL_FAMILY_STATE, demoteFamily, monthlyFamilyLife, childLifespan, ageAt, generateSpouseCandidates, marry, MARRIAGE_FEE, MARRIAGE_MIN_AGE, SPOUSE_MEMBER_ID, canInteract, applyInteraction, GIFT_COST, promoteFamily, getHeirlooms, addHeirloom, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
+import { FamilyState, INITIAL_FAMILY_STATE, demoteFamily, monthlyFamilyLife, childLifespan, ageAt, checkCoup, generateSpouseCandidates, marry, MARRIAGE_FEE, MARRIAGE_MIN_AGE, SPOUSE_MEMBER_ID, canInteract, applyInteraction, GIFT_COST, promoteFamily, getHeirlooms, addHeirloom, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
 import { randomTraits, affinityBonus, withBirthPrivilege, rollMaintenance, fertileMaxAge, MAINTENANCE_COST, FERTILITY_TRAITS, SIMPLE_MAINTENANCE_CHANCE, SIMPLE_MAINTENANCE_RESERVE, PLAYER_TRAITS_KEY, diseaseTraitMultiplier, decayReduction, salaryMultiplier, depositInterestMultiplier, traitNames, traitById } from './lib/traits';
 import { REPUTATION_KEY, REP, HIGH_SALARY, clampReputation, reputationLevel, CHARITY_KEY, CHARITY_UNIT, charityRemaining } from './lib/reputation';
 import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, formatRealTime, unlockAllForTesting, clearAchievementsForTesting, hasAllAchievements, CREDITS_SEEN_KEY, CREDITS_RANK_KEY, readGiftsGiven, recordGiftsGiven } from './lib/achievements';
 import { CreditsRoll } from './components/CreditsRoll';
+import { SeasonRankPanel } from './components/SeasonRankPanel';
+import { currentSeason } from './data/seasons';
+import { ensureSeason, seasonScore, completionMs, seasonAchievements, readSeasonSimPoints, addSeasonSimPoints, markSeasonLazy, isSeasonLazy, markSeasonCheat, isSeasonCheat } from './lib/season';
+import { TEST_CODE, GOD_MODE_KEY, GOD_COINS, isBetaVersion } from './lib/testCode';
+import { ANTIBODY_KEY, VACCINE_SUCCESS, vaccinesAvailable, immunityAfterRecovery, antibodyNames, diseaseById, DISEASES } from './lib/disease';
 import { SimpleModeView, SimpleCard } from './components/SimpleModeView';
 import { SIMPLE_MODE_KEY, autoOptionIndex, recommendJobs, recommendHome, shouldSuggestHome, buyRecommended, sellAll } from './lib/simpleMode';
 import { GiftInventory, GIFT_INVENTORY_KEY, GIFT_QUALITY_STYLE, GIFT_TASTE_LABEL, CHILD_AGE as GIFT_CHILD_AGE, addGifts, driftGiftTastes, giftCount, giftById, giftAffinityGain, removeGift } from './lib/gifts';
 import { AboutUs } from './components/AboutUs';
-import { claimCompletionRank } from './lib/authClient';
+import { claimCompletionRank, submitSeasonScore } from './lib/authClient';
 import { GUARDIANSHIP_KEY, Guardianship, takeCustody, monthlyGuardianship, ORPHANAGE_NAME, ADULT_AGE as GUARDIAN_ADULT_AGE } from './lib/guardianship';
 import { rankFamilies, familyNetWorth } from './lib/familyRank';
 import { rollClass, generateOrigin, classById, readChildJob, CHILD_JOB_KEY, CHILD_LABOR_MAX_AGE, CHILD_JOBS, checkPromotion, checkDemotion, PLAYER_LIFESPAN_KEY, rollPlayerLifespan } from './lib/lineage';
 import { applySurname } from './lib/names';
-import { Auction, AUCTION_KEY, AUCTION_CHANCE, TICKET_PRICE, generateAuction, placeBid, isInvited, heirloomById, heirloomsValue } from './lib/heirlooms';
+import { Auction, AUCTION_KEY, AUCTION_CHANCE, TICKET_PRICE, generateAuction, raiseBid, buyoutLot, passLot, normalizeLot, isInvited, heirloomById, heirloomsValue } from './lib/heirlooms';
 import { AuctionModal } from './components/AuctionModal';
 import { progressDisease, diseaseInfo, DISEASE_KEY, ActiveDisease } from './lib/disease';
 import { SuccessionModal } from './components/SuccessionModal';
-import { SimEventInstance, rollMonthlyEvent, eventDef, resolveOption, optionBlocked, SIM_EVENTS_KEY, SIM_SCORE_KEY, SIM_QUIET_KEY } from './lib/simEvents';
+import { SimEventInstance, rollMonthlyEvent, eventDef, resolveOption, optionBlocked, SIM_EVENTS_KEY, SIM_SCORE_KEY, SIM_QUIET_KEY, readSimRecent, recordSimRecent } from './lib/simEvents';
 import { addLifeLog, readLifeLog, clearLifeLog } from './lib/lifeLog';
 import { BASE_STIPEND, monthlySalary, nextHealth, effectiveComfort, isMinor } from './lib/monthly';
 import { computeAllowance } from './lib/allowance';
@@ -105,7 +110,8 @@ const saveStored = (key: string, value: unknown) => {
 const SIMPLE_SNOOZE_KEY = 'amigo_simple_snooze';
 const USED_SIMPLE_KEY = 'amigo_used_simple_mode';
 const MAINTENANCE_LOG_KEY = 'amigo_maintenance_log';
-const KEYS_KEPT_ON_RESET = new Set(['amigo_simple_mode', 'amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements', 'amigo_credits_seen', 'amigo_credits_rank', 'amigo_gifts_given']);
+// 赛季进度与成就一样跨人生保留（第 55 题）
+const KEYS_KEPT_ON_RESET = new Set(['amigo_simple_mode', 'amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements', 'amigo_credits_seen', 'amigo_credits_rank', 'amigo_gifts_given', 'amigo_season_id', 'amigo_season_joined_at', 'amigo_season_sim_points', 'amigo_season_lazy', 'amigo_season_cheat']);
 
 
 
@@ -728,6 +734,11 @@ interface ProfileModalProps {
   onToggleSimpleMode: () => void;
   /** 这一世用过简洁模式：排行榜上标「偷懒」 */
   lazy?: boolean;
+  /** 测试兑换码（第 57 题），返回提示文字 */
+  onRedeemTestCode?: () => string;
+  /** 本赛季成绩（第 55 题） */
+  seasonMine?: { score: number; completedMs: number | null; lazy: boolean; achieved: number; total: number };
+  canRankSeason?: boolean;
 }
 
 const ProfileModal = ({
@@ -761,6 +772,9 @@ const ProfileModal = ({
   simpleMode,
   onToggleSimpleMode,
   lazy = false,
+  seasonMine,
+  canRankSeason = false,
+  onRedeemTestCode,
 }: ProfileModalProps) => {
   // 名片资料：读取真实游戏状态（岗位、房产、服装）
   const currentJob = (() => {
@@ -1003,7 +1017,7 @@ const ProfileModal = ({
   };
 
   React.useEffect(() => {
-    if (subTab === 'rank') {
+    if (subTab === 'rank' && board < 10) {
       refreshRankData(board, period);
     }
   }, [subTab, board, period]);
@@ -1132,6 +1146,12 @@ const ProfileModal = ({
     const code = cdkeyInput.trim().toUpperCase();
     if (!code) {
       showToast('请输入有效的礼包兑换码！');
+      return;
+    }
+    // 测试兑换码：只在测试版本可用，可无限次兑换（第 57 题）
+    if (code === TEST_CODE) {
+      setCdkeyInput('');
+      showToast(isBetaVersion() && onRedeemTestCode ? onRedeemTestCode() : '❌ 该兑换码只能在测试版本中使用');
       return;
     }
     if (redeemedCodes.includes(code)) {
@@ -1557,8 +1577,8 @@ const ProfileModal = ({
               </div>
             </div>
 
-            {/* Board Selector (1: 财富榜, 3: 推演榜) */}
-            <div className="grid grid-cols-2 bg-[#21232e] p-1 rounded-xl border-2 border-black gap-1 shadow-[0_2px_0_#000]">
+            {/* Board Selector (1: 财富榜, 3: 推演榜, 10: 本赛季, 11: 以往赛季) */}
+            <div className="grid grid-cols-4 bg-[#21232e] p-1 rounded-xl border-2 border-black gap-1 shadow-[0_2px_0_#000]">
               <button
                 onClick={() => setBoard(1)}
                 className={`py-1.5 text-xs font-black rounded-lg border transition-all cursor-pointer flex items-center justify-center gap-1 ${
@@ -1581,7 +1601,27 @@ const ProfileModal = ({
                 <Swords size={13} />
                 <span>推演战绩榜</span>
               </button>
+              {([
+                [10, '本赛季'],
+                [11, '以往赛季'],
+              ] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setBoard(id)}
+                  className={`py-1.5 text-xs font-black rounded-lg border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                    board === id ? 'bg-yellow-400 text-black border-black shadow-[0_1px_0_#000]' : 'text-gray-400 border-transparent hover:text-white'
+                  }`}
+                >
+                  <Trophy size={13} />
+                  <span>{label}</span>
+                </button>
+              ))}
             </div>
+
+            {board >= 10 ? (
+              <SeasonRankPanel key={board} mode={board === 10 ? 'current' : 'past'} mine={seasonMine} canRank={canRankSeason} />
+            ) : (
+            <>
 
             {/* Period Selector (week / month / all / day) */}
             <div className="flex items-center justify-between bg-[#21232e] px-2 py-1 rounded-xl border border-black text-xs font-bold">
@@ -1714,6 +1754,8 @@ const ProfileModal = ({
             <div className="text-center text-gray-500 text-[10px] font-bold">
               * 排行榜数据通过 B站 Toy SDK 实时接入 · 跨终端同步
             </div>
+            </>
+            )}
           </div>
         )}
 
@@ -2838,6 +2880,10 @@ export default function App() {
       setCreditsRank(cached);
       return;
     }
+    if (isSeasonCheat()) {
+      setCreditsRank(null);
+      return;
+    }
     setCreditsLoading(true);
     claimCompletionRank()
       .then((rank) => {
@@ -2981,6 +3027,13 @@ export default function App() {
       nextM = 1;
       nextY += 1;
     }
+    // 第 58 题：本赛季只推演到卡罗尼亚帝国结束（1920 年）
+    const seasonEnd = currentSeason().endGameYear;
+    if (seasonEnd !== undefined && nextY > seasonEnd) {
+      showToast(`📜 ${seasonEnd} 年，${currentSeason().endEvent ?? '本赛季结束'}。本赛季推演到此为止，下一赛季开放后继续。`);
+      setFastForwardRemaining(0);
+      return;
+    }
     setGameMonth(nextM);
     setGameYear(nextY);
     try {
@@ -3099,7 +3152,7 @@ export default function App() {
     const comfort = isRegistered ? effectiveComfort(comfortBonusTotal, ageNextMonth, familyClass.parentHomeComfort) : comfortBonusTotal;
     let diseaseDamage = 0;
     if (isRegistered) {
-      const sick = progressDisease(disease, ageNextMonth, familyClass.diseaseMultiplier * diseaseTraitMultiplier(playerTraits));
+      const sick = progressDisease(disease, ageNextMonth, familyClass.diseaseMultiplier * diseaseTraitMultiplier(playerTraits), Math.random, antibodies);
       setDisease(sick.active);
       diseaseDamage = sick.damage;
       const when = { year: nextY, month: nextM, age: ageNextMonth };
@@ -3110,13 +3163,16 @@ export default function App() {
       if (sick.recovered) {
         notes.push(`${sick.recovered.name}已痊愈`);
         addLifeLog('健康', `${sick.recovered.name}痊愈`, '熬过病痛，身体逐渐康复。', when);
+        if (gainRecoveryImmunity(sick.recovered.id)) notes.push(`🛡️ 获得${sick.recovered.name}抗体`);
       }
       else if (sick.damage > 0 && currentDisease) notes.push(`${currentDisease.name} -${sick.damage}`);
     }
     // 第 51 题：到达寿命即寿终正寝，医疗只能延缓衰减
-    const reachedLifespan = isRegistered && playerLifespan !== null && ageNextMonth >= playerLifespan;
+    const reachedLifespan = !godMode && isRegistered && playerLifespan !== null && ageNextMonth >= playerLifespan;
     if (reachedLifespan) notes.push('🕯️ 寿终正寝');
-    const newHealth = reachedLifespan
+    const newHealth = godMode && isRegistered
+      ? 100
+      : reachedLifespan
       ? 0
       : isRegistered
         ? nextHealth(health, comfort, ageNextMonth, diseaseDamage + childLaborDamage - decayReduction(playerTraits, ageNextMonth))
@@ -3133,7 +3189,7 @@ export default function App() {
     let familyCash = 0; // 本月家族相关的现金变动
     let repDelta = 0;
     if (isRegistered && newHealth > 0) {
-      const birth = tryHaveChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits, gender);
+      const birth = tryHaveChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits, gender, antibodies);
       if (birth.child) {
         fam = birth.state;
         repDelta += REP.child * birth.children.length;
@@ -3160,7 +3216,7 @@ export default function App() {
         } else {
           familyCash -= upkeep;
           notes.push(`供养情人 -${upkeep.toLocaleString()}`);
-          const secret = tryIllegitimateChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits, gender);
+          const secret = tryIllegitimateChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits, gender, antibodies);
           if (secret.child) {
             fam = secret.state;
             notes.push(`🤫 私生${secret.child.gender === '女' ? '女' : '子'} ${secret.child.name} 降生`);
@@ -3181,6 +3237,12 @@ export default function App() {
       const membersNow = buildFamilyMembers(fam, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth });
       const drift = monthlyFamilyDrift(fam, membersNow, gameYear, gameMonth);
       fam = drift.state;
+
+      // 逼宫（第 59 题）：富商、贵族家族中野心高且不满的成年子嗣
+      const coup = checkCoup(fam, membersNow, getOrigin(fam).classId);
+      fam = coup.state;
+      coup.warnings.forEach((w) => notes.push(w));
+      if (coup.coupBy) setPendingCoup(coup.coupBy);
 
       // 礼物喜好：成年家人每月有小概率改变喜好（第 35 题）
       const tasteDrift = driftGiftTastes(
@@ -3263,8 +3325,12 @@ export default function App() {
         { age: ageNextMonth, classId: familyClass.id, employed: !!job, coins, hasChildren: fam.children.length > 0, ownedHeirlooms: getHeirlooms(fam).map((h) => h.id) },
         nextY,
         nextM,
+        Math.random,
+        readSimRecent(),
+        simEvents.map((e) => e.defId),
       );
       if (inst) {
+        recordSimRecent(inst.defId, nextY, nextM);
         setSimEvents((prev) => [...prev, inst]);
         setSimQuiet(null);
         notes.push('📰 新的人生事件');
@@ -3306,11 +3372,12 @@ export default function App() {
   // 年龄可小于 8 岁（年幼的子嗣继承家业时）
   const currentAge = isRegistered ? Math.max(0, 8 + gameYear - birthRegisteredYear) : 8;
 
-  const handleRegisterBirth = (name: string) => {
+  const handleRegisterBirth = (name: string, preferredSurname = '') => {
     const generatedGender = Math.random() > 0.5 ? '男' : '女';
     // 随机家族出身（undefined.md 第 18 题）：决定起始资产、父母家条件与家族成员
+    // 第 56 题：家族沿用玩家填写的姓，留空则随机；皇族只有纳海王朝
     const cls = rollClass();
-    const origin = generateOrigin(cls, Math.random, gameYear);
+    const origin = generateOrigin(cls, Math.random, gameYear, preferredSurname);
     setFamily({ ...INITIAL_FAMILY_STATE, origin });
     setCoins(cls.startCash);
     const bankTotals = persistBankAccounts(buildDefaultAccounts(cls.startDeposit, 0));
@@ -3337,6 +3404,7 @@ export default function App() {
     const traits = withBirthPrivilege(cls.id, randomTraits());
     setPlayerTraits(traits);
     setPlayerLifespan(rollPlayerLifespan(cls.id, traits));
+    setAntibodies([]);
     setReputation(cls.startReputation);
     setGuardianship(null);
     addLifeLog('成长', '出生登记', `出生于${cls.label}之家（${origin.surname}家族），性别${generatedGender}，特质：${traitNames(traits).join('、')}。`, { year: gameYear, month: gameMonth, age: 8 });
@@ -3347,7 +3415,9 @@ export default function App() {
   };
 
   /** 由子嗣或兄弟姐妹继承：资产保留，身份、年龄、家族世系换成继承人（undefined.md 第 21 题） */
-  const handleSuccession = (heirId: string, keepRecords: boolean) => {
+  /** 主动传位（第 58 题）：主角年满 RETIRE_MIN_AGE 岁，可把家业传给年满 18 岁的在世子女 */
+  const RETIRE_MIN_AGE = 50;
+  const handleSuccession = (heirId: string, keepRecords: boolean, retire = false, coup = false) => {
     const members = buildFamilyMembers(family, {
       playerName,
       playerGender: gender,
@@ -3363,8 +3433,12 @@ export default function App() {
       { name: playerName, gender: (gender === '女' ? '女' : '男') as Gender, age: currentAge, occupation: playerOccupation },
       gameYear,
       gameMonth,
+      retire ? { lifespan: playerLifespan ?? currentAge + 20, coup } : undefined,
     );
     const newRegYear = gameYear - (heir.age - 8);
+    // 第 53 题：子女、孙辈继承时带着自己的抗体；兄弟姐妹没有记录抗体
+    const heirSource = family.children.find((c) => c.id === heirId) ?? family.children.flatMap((c) => c.kids ?? []).find((k) => k.id === heirId);
+    setAntibodies(heirSource?.antibodies ?? []);
     // 第 17 题：玩家可选择把前任主角的人生大事写入族谱
     const records = keepRecords
       ? readLifeLog()
@@ -3421,8 +3495,32 @@ export default function App() {
     }
     // 继承人开始新的人生日志
     clearLifeLog();
-    addLifeLog('大事', '继承家业', `${playerName} 辞世后，作为${heir.relation}继承了家业。`, { year: gameYear, month: gameMonth, age: heir.age });
-    showToast(`🕯️ ${heir.relation} ${heir.name}（${heir.age} 岁）继承了家业`);
+    addLifeLog(
+      '大事',
+      '继承家业',
+      coup ? `联合族人逼宫，迫使 ${playerName} 退位，接过了家业。` : retire ? `${playerName} 退居幕后，作为${heir.relation}接过了家业。` : `${playerName} 辞世后，作为${heir.relation}继承了家业。`,
+      { year: gameYear, month: gameMonth, age: heir.age },
+    );
+    showToast(coup ? `⚔️ ${heir.relation} ${heir.name} 逼宫！${playerName} 被迫退位，由 ${heir.name}（${heir.age} 岁）当家` : retire ? `👑 ${playerName} 退居幕后，${heir.relation} ${heir.name}（${heir.age} 岁）接过家业` : `🕯️ ${heir.relation} ${heir.name}（${heir.age} 岁）继承了家业`);
+  };
+  const [pendingCoup, setPendingCoup] = useState<string | null>(null);
+  React.useEffect(() => {
+    if (!pendingCoup) return;
+    const id = pendingCoup;
+    setPendingCoup(null);
+    if (isRegistered && health > 0 && family.children.some((c) => c.id === id)) {
+      setFastForwardRemaining(0);
+      handleSuccession(id, true, true, true);
+    }
+  }, [pendingCoup]);
+  const handleRetire = (heirId: string): string | null => {
+    if (!isRegistered || health <= 0) return '角色已故，请使用传承';
+    if (currentAge < RETIRE_MIN_AGE) return `年满 ${RETIRE_MIN_AGE} 岁才能传位`;
+    const child = family.children.find((c) => c.id === heirId);
+    if (!child) return '只能传位给自己的子女';
+    if (ageAt(child.birthYear, child.birthMonth, gameYear, gameMonth) < 18) return '子女年满 18 岁才能接班';
+    handleSuccession(heirId, true, true);
+    return null;
   };
 
   const handleResetLife = () => {
@@ -3455,6 +3553,8 @@ export default function App() {
     setPlayerLifespan(null);
     setUsedSimpleMode(false);
     setMaintenanceLog({});
+    setAntibodies([]);
+    setGodMode(false);
     setReputation(0);
     setGuardianship(null);
     setCharity(null);
@@ -3466,7 +3566,7 @@ export default function App() {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith('amigo_') || key.startsWith('aminoac_')) && !KEYS_KEPT_ON_RESET.has(key) && !key.startsWith('amigo_cloud_')) {
+        if (key && (key.startsWith('amigo_') || key.startsWith('aminoac_')) && !KEYS_KEPT_ON_RESET.has(key) && !key.startsWith('amigo_cloud_') && !key.startsWith('amigo_achievements_archive_')) {
           keysToRemove.push(key);
         }
       }
@@ -3605,7 +3705,7 @@ export default function App() {
     const option = def?.options[optionIndex];
     if (!inst || !def || !option || optionBlocked(option, coins)) return null;
     const result = resolveOption(option);
-    const newHealth = Math.max(0, Math.min(100, health + result.health));
+    const newHealth = godMode ? 100 : Math.max(0, Math.min(100, health + result.health));
     setCoins((prev) => Math.max(0, prev + result.coins));
     setHealth(newHealth);
     setSimScore((n) => n + result.score);
@@ -3682,6 +3782,53 @@ export default function App() {
     return computeAllowance(parents, age, familyClass.id, !!family.playerIllegitimate);
   };
 
+  // 抗体（第 53 题）：接种疫苗或传染病痊愈后按概率获得，有抗体的病不会再患
+  const [antibodies, setAntibodies] = useState<string[]>(() => loadStored<string[]>(ANTIBODY_KEY, []));
+  React.useEffect(() => saveStored(ANTIBODY_KEY, antibodies), [antibodies]);
+  /** 传染病痊愈后按概率获得抗体；返回是否获得 */
+  const gainRecoveryImmunity = (diseaseId: string): boolean => {
+    if (antibodies.includes(diseaseId) || !immunityAfterRecovery(diseaseId)) return false;
+    setAntibodies((prev) => (prev.includes(diseaseId) ? prev : [...prev, diseaseId]));
+    addLifeLog('健康', `获得${diseaseById(diseaseId)?.name ?? diseaseId}抗体`, '痊愈后身体产生了抗体，不会再患这种病。');
+    return true;
+  };
+  /** 接种疫苗：给自己，或给所有在世、还没有抗体的子女；返回提示文字 */
+  const handleVaccinate = (diseaseId: string, target: 'self' | 'children'): string => {
+    const d = diseaseById(diseaseId);
+    if (!d || d.vaccineYear === undefined || gameYear < d.vaccineYear) return '这种疫苗还没有问世';
+    const cost = d.vaccineCost ?? 0;
+    if (target === 'self') {
+      if (antibodies.includes(d.id)) return `你已经有${d.name}抗体了`;
+      if (coins < cost) return `钱不够，接种要 ${cost.toLocaleString()} ₽`;
+      setCoins((prev) => prev - cost);
+      if (Math.random() < VACCINE_SUCCESS) {
+        setAntibodies((prev) => [...prev, d.id]);
+        addLifeLog('健康', `接种${d.name}疫苗`, '接种成功，获得了抗体。');
+        return `💉 接种${d.name}疫苗成功，获得抗体（-${cost.toLocaleString()} ₽）`;
+      }
+      addLifeLog('健康', `接种${d.name}疫苗`, '这次接种没有产生抗体。');
+      return `💉 接种了${d.name}疫苗（-${cost.toLocaleString()} ₽），可惜没有产生抗体`;
+    }
+    const kids = family.children.filter((c) => ageAt(c.birthYear, c.birthMonth, gameYear, gameMonth) < childLifespan(c) && !(c.antibodies ?? []).includes(d.id));
+    if (kids.length === 0) return `孩子们都已经有${d.name}抗体（或还没有孩子）`;
+    const total = cost * kids.length;
+    if (coins < total) return `钱不够，给 ${kids.length} 个孩子接种要 ${total.toLocaleString()} ₽`;
+    setCoins((prev) => prev - total);
+    let ok = 0;
+    const ids = new Set(kids.map((k) => k.id));
+    setFamily((prev) => ({
+      ...prev,
+      children: prev.children.map((c) => {
+        if (!ids.has(c.id) || Math.random() >= VACCINE_SUCCESS) return c;
+        ok++;
+        return { ...c, antibodies: [...(c.antibodies ?? []), d.id] };
+      }),
+    }));
+    addLifeLog('健康', `孩子们接种${d.name}疫苗`, `为 ${kids.length} 个孩子接种，花费 ${total.toLocaleString()} ₽。`);
+    return `💉 为 ${kids.length} 个孩子接种了${d.name}疫苗（-${total.toLocaleString()} ₽）`;
+  };
+  const vaccineList = vaccinesAvailable(gameYear).map((d) => ({ id: d.id, name: d.name, cost: d.vaccineCost ?? 0, owned: antibodies.includes(d.id) }));
+
   // 主角寿命（第 51 题）：旧存档或传承后没有寿命时，按当前阶层与特质补抽
   const [playerLifespan, setPlayerLifespan] = useState<number | null>(() => loadStored<number | null>(PLAYER_LIFESPAN_KEY, null));
   React.useEffect(() => saveStored(PLAYER_LIFESPAN_KEY, playerLifespan), [playerLifespan]);
@@ -3692,6 +3839,54 @@ export default function App() {
   // ---------- 简洁模式（第 49 题）：面向 7 岁儿童的一屏界面，与完整模式共用存档 ----------
   const [simpleMode, setSimpleMode] = useState<boolean>(() => loadStored<boolean>(SIMPLE_MODE_KEY, false));
   React.useEffect(() => saveStored(SIMPLE_MODE_KEY, simpleMode), [simpleMode]);
+  // ---------- 测试兑换码（第 57 题） ----------
+  const [godMode, setGodMode] = useState<boolean>(() => loadStored<boolean>(GOD_MODE_KEY, false));
+  React.useEffect(() => saveStored(GOD_MODE_KEY, godMode), [godMode]);
+  // 无限金币、无限体力：低于上限就补满
+  React.useEffect(() => {
+    if (!godMode) return;
+    if (coins < GOD_COINS) setCoins(GOD_COINS);
+    if (isRegistered && health < 100) setHealth(100);
+  }, [godMode, coins, health, isRegistered]);
+  const activateGodMode = (): string => {
+    setGodMode(true);
+    setCoins((c) => Math.max(c, GOD_COINS));
+    setHealth(100);
+    setDisease(null);
+    markSeasonCheat();
+    const added = unlockAllForTesting();
+    autoPlayCreditsIfComplete();
+    return `🛠️ 测试兑换码生效：无限金币、无限体力、无限寿命，已解锁全部成就（新增 ${added} 项）。本赛季成绩不计入排行。`;
+  };
+
+  // ---------- 赛季（第 55 题） ----------
+  const [seasonJoinedAt] = useState<number>(() => ensureSeason());
+  const prevSimScoreRef = React.useRef(simScore);
+  React.useEffect(() => {
+    if (simScore > prevSimScoreRef.current) addSeasonSimPoints(simScore - prevSimScoreRef.current);
+    prevSimScoreRef.current = simScore;
+  }, [simScore]);
+  React.useEffect(() => {
+    if (simpleMode && isRegistered) markSeasonLazy();
+  }, [simpleMode, isRegistered]);
+  const seasonRecord = readAchievements();
+  const seasonMine = {
+    score: seasonScore(seasonRecord, readSeasonSimPoints(), familyClass.id),
+    completedMs: completionMs(seasonRecord, seasonJoinedAt),
+    lazy: isSeasonLazy(),
+    cheat: isSeasonCheat(),
+    achieved: seasonAchievements(seasonRecord).length,
+    total: ACHIEVEMENTS.length,
+  };
+  // 已验证的邮箱账号：每次推进月份或成绩变化后上报（延迟 3 秒合并）
+  React.useEffect(() => {
+    if (!cloud.enabled || !isRegistered || seasonMine.cheat) return;
+    const timer = setTimeout(() => {
+      submitSeasonScore({ season: currentSeason().id, score: seasonMine.score, completedMs: seasonMine.completedMs, lazy: seasonMine.lazy }).catch(() => {});
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [cloud.enabled, isRegistered, seasonMine.score, seasonMine.completedMs, seasonMine.lazy, seasonMine.cheat]);
+
   /** 这一世用过简洁模式：排行榜上标「偷懒」，重开人生后清除 */
   const [usedSimpleMode, setUsedSimpleMode] = useState<boolean>(() => loadStored<boolean>(USED_SIMPLE_KEY, false));
   React.useEffect(() => saveStored(USED_SIMPLE_KEY, usedSimpleMode), [usedSimpleMode]);
@@ -3736,9 +3931,22 @@ export default function App() {
         setDisease(null);
         unlockAchievement('cured');
         addLifeLog('健康', `治愈${currentDisease.name}`, '简洁模式自动就医。');
+        if (gainRecoveryImmunity(currentDisease.id)) out.push(`🛡️ 获得${currentDisease.name}抗体`);
         out.push(`🩺 治好了${currentDisease.name}${cost > 0 ? `（-${cost.toLocaleString()} ₽）` : '（爸妈付钱）'}`);
       } else {
         out.push(`🤒 钱不够，治不了${currentDisease.name}（要 ${cost.toLocaleString()} ₽）`);
+      }
+    }
+    // 每月自动给自己接种一种还没有抗体的疫苗（钱够时）
+    const nextVaccine = vaccinesAvailable(gameYear).find((d) => !antibodies.includes(d.id) && cash >= (d.vaccineCost ?? 0) + 5000);
+    if (nextVaccine) {
+      cash -= nextVaccine.vaccineCost ?? 0;
+      if (Math.random() < VACCINE_SUCCESS) {
+        setAntibodies((prev) => (prev.includes(nextVaccine.id) ? prev : [...prev, nextVaccine.id]));
+        addLifeLog('健康', `接种${nextVaccine.name}疫苗`, '简洁模式自动接种，获得了抗体。');
+        out.push(`💉 接种${nextVaccine.name}疫苗，获得抗体`);
+      } else {
+        out.push(`💉 接种了${nextVaccine.name}疫苗，这次没有产生抗体`);
       }
     }
     if (hp < 40) {
@@ -3760,7 +3968,7 @@ export default function App() {
       const option = def.options[idx];
       const result = resolveOption(option);
       cash = Math.max(0, cash + result.coins);
-      hp = Math.max(0, Math.min(100, hp + result.health));
+      hp = godMode ? 100 : Math.max(0, Math.min(100, hp + result.health));
       score += result.score;
       resolved.push(inst.uid);
       addLifeLog('大事', def.headline, `${option.label}：${result.text}`);
@@ -3854,8 +4062,15 @@ export default function App() {
     return out;
   };
 
+  /** 已到本赛季的最后一个月（第 58 题） */
+  const atSeasonEnd = currentSeason().endGameYear !== undefined && gameYear >= currentSeason().endGameYear! && gameMonth === 12;
   const handleSimpleNextMonth = () => {
     if (!isRegistered) return;
+    if (atSeasonEnd) {
+      setSimpleRemaining(0);
+      handleNextMonth();
+      return;
+    }
     const notes = simpleAutoHandle();
     setSimpleAutoNotes(notes);
     simpleMonthNotesRef.current = [];
@@ -4020,7 +4235,7 @@ export default function App() {
   const [simpleRemaining, setSimpleRemaining] = useState(0);
   React.useEffect(() => {
     if (simpleRemaining <= 0 || simpleAdvancePending) return;
-    if (!isRegistered || health <= 0 || simpleCard) {
+    if (!isRegistered || health <= 0 || simpleCard || atSeasonEnd) {
       setSimpleRemaining(0);
       return;
     }
@@ -4352,6 +4567,8 @@ export default function App() {
              heirlooms={getHeirlooms(family)}
              giftInventory={giftInventory}
              lazy={usedSimpleMode}
+             playerAntibodies={antibodies}
+             onRetireTo={handleRetire}
              setGiftInventory={setGiftInventory}
              auctionOpen={!!auction && auction.year === gameYear && auction.month === gameMonth}
              onOpenAuction={() => setShowAuction(true)}
@@ -4415,9 +4632,13 @@ export default function App() {
              parentsPay={isRegistered && isMinor(currentAge) && familyClass.parentsPayMedical}
              disease={currentDisease}
              onCureDisease={() => {
+               if (currentDisease && gainRecoveryImmunity(currentDisease.id)) showToast(`🛡️ 痊愈后获得了${currentDisease.name}抗体`);
                setDisease(null);
                unlockAchievement('cured');
              }}
+             vaccines={vaccineList}
+             antibodyText={antibodies.length ? antibodyNames(antibodies).join('、') : '暂无'}
+             onVaccinate={handleVaccinate}
              onMaintenance={handleMaintenance}
              hasSpouse={!!family.spouse}
              fertilityText={fertilityText}
@@ -4548,6 +4769,9 @@ export default function App() {
                setShowProfile(false);
              }}
              lazy={usedSimpleMode}
+             seasonMine={seasonMine}
+             canRankSeason={cloud.enabled && !seasonMine.cheat}
+             onRedeemTestCode={activateGodMode}
            />
          )}
 
@@ -4679,20 +4903,27 @@ export default function App() {
                setAuction({ ...auction, admitted: true });
                return `🎟️ 已购买门票（-${TICKET_PRICE.toLocaleString()} ₽），欢迎入场`;
              }}
-             onBid={(i, amount) => {
+             onAction={(i, action) => {
                const lot = auction.lots[i];
                if (!lot) return '拍品不存在';
-               if (!Number.isFinite(amount) || amount <= 0) return '请输入出价';
-               if (amount > coins) return `现金不足（出价 ${amount.toLocaleString()} ₽，现金 ${coins.toLocaleString()} ₽）`;
-               const res = placeBid(lot, amount);
-               if (res.error) return res.error;
-               setAuction({ ...auction, lots: auction.lots.map((l, idx) => (idx === i ? res.lot : l)) });
                const h = heirloomById(lot.heirloomId);
-               if (!res.won) return `落败：${h?.name ?? '拍品'} 被其他买家以更高价拍走`;
-               setCoins((c) => c - amount);
+               const update = (next: typeof lot) => setAuction({ ...auction, lots: auction.lots.map((l, idx) => (idx === i ? next : l)) });
+               if (action.type === 'pass') {
+                 update(passLot(lot));
+                 return `你放弃了「${h?.name ?? '拍品'}」`;
+               }
+               const want = action.type === 'buyout' ? normalizeLot(lot).buyout : action.amount;
+               if (!Number.isFinite(want) || want <= 0) return '请输入出价';
+               if (want > coins) return `现金不足（需要 ${want.toLocaleString()} ₽，现金 ${coins.toLocaleString()} ₽）`;
+               const res = action.type === 'buyout' ? buyoutLot(lot) : raiseBid(lot, want);
+               if (res.outcome === 'error') return res.error ?? '出价无效';
+               update(res.lot);
+               if (res.outcome === 'outbid') return `其他竞买人跟价到 ${(res.lot.currentPrice ?? 0).toLocaleString()} ₽，要继续加价吗？`;
+               const paid = res.lot.paid ?? want;
+               setCoins((c) => c - paid);
                setFamily((prev) => addHeirloom(prev, { id: lot.heirloomId, source: '拍卖会', year: gameYear, month: gameMonth, keeper: '当家人' }));
-               addLifeLog('财富', `拍得传家宝：${h?.name ?? ''}`, `在北城拍卖会以 ${amount.toLocaleString()} ₽ 拍得。`);
-               return `🎉 以 ${amount.toLocaleString()} ₽ 拍得「${h?.name ?? ''}」，已收入家族传家宝`;
+               addLifeLog('财富', `拍得传家宝：${h?.name ?? ''}`, `在北城拍卖会以 ${paid.toLocaleString()} ₽ ${action.type === 'buyout' ? '一口价买下' : '落槌拍得'}。`);
+               return `🎉 ${action.type === 'buyout' ? '一口价' : '落槌！'}以 ${paid.toLocaleString()} ₽ 拍得「${h?.name ?? ''}」`;
              }}
            />
          )}
@@ -4775,6 +5006,15 @@ export default function App() {
              }}
              simpleMode={simpleMode}
              onToggleSimpleMode={() => setSimpleMode((v) => !v)}
+             antibodyText={antibodies.length ? antibodyNames(antibodies).join('、') : '暂无'}
+             onGrantAllAntibodies={() => {
+               setAntibodies(DISEASES.filter((d) => d.infectious).map((d) => d.id));
+               showToast('🛠️ 已获得全部传染病抗体');
+             }}
+             onClearAntibodies={() => {
+               setAntibodies([]);
+               showToast('🛠️ 已清空抗体');
+             }}
              smartFastForward={smartFastForward}
              onToggleSmartFastForward={() => setSmartFastForward((v) => !v)}
              onOpenAuctionNow={() => {

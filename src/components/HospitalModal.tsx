@@ -2,6 +2,7 @@ import { addLifeLog } from '../lib/lifeLog';
 import React, { useState } from 'react';
 import type { DiseaseInfo } from '../lib/disease';
 import { MAINTENANCE_COST, MAINTENANCE_CHANCE } from '../lib/traits';
+import { VACCINE_SUCCESS, RECOVERY_IMMUNITY, ANTIBODY_INHERIT } from '../lib/disease';
 import {
   ChevronLeft,
   Hospital,
@@ -33,6 +34,10 @@ export interface HospitalModalProps {
   hasSpouse?: boolean;
   /** 生育年龄说明 */
   fertilityText?: string;
+  /** 已问世的疫苗（第 53 题） */
+  vaccines?: Array<{ id: string; name: string; cost: number; owned: boolean }>;
+  antibodyText?: string;
+  onVaccinate?: (diseaseId: string, target: 'self' | 'children') => string;
 }
 
 export interface HospitalInfo {
@@ -203,6 +208,9 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
   onMaintenance,
   hasSpouse = false,
   fertilityText = '',
+  vaccines = [],
+  antibodyText = '暂无',
+  onVaccinate,
 }) => {
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>('h1');
   const [isSelectingHospital, setIsSelectingHospital] = useState<boolean>(false);
@@ -346,6 +354,40 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                 治疗 {costOf(disease.cost).toLocaleString()} ₽
               </button>
             </div>
+          </div>
+        )}
+        {onVaccinate && (
+          <div className="bg-sky-950/70 border-2 border-sky-500/60 rounded-2xl p-3 shadow-[0_3px_0_#000] space-y-2">
+            <div className="text-sky-200 font-black text-sm">💉 疫苗接种</div>
+            <p className="text-sky-200/80 text-[11px] font-bold leading-relaxed">
+              接种成功率 {Math.round(VACCINE_SUCCESS * 100)}%，获得抗体后不会再患这种病；传染病痊愈后也有 {Math.round(RECOVERY_IMMUNITY * 100)}% 概率获得抗体。抗体会按 {Math.round(ANTIBODY_INHERIT * 100)}% 的概率遗传给孩子。你的抗体：{antibodyText}
+            </p>
+            {vaccines.length === 0 ? (
+              <p className="text-sky-200/70 text-[11px] font-bold">这个年代还没有疫苗问世。</p>
+            ) : (
+              <div className="space-y-1.5">
+                {vaccines.map((v) => (
+                  <div key={v.id} className="flex items-center gap-2 bg-black/20 rounded-xl px-2 py-1.5">
+                    <span className="text-white text-xs font-black flex-1">
+                      {v.name}疫苗 <span className="text-sky-300/80 font-bold">{v.cost.toLocaleString()} ₽ / 人</span>
+                    </span>
+                    <button
+                      onClick={() => showToast(onVaccinate(v.id, 'self'))}
+                      disabled={v.owned}
+                      className="bg-sky-400 hover:bg-sky-300 text-black text-[10px] font-black px-2 py-1 rounded-lg border-2 border-black cursor-pointer disabled:opacity-40"
+                    >
+                      {v.owned ? '已有抗体' : '自己接种'}
+                    </button>
+                    <button
+                      onClick={() => showToast(onVaccinate(v.id, 'children'))}
+                      className="bg-sky-400 hover:bg-sky-300 text-black text-[10px] font-black px-2 py-1 rounded-lg border-2 border-black cursor-pointer"
+                    >
+                      孩子们接种
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
         {onMaintenance && (

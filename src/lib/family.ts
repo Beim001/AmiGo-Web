@@ -9,6 +9,7 @@
 
 import { randomTraits, inheritTraits, fertilityMultiplier, twinChanceFor, fertileMaxAge } from './traits';
 import { randomFullName, MALE_GIVEN_NAMES, FEMALE_GIVEN_NAMES } from './names';
+import { inheritAntibodies } from './disease';
 import { OwnedHeirloom, VALENTINE_DEFAULT_HEIRLOOMS } from './heirlooms';
 
 export type Gender = '男' | '女';
@@ -53,6 +54,8 @@ export interface Spouse {
   traits?: string[];
   /** 寿命（第 52 题）；旧存档缺失时按 id 稳定推算 */
   lifespan?: number;
+  /** 抗体（第 53 题） */
+  antibodies?: string[];
 }
 
 /** 情人（贵族、皇族已婚者可结识） */
@@ -99,6 +102,10 @@ export interface Child {
   spouse?: Spouse;
   /** 自己的孩子（主角的孙辈） */
   kids?: Child[];
+  /** 抗体（第 53 题）：出生时按概率遗传父母的抗体 */
+  antibodies?: string[];
+  /** 出生时的野心值 0–50（第 59 题）；旧存档缺失时按 id 稳定推算 */
+  ambition?: number;
 }
 
 export interface FamilyEvent {
@@ -166,6 +173,8 @@ export interface FamilyState {
   baseClassId?: string;
   /** 资产连续低于降级门槛的月数 */
   demotionStreak?: number;
+  /** 子嗣 id → 野心高且对当家人不满的连续月数（第 59 题） */
+  coupStreak?: Record<string, number>;
   /** 家族传家宝；旧存档没有此字段时，瓦伦丁家族默认持有三件祖传宝物 */
   heirlooms?: OwnedHeirloom[];
 }
@@ -306,6 +315,10 @@ export interface FamilyMemberView {
   parents?: string;
   /** 机制特质（见 traits.ts）；只有配偶与子嗣有 */
   traitIds?: string[];
+  /** 抗体（第 53 题）；只有子嗣、孙辈记录 */
+  antibodies?: string[];
+  /** 野心值（第 59 题）；只有子嗣有 */
+  ambition?: number;
 }
 
 const parentLabel = (gender: string | null | undefined) => (gender === '女' ? '母' : gender === '男' ? '父' : '家长');
@@ -416,6 +429,8 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
       isChild: true,
       parents: describeParents(c, playerName, playerGender),
       traitIds: c.traits,
+      antibodies: c.antibodies,
+      ambition: childAmbition(c, gameYear, gameMonth),
     });
   });
 
@@ -442,6 +457,7 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
         traits: ['家族新生代'],
         parents: `${c.name}（${c.gender === '女' ? '母' : '父'}）${k.otherParentName ? `、${k.otherParentName}（${k.otherParentGender === '女' ? '母' : '父'}）` : ''}`,
         traitIds: k.traits,
+        antibodies: k.antibodies,
       });
     });
   });
@@ -538,6 +554,7 @@ export const monthlyFamilyLife = (state: FamilyState, year: number, month: numbe
           otherParentGender: sp.gender,
           traits: inheritTraits(child.traits ?? [], sp.traits ?? [], rng),
           lifespan: rollKinLifespan(rng),
+          antibodies: inheritAntibodies(child.antibodies ?? [], sp.antibodies ?? [], rng),
         });
       }
       child = { ...child, kids: [...kids, ...born] };
@@ -554,6 +571,60 @@ export const monthlyFamilyLife = (state: FamilyState, year: number, month: numbe
     };
   }
   return { state: next, notes };
+};
+
+// ---------- 野心与逼宫（第 59 题，默认值） ----------
+// 子嗣出生时野心 0–50；带「野心勃勃」特质的成年后每年 +4。
+// 富商、贵族家族中，成年子嗣野心 ≥ 80 且对当家人的好感 ≤ 30，连续 6 个月就会逼宫，强迫当家人退位。
+// 皇族按维基设定，不随机发生逼宫。
+
+export const AMBITION_BASE_MAX = 50;
+export const AMBITION_GROWTH_PER_YEAR = 4;
+export const COUP_AMBITION = 80;
+export const COUP_AFFINITY = 30;
+export const COUP_MONTHS = 6;
+export const COUP_CLASSES = ['merchant', 'noble'];
+
+const stableAmbition = (id: string) => {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  return (h >>> 0) % (AMBITION_BASE_MAX + 1);
+};
+
+export const childAmbition = (c: Child, year: number, month: number): number => {
+  const base = c.ambition ?? stableAmbition(c.id);
+  const age = ageAt(c.birthYear, c.birthMonth, year, month);
+  const growth = (c.traits ?? []).includes('ambitious') && age > 18 ? (age - 18) * AMBITION_GROWTH_PER_YEAR : 0;
+  return Math.min(100, base + growth);
+};
+
+export interface CoupCheck {
+  state: FamilyState;
+  /** 发动逼宫的子嗣 id */
+  coupBy: string | null;
+  /** 不满开始累积或即将逼宫时的提醒 */
+  warnings: string[];
+}
+
+/** 每月判定：members 为本月推进前的族谱（含好感度） */
+export const checkCoup = (state: FamilyState, members: FamilyMemberView[], classId: string): CoupCheck => {
+  if (!COUP_CLASSES.includes(classId)) return { state: state.coupStreak && Object.keys(state.coupStreak).length ? { ...state, coupStreak: {} } : state, coupBy: null, warnings: [] };
+  const prev = state.coupStreak ?? {};
+  const streak: Record<string, number> = {};
+  const warnings: string[] = [];
+  let coupBy: string | null = null;
+  for (const m of members) {
+    if (!m.isChild || m.status === '已故' || m.age < 18) continue;
+    const ambition = m.ambition ?? 0;
+    if (ambition >= COUP_AMBITION && m.affinity <= COUP_AFFINITY) {
+      const n = (prev[m.id] ?? 0) + 1;
+      streak[m.id] = n;
+      if (n === 1) warnings.push(`⚠️ ${m.relation} ${m.name} 野心勃勃，对你心怀不满`);
+      if (n === COUP_MONTHS - 1) warnings.push(`⚠️ ${m.relation} ${m.name} 正在联络族人，再不安抚就要逼宫了`);
+      if (n >= COUP_MONTHS && !coupBy) coupBy = m.id;
+    }
+  }
+  return { state: { ...state, coupStreak: coupBy ? {} : streak }, coupBy, warnings };
 };
 
 // ---------- 结婚 ----------
@@ -644,6 +715,7 @@ interface OtherParent {
   name: string;
   gender: Gender;
   traits?: string[];
+  antibodies?: string[];
 }
 
 /** 生下 count 个孩子（同年同月，双胞胎时 count = 2） */
@@ -656,6 +728,7 @@ const giveBirth = (
   other: OtherParent | null,
   playerTraits: string[] = [],
   illegitimate = false,
+  playerAntibodies: string[] = [],
 ): BirthResult => {
   const surname = getOrigin(state).surname;
   const usedNames = new Set(state.children.map((c) => c.name));
@@ -675,6 +748,8 @@ const giveBirth = (
       traits: inheritTraits(playerTraits, other?.traits ?? [], rng),
       ...(illegitimate ? { illegitimate: true } : {}),
       lifespan: rollKinLifespan(rng),
+      antibodies: inheritAntibodies(playerAntibodies, other?.antibodies ?? [], rng),
+      ambition: Math.floor(rng() * (AMBITION_BASE_MAX + 1)),
     });
   }
   const title = illegitimate ? '私生子女降生' : count === 2 ? '喜得双胞胎' : `喜得${born[0].gender === '女' ? '千金' : '麟儿'}`;
@@ -699,6 +774,7 @@ export const tryHaveChild = (
   rng: () => number = Math.random,
   playerTraits: string[] = [],
   playerGender: string | null = null,
+  playerAntibodies: string[] = [],
 ): BirthResult => {
   const none = { state, child: null, children: [] };
   const s = state.spouse;
@@ -710,7 +786,7 @@ export const tryHaveChild = (
   if (playerAge > fertileMaxAge(playerGender, playerTraits) || spouseAge > fertileMaxAge(s.gender, s.traits) || state.children.length >= MAX_CHILDREN) return none;
   if (rng() >= BIRTH_CHANCE * fertilityMultiplier(playerTraits, s.traits)) return none;
   const twins = rng() < twinChanceFor(TWIN_CHANCE, playerTraits, s.traits) && state.children.length + 2 <= MAX_CHILDREN;
-  return giveBirth(state, year, month, twins ? 2 : 1, rng, s, playerTraits);
+  return giveBirth(state, year, month, twins ? 2 : 1, rng, s, playerTraits, false, playerAntibodies);
 };
 
 /** 开发测试工具：立即新增子嗣（忽略婚姻、年龄与人数上限） */
@@ -744,6 +820,7 @@ export const tryIllegitimateChild = (
   rng: () => number = Math.random,
   playerTraits: string[] = [],
   playerGender: string | null = null,
+  playerAntibodies: string[] = [],
 ): BirthResult => {
   const none = { state, child: null, children: [] };
   const l = state.lover;
@@ -751,7 +828,7 @@ export const tryIllegitimateChild = (
   if (l && playerGender && l.gender === playerGender) return none;
   if (!l || playerAge > fertileMaxAge(playerGender, playerTraits) || year - l.birthYear > fertileMaxAge(l.gender, l.traits) || state.children.length >= MAX_CHILDREN) return none;
   if (rng() >= ILLEGITIMATE_CHANCE * fertilityMultiplier(playerTraits, l.traits)) return none;
-  return giveBirth(state, year, month, 1, rng, l, playerTraits, true);
+  return giveBirth(state, year, month, 1, rng, l, playerTraits, true, playerAntibodies);
 };
 
 // ---------- 传家宝 ----------
@@ -971,6 +1048,8 @@ export const succeed = (
   predecessor: Predecessor,
   year: number,
   month: number,
+  /** 主动传位（第 58 题）或被逼宫（第 59 题）：前任在世、退居幕后，按自己的寿命继续出现在族谱中 */
+  retire?: { lifespan: number; coup?: boolean },
 ): { state: FamilyState; heir: HeirCandidate } => {
   const heir = listHeirs(members).find((h) => h.id === heirId);
   if (!heir) throw new Error('继承人不符合条件');
@@ -990,11 +1069,11 @@ export const succeed = (
       relation: relationFor(kin, predecessor.gender, ageOffset),
       generation: KIN_GENERATION[kin],
       ageOffset,
-      lifespan: predecessor.age,
-      occupationByAge: [[0, predecessor.occupation]],
+      lifespan: retire ? Math.max(retire.lifespan, predecessor.age + 1) : predecessor.age,
+      occupationByAge: [[0, retire ? '退居幕后' : predecessor.occupation]],
       defaultAffinity: 100,
       avatarBg: '#525a66',
-      desc: `上一代当家人，${year} 年 ${month} 月辞世，享年 ${predecessor.age} 岁。`,
+      desc: retire ? `上一代当家人，${year} 年 ${month} 月传位后退居幕后。` : `上一代当家人，${year} 年 ${month} 月辞世，享年 ${predecessor.age} 岁。`,
       traits: ['先代当家'],
     };
   };
@@ -1101,7 +1180,11 @@ export const succeed = (
       origin: { ...origin, members: members2 },
       events: [
         ...state.events,
-        { year, month, title: '传承家业', desc: `${predecessor.name} 辞世，享年 ${predecessor.age} 岁。${heir.relation} ${heir.name} 继承家业，成为新一代当家人。` },
+        retire?.coup
+          ? { year, month, title: '逼宫', desc: `${heir.relation} ${heir.name} 野心勃勃，联合族人逼宫，${predecessor.name}（${predecessor.age} 岁）被迫退位。` }
+          : retire
+          ? { year, month, title: '传位', desc: `${predecessor.name}（${predecessor.age} 岁）退居幕后，把家业传给${heir.relation} ${heir.name}。` }
+          : { year, month, title: '传承家业', desc: `${predecessor.name} 辞世，享年 ${predecessor.age} 岁。${heir.relation} ${heir.name} 继承家业，成为新一代当家人。` },
       ],
     },
   };

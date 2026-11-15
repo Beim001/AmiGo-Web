@@ -31,7 +31,8 @@ export interface BirthModalProps {
   setCoins?: React.Dispatch<React.SetStateAction<number>>;
   health?: number;
   setHealth?: React.Dispatch<React.SetStateAction<number>>;
-  onRegisterBirth: (name: string) => { gender: string; age: number; classLabel?: string; surname?: string; name?: string };
+  /** 出生登记：name 为「名·姓」或只有名；preferredSurname 为玩家填写的姓（留空则随机家族姓） */
+  onRegisterBirth: (name: string, preferredSurname?: string) => { gender: string; age: number; classLabel?: string; surname?: string; name?: string };
   onOpenGender?: () => void;
   onOpenHousing?: () => void;
   onOpenVisa?: () => void;
@@ -52,7 +53,15 @@ export const BirthModal: React.FC<BirthModalProps> = ({
   onOpenGender,
 }) => {
   const [isEditing, setIsEditing] = useState(!isRegistered);
-  const [inputName, setInputName] = useState(playerName && playerName !== '阿米诺斯市民' ? playerName : '');
+  // 姓名分「名」「姓」两栏（第 56 题）：名·姓
+  const initialName = playerName && playerName !== '阿米诺斯市民' ? playerName : '';
+  const splitName = (full: string) => {
+    const dot = full.lastIndexOf('·');
+    return dot >= 0 ? { given: full.slice(0, dot), surname: full.slice(dot + 1) } : { given: full, surname: '' };
+  };
+  const [inputName, setInputName] = useState(splitName(initialName).given);
+  const [inputSurname, setInputSurname] = useState(isRegistered ? splitName(initialName).surname : '');
+  const fullNameOf = (given: string, surname: string) => (surname ? `${given}·${surname}` : given);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
@@ -78,9 +87,9 @@ export const BirthModal: React.FC<BirthModalProps> = ({
     }, 2500);
   };
 
+  // 随机只换「名」，保留已填写的姓
   const handleRandomName = () => {
-    const rName = randomPlayerName();
-    setInputName(rName);
+    setInputName(splitName(randomPlayerName()).given);
     setErrorMsg(null);
   };
 
@@ -101,11 +110,13 @@ export const BirthModal: React.FC<BirthModalProps> = ({
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const trimmed = inputName.trim();
-    if (!trimmed) {
-      setErrorMsg('请输入角色姓名');
+    const given = inputName.trim().replace(/·/g, '');
+    const surname = inputSurname.trim().replace(/·/g, '');
+    if (!given) {
+      setErrorMsg('请输入名字');
       return;
     }
+    const trimmed = fullNameOf(given, surname);
 
     const validation = validatePlayerName(trimmed);
     if (!validation.valid) {
@@ -118,8 +129,17 @@ export const BirthModal: React.FC<BirthModalProps> = ({
 
     // 首次登记完全随机确定性别
     if (!isRegistered) {
-      const regRes = onRegisterBirth(trimmed);
-      if (regRes.name) setInputName(regRes.name);
+      const regRes = onRegisterBirth(trimmed, surname);
+      if (regRes.name) {
+        const parts = splitName(regRes.name);
+        setInputName(parts.given);
+        setInputSurname(parts.surname);
+      }
+      if (surname && regRes.surname && regRes.surname !== surname) {
+        showToast(`你出生在皇族纳海王朝，家族姓只能是「${regRes.surname}」`);
+        setIsEditing(false);
+        return;
+      }
       showToast(`已完成出生登记：${regRes.name ?? trimmed}，${regRes.classLabel ?? ''}之家 · ${regRes.surname ?? ''}家族，性别【${regRes.gender}】`);
     } else {
       showToast(`已更新公民姓名【${trimmed}】`);
@@ -293,7 +313,7 @@ export const BirthModal: React.FC<BirthModalProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-black text-white flex items-center gap-1.5">
                     <User size={15} className="text-rose-400" />
-                    <span>公民姓名 (2-10字)</span>
+                    <span>公民姓名（名 · 姓，合计 2–10 字）</span>
                   </label>
 
                   <button
@@ -306,21 +326,40 @@ export const BirthModal: React.FC<BirthModalProps> = ({
                   </button>
                 </div>
 
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={inputName}
-                    onChange={(e) => {
-                      setInputName(e.target.value);
-                      if (errorMsg) setErrorMsg(null);
-                    }}
-                    placeholder="请输入角色姓名"
-                    maxLength={10}
-                    className="w-full bg-[#181a24] border-2 border-black focus:border-rose-400 rounded-xl p-3 text-sm font-bold text-white focus:outline-none shadow-inner"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-mono">
-                    {inputName.trim().length}/10
-                  </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-[10px] text-gray-400 font-bold mb-1">名</div>
+                    <input
+                      type="text"
+                      value={inputName}
+                      onChange={(e) => {
+                        setInputName(e.target.value);
+                        if (errorMsg) setErrorMsg(null);
+                      }}
+                      placeholder="例如 阿德弟吉"
+                      maxLength={9}
+                      className="w-full bg-[#181a24] border-2 border-black focus:border-rose-400 rounded-xl p-3 text-sm font-bold text-white focus:outline-none shadow-inner"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-400 font-bold mb-1">姓（家族姓）</div>
+                    <input
+                      type="text"
+                      value={inputSurname}
+                      onChange={(e) => {
+                        setInputSurname(e.target.value);
+                        if (errorMsg) setErrorMsg(null);
+                      }}
+                      disabled={isRegistered}
+                      placeholder={isRegistered ? '' : '留空则随机'}
+                      maxLength={8}
+                      title={isRegistered ? '家族姓在出生登记时确定，不能修改' : '家族会沿用这个姓；留空则随机'}
+                      className="w-full bg-[#181a24] border-2 border-black focus:border-rose-400 rounded-xl p-3 text-sm font-bold text-white focus:outline-none shadow-inner disabled:opacity-60"
+                    />
+                  </div>
+                </div>
+                <div className="text-[10px] text-gray-500 font-bold text-right font-mono">
+                  {fullNameOf(inputName.trim(), inputSurname.trim()).length}/10 · 预览：{fullNameOf(inputName.trim(), inputSurname.trim()) || '—'}
                 </div>
 
                 {errorMsg && (
@@ -340,6 +379,7 @@ export const BirthModal: React.FC<BirthModalProps> = ({
                 <div className="text-gray-400 leading-relaxed text-[11px] space-y-1">
                   <p>• 生理性别将在登记时由系统完全随机确定（登记完成后可在「性别权利」中更正）。</p>
                   <p>• 登记成功后将确立合法公民身份，生成公民身份编号并加盖登记公章，初始年龄确立为 8 岁。</p>
+                  <p>• 家族会沿用你填写的姓；留空则按出身随机。家族阶层仍随机决定，若出生在皇族，家族姓固定为纳海。</p>
                 </div>
               </div>
 

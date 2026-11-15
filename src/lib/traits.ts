@@ -21,6 +21,7 @@ export const TRAITS: TraitDef[] = [
   { id: 'diligent', name: '勤勉', desc: '月薪 +10%' },
   { id: 'shrewd', name: '精明', desc: '银行存款利息 +20%' },
   { id: 'amiable', name: '亲和', desc: '家族互动好感度额外 +1' },
+  { id: 'ambitious', name: '野心勃勃', desc: '成年后野心每年 +4；富商、贵族家族中野心高且对当家人不满时会逼宫' },
   { id: 'vigorous', name: '精力旺盛', desc: '生育年龄上限延长到女 50 岁、男 65 岁', special: true },
   { id: 'pampered', name: '富养', desc: '生育年龄上限延长到女 50 岁、男 65 岁', special: true },
 ];

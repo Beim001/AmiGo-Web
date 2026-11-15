@@ -184,10 +184,15 @@ export const surnamePoolFor = (cls: SocialClass, year: number): string[] => {
   return [...new Set([...fixed, ...cls.surnames])];
 };
 
-export const generateOrigin = (cls: SocialClass, rng: () => number = Math.random, year = 1870): FamilyOrigin => {
-  const surname = pick(surnamePoolFor(cls, year), rng);
-  // 瓦伦丁家族沿用原有成员设定、传家宝与大事记
-  if (surname === '瓦伦丁') {
+/**
+ * 生成家族出身。preferredSurname：玩家在出生登记时填写的姓（第 56 题），家族沿用这个姓；
+ * 留空则按阶层随机。皇族只有纳海王朝，填写的姓不生效。
+ */
+export const generateOrigin = (cls: SocialClass, rng: () => number = Math.random, year = 1870, preferredSurname = ''): FamilyOrigin => {
+  const wanted = preferredSurname.trim();
+  const surname = wanted && cls.id !== 'royal' ? wanted : pick(surnamePoolFor(cls, year), rng);
+  // 瓦伦丁家族沿用原有成员设定、传家宝与大事记（只在贵族中出现）
+  if (surname === '瓦伦丁' && (cls.id === 'noble' || !wanted)) {
     return { classId: cls.id, classLabel: cls.label, surname, members: VALENTINE_MEMBERS, isValentine: true };
   }
 
