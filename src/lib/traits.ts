@@ -51,15 +51,25 @@ const fillRandom = (current: string[], target: number, rng: () => number): strin
 /** 随机 1–3 个特质 */
 export const randomTraits = (rng: () => number = Math.random): string[] => fillRandom([], 1 + Math.floor(rng() * MAX_TRAITS), rng);
 
-/** 子嗣遗传：父母每个特质各有 30% 概率遗传；不足 1 个时随机补足，最多 3 个 */
-export const inheritTraits = (a: string[] = [], b: string[] = [], rng: () => number = Math.random): string[] => {
-  const result: string[] = [];
-  // 「倾国倾城」不走 30% 遗传，由 appearance.ts 的 rollBeauty 单独判定
-  for (const id of [...new Set([...a, ...b])].filter((t) => t !== 'beauty')) {
-    if (result.length >= MAX_TRAITS) break;
-    if (rng() < TRAIT_INHERIT_CHANCE && compatible(result, id)) result.push(id);
-  }
-  return result.length > 0 ? result : fillRandom([], 1, rng);
+/** 祖父母的每个特质遗传给孙辈的概率（第 62 题） */
+export const GRANDPARENT_INHERIT_CHANCE = 0.15;
+
+/**
+ * 子嗣特质（第 62 题）：
+ * - 遗传部分不设上限：父母的每个特质各 TRAIT_INHERIT_CHANCE（30%），祖父母的每个特质各 GRANDPARENT_INHERIT_CHANCE（15%）
+ * - 随机部分 1–MAX_TRAITS 个（默认最多 3 个），不与已遗传的特质冲突
+ * - 「倾国倾城」不走这里，由 appearance.ts 的 rollBeauty 单独判定
+ */
+export const inheritTraits = (a: string[] = [], b: string[] = [], rng: () => number = Math.random, grandparents: string[] = []): string[] => {
+  const inherited: string[] = [];
+  const tryAdd = (id: string, chance: number) => {
+    if (id === 'beauty' || inherited.includes(id)) return;
+    if (rng() < chance && compatible(inherited, id)) inherited.push(id);
+  };
+  for (const id of new Set([...a, ...b])) tryAdd(id, TRAIT_INHERIT_CHANCE);
+  for (const id of new Set(grandparents)) tryAdd(id, GRANDPARENT_INHERIT_CHANCE);
+  const randomCount = 1 + Math.floor(rng() * MAX_TRAITS);
+  return fillRandom(inherited, inherited.length + randomCount, rng);
 };
 
 const has = (id: string, ...groups: Array<string[] | undefined>) => groups.some((g) => g?.includes(id));

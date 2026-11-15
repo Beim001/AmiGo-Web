@@ -43,3 +43,23 @@ export const CLOTHING: ClothingItem[] = [
 ];
 
 export const clothingById = (id: string) => CLOTHING.find((c) => c.id === id);
+
+/** 家人的日常穿着：按家族阶层与性别挑选（按 id 稳定选择）；16 岁以下穿学堂制服或初始服装 */
+const CLASS_OUTFITS: Record<string, { 男: string[]; 女: string[] }> = {
+  beggar: { 男: ['padded', 'worker'], 女: ['padded', 'maid'] },
+  commoner: { 男: ['worker', 'padded', 'chapan'], 女: ['maid', 'shawl', 'padded'] },
+  modest: { 男: ['vest', 'worker', 'chapan'], 女: ['shawl', 'maid'] },
+  middle: { 男: ['vest', 'tailcoat'], 女: ['victorian', 'shawl'] },
+  merchant: { 男: ['tailcoat', 'vest'], 女: ['victorian', 'shawl'] },
+  noble: { 男: ['noblecoat', 'tailcoat', 'military'], 女: ['victorian', 'court'] },
+  royal: { 男: ['noblecoat', 'military'], 女: ['court', 'victorian'] },
+};
+
+export const outfitFor = (classId: string, gender: string | null, age: number, id: string): string => {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  if (age < 16) return ['beggar', 'commoner'].includes(classId) ? 'default' : 'student';
+  const set = CLASS_OUTFITS[classId] ?? CLASS_OUTFITS.commoner;
+  const list = gender === '女' ? set.女 : set.男;
+  return list[h % list.length];
+};

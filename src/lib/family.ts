@@ -10,7 +10,7 @@
 import { randomTraits, inheritTraits, fertilityMultiplier, twinChanceFor, fertileMaxAge } from './traits';
 import { randomFullName, MALE_GIVEN_NAMES, FEMALE_GIVEN_NAMES } from './names';
 import { inheritAntibodies } from './disease';
-import { Appearance, randomAppearance, inheritAppearance, rollBeauty, applyBeauty } from './appearance';
+import { Appearance, randomAppearance, inheritAppearance, rollBeauty, applyBeauty, stableAppearance, seededRng } from './appearance';
 import { OwnedHeirloom, VALENTINE_DEFAULT_HEIRLOOMS } from './heirlooms';
 
 export type Gender = '男' | '女';
@@ -129,6 +129,10 @@ export interface FamilyMemberDef {
   id: string;
   name: string;
   gender: Gender;
+  /** 外貌（第 61 题）：传承时沿用前任主角、配偶、子女的外貌；缺失时按 id 稳定生成 */
+  appearance?: Appearance;
+  /** 机制特质（第 62 题）：传承时沿用真实特质；缺失时按 id 稳定生成，用于向孙辈遗传 */
+  traitIds?: string[];
   kin: Kin;
   /** 称谓；kin 为 sibling / cousin / nephew 等时会按年龄、性别自动生成 */
   relation: string;
@@ -375,11 +379,13 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
       generation: def.generation,
       age,
       status: deceased ? '已故' : def.traveling ? '远游' : '在世',
+      appearance: def.appearance ?? stableAppearance(`${def.id}_${def.name}`, def.gender),
       occupation: occupationFor(def.occupationByAge, age),
       affinity: affinityOf(def.id, def.defaultAffinity),
       avatarBg: def.avatarBg,
       desc: def.desc,
       traits: def.traits,
+      traitIds: defTraitIds(def),
     };
   });
 
@@ -415,7 +421,7 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
       desc: `${s.marriedYear} 年 ${s.marriedMonth} 月与你缔结婚姻，携手经营${origin.surname}家族的新一代。`,
       traits: ['伴侣', '家庭支柱'],
       traitIds: s.traits,
-      appearance: s.appearance,
+      appearance: s.appearance ?? stableAppearance(`spouse_${s.name}_${s.birthYear}`, s.gender),
     });
   }
 
@@ -443,7 +449,7 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
       traitIds: c.traits,
       antibodies: c.antibodies,
       ambition: childAmbition(c, gameYear, gameMonth),
-      appearance: c.appearance,
+      appearance: c.appearance ?? stableAppearance(c.id, c.gender),
     });
   });
 
@@ -471,13 +477,18 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
         parents: `${c.name}（${c.gender === '女' ? '母' : '父'}）${k.otherParentName ? `、${k.otherParentName}（${k.otherParentGender === '女' ? '母' : '父'}）` : ''}`,
         traitIds: k.traits,
         antibodies: k.antibodies,
-        appearance: k.appearance,
+        appearance: k.appearance ?? stableAppearance(k.id, k.gender),
       });
     });
   });
 
   return members;
 };
+
+// ---------- 原有族谱成员的特质（第 62 题） ----------
+
+/** 族谱成员的机制特质：有记录用记录，否则按 id 稳定生成 */
+export const defTraitIds = (def: FamilyMemberDef): string[] => def.traitIds ?? randomTraits(seededRng(`traits_${def.id}_${def.name}`));
 
 // ---------- 家人的寿命与成家（第 52 题，默认值） ----------
 // 子女、孙辈、配偶都有寿命，到期显示已故（配偶去世则主角丧偶，可再婚）；
@@ -510,7 +521,14 @@ export interface FamilyLifeResult {
 }
 
 /** 每月：配偶寿终则丧偶；成年子女成家、生育孙辈 */
-export const monthlyFamilyLife = (state: FamilyState, year: number, month: number, rng: () => number = Math.random): FamilyLifeResult => {
+export const monthlyFamilyLife = (
+  state: FamilyState,
+  year: number,
+  month: number,
+  rng: () => number = Math.random,
+  /** 主角的特质：孙辈的祖父母特质（第 62 题） */
+  playerTraits: string[] = [],
+): FamilyLifeResult => {
   const notes: Array<{ title: string; desc: string }> = [];
   let next = state;
   const surname = getOrigin(state).surname;
@@ -570,7 +588,10 @@ export const monthlyFamilyLife = (state: FamilyState, year: number, month: numbe
           antibodies: inheritAntibodies(child.antibodies ?? [], sp.antibodies ?? [], rng),
           ...(() => {
             const b = applyBeauty(
-              inheritTraits(child.traits ?? [], sp.traits ?? [], rng),
+              inheritTraits(child.traits ?? [], sp.traits ?? [], rng, [
+                ...playerTraits,
+                ...(state.spouse && child.otherParentName === state.spouse.name ? state.spouse.traits ?? [] : []),
+              ]),
               rollBeauty(child.traits ?? [], sp.traits ?? [], rng),
               inheritAppearance(child.appearance, sp.appearance, gender, rng),
               gender,
@@ -816,6 +837,8 @@ const giveBirth = (
 ): BirthResult => {
   const surname = getOrigin(state).surname;
   const usedNames = new Set(state.children.map((c) => c.name));
+  // 第 62 题：主角父母（孩子的祖父母）的特质也会遗传
+  const grandparentTraits = getOrigin(state).members.filter((d) => d.kin === 'parent').flatMap(defTraitIds);
   const born: Child[] = [];
   for (let k = 0; k < count; k++) {
     const gender: Gender = rng() < 0.5 ? '男' : '女';
@@ -829,14 +852,13 @@ const giveBirth = (
       birthYear: year,
       birthMonth: month,
       ...(other ? { otherParentName: other.name, otherParentGender: other.gender } : {}),
-      traits: inheritTraits(playerTraits, other?.traits ?? [], rng),
       ...(illegitimate ? { illegitimate: true } : {}),
       lifespan: rollKinLifespan(rng),
       antibodies: inheritAntibodies(playerAntibodies, other?.antibodies ?? [], rng),
       ambition: Math.floor(rng() * (AMBITION_BASE_MAX + 1)),
       ...(() => {
         const b = applyBeauty(
-          inheritTraits(playerTraits, other?.traits ?? [], rng),
+          inheritTraits(playerTraits, other?.traits ?? [], rng, grandparentTraits),
           rollBeauty(playerTraits, other?.traits ?? [], rng),
           inheritAppearance(playerAppearance, other?.appearance, gender, rng),
           gender,
@@ -1100,6 +1122,8 @@ export interface Predecessor {
   gender: Gender;
   age: number;
   occupation: string;
+  appearance?: Appearance;
+  traits?: string[];
 }
 
 /** 由子嗣继承时，原有成员的亲属类型如何变化（辈分整体上移一代） */
@@ -1126,6 +1150,8 @@ const childToDef = (c: Child, ageNow: number, heirAge: number, kin: Kin): Family
     relation: relationFor(kin, c.gender, ageOffset),
     generation: KIN_GENERATION[kin],
     ageOffset,
+    appearance: c.appearance,
+    traitIds: c.traits,
     lifespan: childLifespan(c),
     occupationByAge: CHILD_STAGES,
     defaultAffinity: CHILD_INITIAL_AFFINITY,
@@ -1167,6 +1193,8 @@ export const succeed = (
       relation: relationFor(kin, predecessor.gender, ageOffset),
       generation: KIN_GENERATION[kin],
       ageOffset,
+      appearance: predecessor.appearance,
+      traitIds: predecessor.traits,
       lifespan: retire ? Math.max(retire.lifespan, predecessor.age + 1) : predecessor.age,
       occupationByAge: [[0, retire ? '退居幕后' : predecessor.occupation]],
       defaultAffinity: 100,
@@ -1193,6 +1221,8 @@ export const succeed = (
             id: SPOUSE_MEMBER_ID + `_${year}`,
             name: spouse.name,
             gender: spouse.gender,
+            appearance: spouse.appearance,
+            traitIds: spouse.traits,
             kin: 'parent',
             relation:
               heirChild?.otherParentName === spouse.name
@@ -1222,6 +1252,8 @@ export const succeed = (
       id: `sp_${sp.name}_${sp.birthYear}`,
       name: sp.name,
       gender: sp.gender,
+      appearance: sp.appearance,
+      traitIds: sp.traits,
       kin,
       relation,
       generation: KIN_GENERATION[kin],

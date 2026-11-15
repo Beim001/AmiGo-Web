@@ -3304,7 +3304,7 @@ export default function App() {
       }
 
       // 家人的生老病死与成家（第 52 题）：配偶寿终则丧偶；成年子女成家、生育孙辈
-      const life = monthlyFamilyLife(fam, nextY, nextM);
+      const life = monthlyFamilyLife(fam, nextY, nextM, Math.random, playerTraits);
       fam = life.state;
       life.notes.forEach((n) => {
         notes.push(`👪 ${n.title}`);
@@ -3511,7 +3511,7 @@ export default function App() {
       family,
       members,
       heirId,
-      { name: playerName, gender: (gender === '女' ? '女' : '男') as Gender, age: currentAge, occupation: playerOccupation },
+      { name: playerName, gender: (gender === '女' ? '女' : '男') as Gender, age: currentAge, occupation: playerOccupation, appearance: appearance ?? undefined, traits: playerTraits },
       gameYear,
       gameMonth,
       retire ? { lifespan: playerLifespan ?? currentAge + 20, coup } : undefined,

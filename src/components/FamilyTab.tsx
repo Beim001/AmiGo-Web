@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { traitNames, affinityBonus, traitById } from '../lib/traits';
 import { antibodyNames } from '../lib/disease';
 import { CharacterAvatar } from './CharacterAvatar';
+import { outfitFor } from '../data/clothing';
 import type { Appearance } from '../lib/appearance';
 import type { RankedFamily } from '../lib/familyRank';
 import { wealthScore } from '../lib/familyRank';
@@ -608,7 +609,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
             {(selectedMember.isPlayer ? playerAppearance : selectedMember.appearance) && (
               <div className="w-20 h-24 mx-auto mb-2 bg-[#21232e] rounded-xl border border-black relative">
                 <CharacterAvatar
-                  clothing={selectedMember.isPlayer ? equippedClothing : 'default'}
+                  clothing={selectedMember.isPlayer ? equippedClothing : outfitFor(origin.classId, selectedMember.gender, selectedMember.age, selectedMember.id)}
                   appearance={selectedMember.isPlayer ? playerAppearance : selectedMember.appearance}
                   age={selectedMember.age}
                   gender={selectedMember.gender}

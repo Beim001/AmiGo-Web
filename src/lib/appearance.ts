@@ -86,6 +86,22 @@ export const inheritAppearance = (
   };
 };
 
+/** 由字符串稳定生成的随机数序列（同一个 id 每次结果相同） */
+export const seededRng = (seed: string): (() => number) => {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  let t = h >>> 0;
+  return () => {
+    t = (t + 0x6d2b79f5) >>> 0;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+/** 没有外貌记录的家人（旧存档、原有族谱成员）：按 id 稳定生成，每次打开都一样 */
+export const stableAppearance = (id: string, gender: Gender | null): Appearance => randomAppearance(gender, seededRng(id));
+
 // ---------- 倾国倾城 ----------
 
 export const BEAUTY_TRAIT = 'beauty';
