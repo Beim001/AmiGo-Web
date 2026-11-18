@@ -6,7 +6,7 @@ import { loadMarket } from './stockMarket';
 import { BASE_STIPEND, monthlySalary } from './monthly';
 import { CHILD_JOBS, CHILD_LABOR_MAX_AGE } from './lineage';
 import { propertyUpkeep, REPOSSESS_AFTER_MONTHS } from './homeUpkeep';
-import { VEHICLE_HEALTH_BONUS, vehicleById, vehicleUpkeep } from './vehicles';
+import { VEHICLE_HEALTH_BONUS, VehicleId, vehicleById, vehicleUpkeep } from './vehicles';
 
 /** 固定种子的伪随机数，保证每次运行结果相同 */
 const seeded = (seed = 1) => () => {
@@ -53,6 +53,7 @@ const input = (over: Partial<MonthInput> = {}): MonthInput => ({
   rental: null,
   vehicles: [],
   licenses: [],
+  coachman: null,
   job: null,
   childJob: null,
   ...over,
@@ -125,22 +126,32 @@ describe('居家开销', () => {
   });
 });
 
-describe('车辆保养', () => {
-  const carriageCost = vehicleUpkeep(vehicleById('carriage')!);
+describe('车马', () => {
+  const coach = ['carriage', 'draft_horses'] as VehicleId[];
+  const carriageCost = vehicleUpkeep(vehicleById('carriage')!) + vehicleUpkeep(vehicleById('draft_horses')!);
 
-  it('有车时每月扣保养费；持有执照时健康恢复 +1', () => {
+  it('有马车与挽马时每月扣保养费；持有执照时健康恢复 +1', () => {
     const none = advanceMonth(input({ health: 50 }), QUIET);
-    const drive = advanceMonth(input({ health: 50, vehicles: ['carriage'], licenses: ['carriage'] }), QUIET);
+    const drive = advanceMonth(input({ health: 50, vehicles: coach, licenses: ['carriage'] }), QUIET);
     expect(drive.netChange).toBe(none.netChange - carriageCost);
-    expect(drive.notes).toContain(`车辆保养 -${carriageCost.toLocaleString()}`);
+    expect(drive.notes).toContain(`车马开销 -${carriageCost.toLocaleString()}`);
     expect(drive.health).toBe(none.health + VEHICLE_HEALTH_BONUS);
   });
 
-  it('没有执照（例如刚继承）照付保养费，但没有健康加成', () => {
+  it('没有执照（例如刚继承）照付保养费，但没有健康加成；有车夫则照样出行', () => {
     const none = advanceMonth(input({ health: 50 }), QUIET);
-    const r = advanceMonth(input({ health: 50, vehicles: ['carriage'] }), QUIET);
+    const r = advanceMonth(input({ health: 50, vehicles: coach }), QUIET);
     expect(r.netChange).toBe(none.netChange - carriageCost);
     expect(r.health).toBe(none.health);
+    const hired = advanceMonth(input({ health: 50, vehicles: coach, coachman: { kind: 'hired', name: '伊万' } }), QUIET);
+    expect(hired.health).toBe(none.health + VEHICLE_HEALTH_BONUS);
+    expect(hired.coachman).toBeUndefined();
+  });
+
+  it('买来的车夫逃跑时写回存档并记入人生日志', () => {
+    const r = advanceMonth(input({ coachman: { kind: 'slave', name: '伊万' } }), () => 0.001);
+    expect(r.coachman).toBeNull();
+    expect(r.logs.some(([, title]) => title === '车夫伊万逃跑')).toBe(true);
   });
 
   it('付不起保养费时不扣钱，本月只能步行', () => {

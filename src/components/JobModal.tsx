@@ -41,7 +41,7 @@ import {
 } from 'lucide-react';
 import { CurrencyIcon } from './CurrencyIcon';
 import { CURRENCY } from '../data/seasons';
-import { VehicleId, loadLicenses, meetsLicense, vehicleById } from '../lib/vehicles';
+import { LicenseId, loadLicenses, meetsLicense, licenseById } from '../lib/vehicles';
 
 export interface JobModalProps {
   onClose: () => void;
@@ -66,7 +66,7 @@ export interface JobPosition {
   desc: string;
   responsibilities: string[];
   /** 需要持有的执照（第 67.4 题：车夫需马车执照） */
-  requiresLicense?: VehicleId;
+  requiresLicense?: LicenseId;
 }
 
 export const JOB_POSITIONS: JobPosition[] = [
@@ -344,6 +344,32 @@ export const JOB_POSITIONS: JobPosition[] = [
     responsibilities: ['驾驭挽马接送客人', '照料马匹与车具', '熟记城中街巷捷径'],
     requiresLicense: 'carriage',
   },
+  {
+    id: 'j22',
+    title: '马夫',
+    category: '交通海事',
+    department: '皇家御马场',
+    dailySalary: 650,
+    reqSkill: '吃苦耐劳 · 不怕脏累',
+    iconName: 'Building2',
+    badge: '马厩杂役',
+    badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/50',
+    desc: '照料御马场的马匹：添草料、刷洗马身、清理马厩，跟着兽医学看马病。',
+    responsibilities: ['按时添加草料与清水', '刷洗马匹打理鬃毛', '清扫马厩更换垫草'],
+  },
+  {
+    id: 'j23',
+    title: '驯马师',
+    category: '体育文娱',
+    department: '皇家御马场',
+    dailySalary: 1100,
+    reqSkill: '懂马性 · 骑术精湛',
+    iconName: 'Award',
+    badge: '驯养技艺',
+    badgeColor: 'bg-orange-500/20 text-orange-300 border-orange-500/50',
+    desc: '调教幼马上鞍拉车，为赛马会训练名驹，替权贵挑选良马。',
+    responsibilities: ['调教幼马上鞍套车', '训练赛马冲刺耐力', '为买主相马估价'],
+  },
 ];
 
 export interface CompanyInfo {
@@ -457,6 +483,16 @@ export const COMPANY_DATA: Record<string, CompanyInfo> = {
     registeredCapital: `120万 ${CURRENCY.symbol}`,
     desc: '城中最大的出租马车行，经营客运马车与货运大车，承接婚丧嫁娶、商号送货与驿站接驳。车夫须持交通署核发的马车执照。',
     benefits: ['供应午间干粮', '马厩值夜津贴', '车资分成', '冬季配发皮袄'],
+  },
+  '皇家御马场': {
+    name: '皇家御马场',
+    type: '皇室直属养马场',
+    established: '1830年',
+    scale: '300 - 800人',
+    location: '北城西郊草场',
+    registeredCapital: `600万 ${CURRENCY.symbol}`,
+    desc: '为宫廷与骑兵繁育挽马、战马与名驹的皇家马场，每年春季举办赛马会，也向民间出售退役马匹。',
+    benefits: ['包食宿', '赛马会观礼席位', '马匹折价认购', '年节赏银'],
   },
 };
 
@@ -591,7 +627,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
       return;
     }
     if (!meetsLicense(job, loadLicenses())) {
-      showToast(`应聘「${job.title}」需要先在驾照管理考取${vehicleById(job.requiresLicense!)?.licenseName ?? '执照'}`);
+      showToast(`应聘「${job.title}」需要先在驾照管理考取${licenseById(job.requiresLicense!)?.name ?? '执照'}`);
       return;
     }
     setCurrentJobId(job.id);

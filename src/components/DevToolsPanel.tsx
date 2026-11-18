@@ -5,7 +5,7 @@ import { GIFTS, GIFT_QUALITY_STYLE } from '../lib/gifts';
 import { formatDuration } from '../lib/season';
 import { propertyUpkeep, REPOSSESS_AFTER_MONTHS, UpkeepProperty } from '../lib/homeUpkeep';
 import { CLOTHING_COUPON_CODE, saveCouponLeft } from '../lib/clothingCoupon';
-import { saveLicenses, saveVehicles } from '../lib/vehicles';
+import { saveLicenses, saveVehicles, saveCoachman } from '../lib/vehicles';
 
 // 开发测试工具：仅在 `npm run dev` 下由 App 渲染（import.meta.env.DEV），生产构建中不存在。
 // 悬浮在所有界面之上：调整现金、一键快进月份、编辑年龄、新增子嗣、发放礼物、成就与赛季上报测试。
@@ -324,11 +324,12 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
                   onClick={() => {
                     saveLicenses([]);
                     saveVehicles([]);
+                    saveCoachman(null);
                     setError(null);
                   }}
                   className={btn}
                 >
-                  清空执照与车辆
+                  清空执照、车马与车夫
                 </button>
               </div>
               <button onClick={onToggleSimpleMode} className={`${btn} w-full mt-1.5`}>

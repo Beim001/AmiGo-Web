@@ -56,7 +56,7 @@ import { HospitalModal } from './components/HospitalModal';
 import { CLOTHING_COUPON_KEY } from './lib/clothingCoupon';
 import { WelfareModal } from './components/WelfareModal';
 import { LicenseModal } from './components/LicenseModal';
-import { loadLicenses, loadVehicles } from './lib/vehicles';
+import { loadLicenses, loadVehicles, loadCoachman, saveCoachman } from './lib/vehicles';
 import { JobModal, JOB_POSITIONS, readCurrentJobId, readJobHistoryIds } from './components/JobModal';
 import { BirthModal } from './components/BirthModal';
 import { WealthChartModal } from './components/WealthChartModal';
@@ -259,6 +259,7 @@ export default function App() {
       rental: loadStored<{ monthlyRent?: number; comfortBonus?: number } | null>('amigo_current_rental', null),
       vehicles: loadVehicles(),
       licenses: loadLicenses(),
+      coachman: loadCoachman(),
       job: (currentJobId ? JOB_POSITIONS.find((j) => j.id === currentJobId) : null) ?? null,
       childJob: readChildJob(),
     });
@@ -269,6 +270,7 @@ export default function App() {
         localStorage.setItem('amigo_owned_properties', JSON.stringify(r.properties));
       } catch (e) {}
     }
+    if (r.coachman !== undefined) saveCoachman(r.coachman);
     if (r.childJobEnded) {
       try {
         localStorage.removeItem(CHILD_JOB_KEY);
