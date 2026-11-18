@@ -1,6 +1,7 @@
 import { KeyRound } from 'lucide-react';
 import type { Cdkey } from './useCdkey';
 import { CURRENCY } from '../../data/seasons';
+import { CLOTHING_COUPON_USES } from '../../lib/clothingCoupon';
 
 // 「礼包兑换」标签页
 
@@ -41,6 +42,7 @@ export const CdkeyTab = ({ cdkey }: { cdkey: Cdkey }) => {
         <div className="text-gray-300 text-xs font-mono font-bold">· GIFT2026 : 50,000 {CURRENCY.name}</div>
         <div className="text-gray-300 text-xs font-mono font-bold">· 666666 : 50,000 {CURRENCY.name}</div>
         <div className="text-gray-300 text-xs font-mono font-bold">· VALENTINE : 瓦伦丁家族专属好礼</div>
+        <div className="text-gray-300 text-xs font-mono font-bold">· Aminoac2026 : 前 {CLOTHING_COUPON_USES} 次购买服饰享 7 折</div>
       </div>
     </div>
   );
