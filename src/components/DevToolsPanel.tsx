@@ -245,7 +245,7 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
 
       {tab === 'time' && (
         <>
-          <div className={label}>一键快进（逐月完整结算：工资、利息、股市、健康、疾病、生育）</div>
+          <div className={label}>一键快进（逐月完整结算：工资、居家开销、利息、股市、健康、疾病、生育）</div>
           {busy ? (
             <div className="space-y-1.5">
               <div className="text-xs font-black text-fuchsia-300 text-center">快进中… 剩余 {fastForwardRemaining} 个月</div>

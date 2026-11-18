@@ -38,6 +38,7 @@ import { SimEventInstance, rollMonthlyEvent } from './simEvents';
 import { LogCategory } from './lifeLog';
 import type { Appearance } from './appearance';
 import { CURRENCY } from '../data/seasons';
+import { propertyUpkeep, livesIn } from './homeUpkeep';
 
 /** 名下房产（只用到结算相关字段，其余字段原样保留） */
 export interface OwnedProperty {
@@ -46,6 +47,8 @@ export interface OwnedProperty {
   totalRentCollected?: number;
   isPrimaryResidence?: boolean;
   comfortBonus?: number;
+  currentValue?: number;
+  purchasePrice?: number;
   [key: string]: unknown;
 }
 
@@ -161,9 +164,11 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
   const ageNextMonth = isRegistered ? Math.max(0, 8 + nextY - birthRegisteredYear) : 8;
   const notes: string[] = [];
 
-  // 1. 名下出租房产租金收益与自住舒适度
+  // 1. 名下出租房产租金收益、自住舒适度与居家开销（第 76 题）
   let propertyRentIncome = 0;
   let comfortBonusTotal = 0;
+  let primaryComfort = 0;
+  let homeUpkeep = 0;
   let properties: OwnedProperty[] | null = null;
   if (input.properties) {
     const props = input.properties.map((p) => ({ ...p }));
@@ -174,10 +179,10 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
         p.totalRentCollected = (p.totalRentCollected || 0) + p.rentPerMonth!;
         updated = true;
       }
-      if (p.isPrimaryResidence && !p.isRentedOut) {
-        comfortBonusTotal += p.comfortBonus || 5;
-      }
+      if (livesIn(p)) primaryComfort += p.comfortBonus || 5;
+      homeUpkeep += propertyUpkeep(p, nextY);
     });
+    comfortBonusTotal += primaryComfort;
     if (updated) properties = props;
   }
 
@@ -222,15 +227,27 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
     notes.unshift(allowance.total > 0 ? `零花 +${allowance.total.toLocaleString()}` : '没有零花（父母已故或好感度不足 30%）');
   }
 
+  // 3d. 居家开销（第 76 题）：付不起就不扣钱，但本月自住房没有取暖照明，舒适度加成作废
+  let upkeepPaid = 0;
+  if (homeUpkeep > 0) {
+    if (coins + baseIncome + propertyRentIncome - rentExpense + salary >= homeUpkeep) {
+      upkeepPaid = homeUpkeep;
+      notes.push(`居家开销 -${homeUpkeep.toLocaleString()}`);
+    } else {
+      comfortBonusTotal -= primaryComfort;
+      notes.push('⚠️ 交不起居家开销，住处没有取暖照明');
+    }
+  }
+
   // 4. 银行存贷款利息（第 5 题：贷款利率随历史大事件上浮）
-  const cashBeforeInterest = Math.max(0, coins + baseIncome + propertyRentIncome - rentExpense + salary);
+  const cashBeforeInterest = Math.max(0, coins + baseIncome + propertyRentIncome - rentExpense + salary - upkeepPaid);
   const interest = settleMonthlyInterest(input.bankAccounts, cashBeforeInterest, nextY, nextM, rng, depositInterestMultiplier(playerTraits));
   if (interest.depositInterest > 0) notes.push(`存款利息 +${interest.depositInterest.toLocaleString()}`);
   if (interest.loanInterest > 0) notes.push(`贷款利息 -${interest.loanInterest.toLocaleString()}`);
   if (interest.capitalized > 0) notes.push(`⚠️ ${interest.capitalized.toLocaleString()} ${CURRENCY.symbol} 利息计入本金`);
   const bankTotals = totalsOf(interest.accounts);
 
-  const netChange = baseIncome + propertyRentIncome - rentExpense + salary - interest.cashPaid;
+  const netChange = baseIncome + propertyRentIncome - rentExpense + salary - upkeepPaid - interest.cashPaid;
 
   // 5. 股市推进（第 4 题：每月 20 个交易日）
   const market = advanceMarket(input.market, TRADING_DAYS_PER_MONTH, rng);

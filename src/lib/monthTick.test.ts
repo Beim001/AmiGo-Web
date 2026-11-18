@@ -5,6 +5,7 @@ import { buildDefaultAccounts } from './bank';
 import { loadMarket } from './stockMarket';
 import { BASE_STIPEND, monthlySalary } from './monthly';
 import { CHILD_JOBS, CHILD_LABOR_MAX_AGE } from './lineage';
+import { propertyUpkeep } from './homeUpkeep';
 
 /** 固定种子的伪随机数，保证每次运行结果相同 */
 const seeded = (seed = 1) => () => {
@@ -80,6 +81,35 @@ describe('收入', () => {
   it('没有出租房产时不需要写回房产', () => {
     const r = advanceMonth(input({ properties: [{ id: 'h1', isPrimaryResidence: true, comfortBonus: 8 }] }), QUIET);
     expect(r.properties).toBeNull();
+  });
+});
+
+describe('居家开销', () => {
+  const home = { id: 'h1', isPrimaryResidence: true, comfortBonus: 8, currentValue: 200_000 };
+  const upkeep = propertyUpkeep(home, YEAR);
+
+  it('自住房每月扣居家开销，计入净变化', () => {
+    const r = advanceMonth(input({ properties: [home] }), QUIET);
+    const none = advanceMonth(input(), QUIET);
+    expect(upkeep).toBeGreaterThan(0);
+    expect(r.netChange).toBe(none.netChange - upkeep);
+    expect(r.notes).toContain(`居家开销 -${upkeep.toLocaleString()}`);
+  });
+
+  it('租房住的居家开销已含在房租里，不另收', () => {
+    const r = advanceMonth(input({ rental: { monthlyRent: 1000, comfortBonus: 2 } }), QUIET);
+    expect(r.notes.some((n) => n.includes('居家开销'))).toBe(false);
+  });
+
+  it('付不起时不扣钱，但本月自住房的舒适度加成作废', () => {
+    // 开销远高于当月零花，现金为 0 时付不起
+    const mansion = { ...home, currentValue: 50_000_000 };
+    const cost = propertyUpkeep(mansion, YEAR);
+    const broke = advanceMonth(input({ coins: 0, health: 50, properties: [mansion] }), QUIET);
+    const paid = advanceMonth(input({ coins: cost, health: 50, properties: [mansion] }), QUIET);
+    expect(broke.notes).toContain('⚠️ 交不起居家开销，住处没有取暖照明');
+    expect(broke.netChange).toBe(paid.netChange + cost);
+    expect(broke.health).toBeLessThan(paid.health);
   });
 });
 

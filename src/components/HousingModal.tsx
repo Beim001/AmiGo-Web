@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { CurrencyIcon } from './CurrencyIcon';
 import { CURRENCY } from '../data/seasons';
+import { livesIn, propertyUpkeep } from '../lib/homeUpkeep';
 
 export interface PropertyItem {
   id: string;
@@ -1106,6 +1107,9 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                           </div>
                           <div className="text-gray-400 text-[10px] font-mono mt-0.5">
                             购入价: {owned.purchasePrice.toLocaleString()} {CURRENCY.symbol}
+                          </div>
+                          <div className="text-rose-300/80 text-[10px] font-mono mt-0.5">
+                            {livesIn(owned) ? '每月居家开销' : '每月修缮'}: {propertyUpkeep(owned, gameYear).toLocaleString()} {CURRENCY.symbol}
                           </div>
                         </div>
                       </div>
