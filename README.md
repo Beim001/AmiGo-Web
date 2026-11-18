@@ -72,13 +72,14 @@ npm run lint                     # 类型检查（前端 + 后端）
 └── src/
     ├── main.tsx / index.css          # 挂载入口与全局样式
     ├── version.ts                    # 游戏版本号
-    ├── App.tsx                       # 主应用：全局状态、月度结算、顶部/底部导航、商城、个人中心、银行
+    ├── App.tsx                       # 主应用：全局状态、月度结算、各界面开关
     ├── data/
     │   ├── fixedFamilies.ts          # 固定家族列表（皇族、贵族与以后出现的家族）
     │   └── credits.ts                # 致谢名单内容
     ├── utils/
     │   └── sensitiveWords.ts         # 敏感词库与昵称校验
     ├── lib/
+    │   ├── storage.ts                # localStorage 读写工具（loadStored / saveStored）
     │   ├── authClient.ts             # 账号接口客户端与错误文案
     │   ├── cloudSave.ts              # 云存档同步
     │   ├── bilibiliToy.ts            # Bilibili Toy SDK 封装
@@ -127,6 +128,10 @@ npm run lint                     # 类型检查（前端 + 后端）
         ├── ImmigrationModal.tsx            # 移民居留
         ├── GenderRightsModal.tsx           # 性别变更
         ├── HistoricalFlag.tsx              # 19 世纪各国离线 SVG 国旗
+        ├── TopBar.tsx / BottomNav.tsx      # 顶部栏、底部导航
+        ├── ShopModal.tsx                   # 商城：抽卡、服饰、理发店
+        ├── ProfileModal.tsx                # 个人中心
+        ├── BankModal.tsx                   # 银行
         └── DevToolsPanel.tsx               # 开发测试工具（仅开发模式）
 ```
 
@@ -134,7 +139,7 @@ npm run lint                     # 类型检查（前端 + 后端）
 
 ## 三、核心模块说明
 
-### 1. 主应用（`src/App.tsx`）
+### 1. 主应用（`src/App.tsx` 及从中拆出的界面组件）
 
 | 组件 / 函数 | 作用 |
 | :--- | :--- |
@@ -143,9 +148,9 @@ npm run lint                     # 类型检查（前端 + 后端）
 | `handleRegisterBirth()` | 出生登记：随机家族阶层与出身（起始资产、父母家、家人），名字中的姓换成家族姓，初始年龄 8 岁。 |
 | `handleSuccession()` | 角色去世后由继承人接续（未成年继承人进入监护），可选择把前任的大事写入家族大事记。 |
 | `handleResetLife()` / `handleLogout()` | 重置人生（保留账号级数据与成就）；退出登录（邮箱账号先同步云端再清除本地存档）。 |
-| `ProfileModal` | 个人中心：名片资料、帝国排行榜、成就（含致谢名单重播）、系统设置、礼包兑换、关于我们；改名敏感词校验与冻结、慈善捐款。 |
-| `ShopModal` / `ChestAnimation` | 服饰商城与宝箱抽奖（保底规则见 `gacha.ts`）。 |
-| `BankModal` | 多银行开户、存取款、贷款借还与流水。 |
+| `ProfileModal`（`components/ProfileModal.tsx`） | 个人中心：名片资料、帝国排行榜、成就（含致谢名单重播）、系统设置、礼包兑换、关于我们；改名敏感词校验与冻结、慈善捐款。 |
+| `ShopModal` / `ChestAnimation`（`components/ShopModal.tsx`） | 服饰商城与宝箱抽奖（保底规则见 `gacha.ts`）、理发店。 |
+| `BankModal`（`components/BankModal.tsx`） | 多银行开户、存取款、贷款借还与流水。 |
 
 ### 2. 游戏规则库（`src/lib/`、`src/data/`）
 
