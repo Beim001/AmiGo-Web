@@ -7,6 +7,7 @@ import { propertyUpkeep, REPOSSESS_AFTER_MONTHS, UpkeepProperty } from '../lib/h
 import { CLOTHING_COUPON_CODE, saveCouponLeft } from '../lib/clothingCoupon';
 import { saveLicenses, saveVehicles, saveCoachman } from '../lib/vehicles';
 import { saveLeisureRecord } from '../lib/leisure';
+import { savePrison, saveCriminalRecord, sentenceTo } from '../lib/prison';
 
 // 开发测试工具：仅在 `npm run dev` 下由 App 渲染（import.meta.env.DEV），生产构建中不存在。
 // 悬浮在所有界面之上：调整现金、一键快进月份、编辑年龄、新增子嗣、发放礼物、成就与赛季上报测试。
@@ -343,6 +344,29 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
               >
                 清空本月文娱记录（可再去一次）
               </button>
+              <div className="grid grid-cols-2 gap-1.5 mt-1.5">
+                <button
+                  disabled={!isRegistered}
+                  onClick={() => {
+                    // 测试第 67.7 题：直接入狱 3 个月（不扣声望、不丢工作；需重新打开相关界面）
+                    savePrison(sentenceTo('测试', 3, gameYear, gameMonth));
+                    setError(null);
+                  }}
+                  className={btn}
+                >
+                  入狱 3 个月
+                </button>
+                <button
+                  onClick={() => {
+                    savePrison(null);
+                    saveCriminalRecord(null);
+                    setError(null);
+                  }}
+                  className={btn}
+                >
+                  清空服刑与前科
+                </button>
+              </div>
               <button onClick={onToggleSimpleMode} className={`${btn} w-full mt-1.5`}>
                 {simpleMode ? '切回完整模式' : '切到简洁模式'}
               </button>

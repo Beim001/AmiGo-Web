@@ -40,6 +40,7 @@ import type { Appearance } from './appearance';
 import { CURRENCY } from '../data/seasons';
 import { settleUpkeep, livesIn, REPOSSESS_AFTER_MONTHS } from './homeUpkeep';
 import { settleGarage, VehicleId, LicenseId, Coachman } from './vehicles';
+import { PrisonState, CriminalRecord, PRISON_HEALTH_LOSS, CRIMINAL_RECORD_YEARS, serveMonth, recordOnRelease, lowerFamilyAffinity } from './prison';
 
 /** 名下房产（只用到结算相关字段，其余字段原样保留） */
 export interface OwnedProperty {
@@ -95,6 +96,8 @@ export interface MonthInput {
   vehicles: VehicleId[];
   licenses: LicenseId[];
   coachman: Coachman | null;
+  /** 正在服刑（第 67.7 题） */
+  prison: PrisonState | null;
   job: { dailySalary?: number | null } | null;
   childJob: ChildJob | null;
 }
@@ -119,6 +122,10 @@ export interface MonthResult {
   /** undefined 表示不更新监护状态 */
   guardianship: Guardianship | null | undefined;
   pendingCoup: string | null;
+  /** 服刑状态：刑满为 null；undefined 表示不在狱中 */
+  prison: PrisonState | null | undefined;
+  /** 本月出狱时留下的前科 */
+  criminalRecord: CriminalRecord | null;
   /** 车夫辞工或逃跑时为 null；undefined 表示不变 */
   coachman: Coachman | null | undefined;
   /** 有房租入账、欠费变化或房产被收回时需要写回的房产列表 */
@@ -202,13 +209,15 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
   if (rentExpense > 0) notes.push(`租金 -${rentExpense.toLocaleString()}`);
 
   // 3. 在职月薪（第 2、3 题：日薪 × 22，年满 16 岁才发）；「勤勉」特质月薪 +10%
-  const job = input.job;
-  let salary = isRegistered ? Math.round(monthlySalary(job?.dailySalary, ageNextMonth) * salaryMultiplier(playerTraits)) : 0;
+  // 狱中没有工作收入（入狱时已丢掉工作，这里再保险一次），也没有俸禄与零花（第 67.7 题）
+  const inPrison = isRegistered && !!input.prison;
+  const job = inPrison ? null : input.job;
+  let salary = isRegistered && !inPrison ? Math.round(monthlySalary(job?.dailySalary, ageNextMonth) * salaryMultiplier(playerTraits)) : 0;
 
   // 3b. 童工（第 19 题：乞丐、平民家庭 8–15 岁）；年满 16 岁自动结束
   let childLaborDamage = 0;
   let childJobEnded = false;
-  const childJob = isRegistered ? input.childJob : null;
+  const childJob = isRegistered && !inPrison ? input.childJob : null;
   if (childJob) {
     if (ageNextMonth > CHILD_LABOR_MAX_AGE || !familyClass.childLabor) {
       childJobEnded = true;
@@ -227,6 +236,8 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
   if (isRegistered && salary > 0) {
     baseIncome = BASE_STIPEND;
     notes.unshift(`俸禄 +${BASE_STIPEND.toLocaleString()}`);
+  } else if (inPrison) {
+    notes.unshift('⛓️ 狱中服刑，没有零花');
   } else if (isRegistered) {
     const allowance = familyAllowance(family, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth }, ageNextMonth, familyClass.id);
     baseIncome = allowance.total;
@@ -313,7 +324,7 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
       : reachedLifespan
         ? 0
         : isRegistered
-          ? nextHealth(health, comfort, ageNextMonth, diseaseDamage + childLaborDamage - decayReduction(playerTraits, ageNextMonth) - vehicle.healthBonus)
+          ? nextHealth(health, comfort, ageNextMonth, diseaseDamage + childLaborDamage + (inPrison ? PRISON_HEALTH_LOSS : 0) - decayReduction(playerTraits, ageNextMonth) - vehicle.healthBonus)
           : Math.min(100, health + comfort);
   if (isRegistered) {
     const delta = newHealth - health;
@@ -378,6 +389,8 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
     const membersNow = buildFamilyMembers(fam, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth });
     const drift = monthlyFamilyDrift(fam, membersNow, gameYear, gameMonth);
     fam = drift.state;
+    // 狱中每月在世家人好感 -1（第 67.7 题）
+    if (inPrison) fam = lowerFamilyAffinity(fam, membersNow);
 
     // 逼宫（第 59 题）：富商、贵族家族中野心高且不满的成年子嗣
     const coup = checkCoup(fam, membersNow, getOrigin(fam).classId);
@@ -466,7 +479,7 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
   // 8. 推演事件：每月 50% 概率出现一张（第 8 题 A）
   let simEvent: SimEventInstance | null = null;
   let simQuiet: string | null = null;
-  if (isRegistered && newHealth > 0) {
+  if (isRegistered && newHealth > 0 && !inPrison) {
     simEvent = rollMonthlyEvent(
       { age: ageNextMonth, classId: familyClass.id, employed: !!job, coins, hasChildren: fam.children.length > 0, ownedHeirlooms: getHeirlooms(fam).map((h) => h.id) },
       nextY,
@@ -502,6 +515,21 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
     if (newHealth <= 0) addLifeLog('大事', '辞世', `${playerName} 离开了人世，享年 ${ageNextMonth} 岁。`, logWhen);
   }
 
+  // 9. 服刑（第 67.7 题）：剩余刑期减一；刑满出狱，留下前科
+  let prison: PrisonState | null | undefined;
+  let criminalRecord: CriminalRecord | null = null;
+  if (inPrison && input.prison) {
+    const served = serveMonth(input.prison);
+    prison = served.prison;
+    if (served.released) {
+      criminalRecord = recordOnRelease(input.prison.crime, nextY, nextM);
+      notes.push('🔓 刑满出狱');
+      addLifeLog('大事', '刑满出狱', `因${input.prison.crime}服刑 ${input.prison.sentence} 个月期满出狱，留下前科（${CRIMINAL_RECORD_YEARS} 年）。`, logWhen);
+    } else {
+      notes.push(`⛓️ 狱中服刑，还剩 ${served.prison!.monthsLeft} 个月`);
+    }
+  }
+
   return {
     ageNextMonth,
     notes,
@@ -516,6 +544,8 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
     pendingCoup,
     properties,
     coachman: vehicle.coachman === input.coachman ? undefined : vehicle.coachman,
+    prison,
+    criminalRecord,
     childJobEnded,
     salary,
     bankAccounts: interest.accounts,

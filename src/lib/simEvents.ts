@@ -3,7 +3,7 @@ import { CURRENCY } from '../data/seasons';
 // - 每月 50% 概率出现一张事件卡；没抽到时显示「本月无事发生」
 // - 未处理的事件一直保留、不限数量
 // - 稳妥选项结果固定；冒险选项按概率出现好坏结果，选项上只提示方向
-// - 只结算金币与健康；推演积分：稳妥 +1、冒险成功 +3、冒险失败 +0
+// - 结算金币与健康，部分结果会入狱（第 67.7 题）；推演积分：稳妥 +1、冒险成功 +3、冒险失败 +0
 // 历史大事件将严格按维基编写，本文件暂只收录日常事件。
 
 export const EVENT_CHANCE = 0.5;
@@ -25,10 +25,20 @@ export interface SimContext {
   ownedHeirlooms?: string[];
 }
 
+/** 入狱：chance 缺省为必定入狱；按概率拘留时 text 接在结果文字后 */
+export interface JailOutcome {
+  crime: string;
+  months: number;
+  chance?: number;
+  text?: string;
+}
+
 export interface Outcome {
   coins?: number;
   health?: number;
   text: string;
+  /** 入狱（第 67.7 题） */
+  jail?: JailOutcome;
   /** 获得的传家宝（见 heirlooms.ts） */
   heirloom?: string;
 }
@@ -65,7 +75,7 @@ export const SIM_EVENTS: SimEventDef[] = [
     when: () => true,
     options: [
       { label: '交给巡捕房', hint: '稳妥', kind: 'safe', result: { coins: 100, text: `失主登门道谢，送上 100 ${CURRENCY.symbol} 酬谢。` } },
-      { label: '悄悄据为己有', hint: '高风险 · 可能大赚', kind: 'risky', chance: 0.7, success: { coins: 800, text: `没人发现，你多了 800 ${CURRENCY.symbol}。` }, failure: { coins: -300, text: `被巡捕抓个正着，罚款 300 ${CURRENCY.symbol}。` } },
+      { label: '悄悄据为己有', hint: '高风险 · 可能大赚', kind: 'risky', chance: 0.7, success: { coins: 800, text: `没人发现，你多了 800 ${CURRENCY.symbol}。` }, failure: { coins: -300, text: `被巡捕抓个正着，罚款 300 ${CURRENCY.symbol}。`, jail: { crime: '侵占财物', months: 1, chance: 0.5, text: '还被关进巡捕房拘留了一个月。' } } },
     ],
   },
   {
@@ -137,7 +147,7 @@ export const SIM_EVENTS: SimEventDef[] = [
     when: (c) => c.age >= 16,
     options: [
       { label: '不去', hint: '稳妥', kind: 'safe', result: { text: '你绕道回家了。' } },
-      { label: `下注 2,000 ${CURRENCY.symbol}`, hint: '高风险 · 可能翻倍', kind: 'risky', requires: 2000, chance: 0.45, success: { coins: 4000, text: `手气正旺，赢了 4,000 ${CURRENCY.symbol}！` }, failure: { coins: -2000, text: `输得精光，2,000 ${CURRENCY.symbol} 没了。` } },
+      { label: `下注 2,000 ${CURRENCY.symbol}`, hint: '高风险 · 可能翻倍', kind: 'risky', requires: 2000, chance: 0.45, success: { coins: 4000, text: `手气正旺，赢了 4,000 ${CURRENCY.symbol}！` }, failure: { coins: -2000, text: `输得精光，2,000 ${CURRENCY.symbol} 没了。`, jail: { crime: '聚众赌博', months: 1, chance: 0.2, text: '散场时撞上巡捕查抄，被拘留了一个月。' } } },
     ],
   },
   {
@@ -233,6 +243,56 @@ export const SIM_EVENTS: SimEventDef[] = [
   },
 ];
 
+/** 犯罪推演事件（第 67.7 题）：冒险失败入狱 3–12 个月 */
+export const CRIME_EVENTS: SimEventDef[] = [
+  {
+    id: 'smuggle', title: '诱惑', headline: '码头有人找你夹带俄货', icon: 'box',
+    desc: '俄国人垄断了厅和港的贸易，私下夹带一箱货就能赚上一大笔，前提是别被关税局查到。',
+    when: (c) => c.age >= 16,
+    options: [
+      { label: '拒绝', hint: '稳妥', kind: 'safe', result: { text: '你摇摇头走开了。' } },
+      { label: '夹带一箱', hint: '高风险 · 可能坐牢', kind: 'risky', chance: 0.5, success: { coins: 6000, text: `货物顺利出手，赚了 6,000 ${CURRENCY.symbol}。` }, failure: { text: '被关税局当场查获。', jail: { crime: '走私', months: 6 } } },
+    ],
+  },
+  {
+    id: 'theft', title: '诱惑', headline: '富商的钱袋没系紧', icon: 'wallet',
+    desc: '集市人挤人，前面那位富商腰间的钱袋口敞着，周围没人注意。',
+    when: (c) => c.age >= 16,
+    options: [
+      { label: '走开', hint: '稳妥', kind: 'safe', result: { text: '你挤出人群，没再回头。' } },
+      { label: '顺手摸走', hint: '高风险 · 可能坐牢', kind: 'risky', chance: 0.6, success: { coins: 1500, text: `得手了，钱袋里有 1,500 ${CURRENCY.symbol}。` }, failure: { text: '被富商的随从当场按住。', jail: { crime: '偷窃', months: 3 } } },
+    ],
+  },
+  {
+    id: 'brawl', title: '冲突', headline: '酒馆里有人辱骂你的家族', icon: 'alert',
+    desc: '邻桌的醉汉指名道姓地嘲笑你家，酒馆里的人都看着你。',
+    when: (c) => c.age >= 16,
+    options: [
+      { label: '忍气吞声', hint: '稳妥', kind: 'safe', result: { text: '你放下酒杯离开了酒馆。' } },
+      { label: '动手教训他', hint: '有风险 · 可能坐牢', kind: 'risky', chance: 0.5, success: { health: -3, text: '三拳两脚把人打趴下，出了口恶气。' }, failure: { health: -8, text: '打得头破血流，巡捕赶到把你带走。', jail: { crime: '斗殴', months: 3 } } },
+    ],
+  },
+  {
+    id: 'forgery', title: '诱惑', headline: '同僚邀你伪造货运票据', icon: 'clock',
+    desc: '只要在提单上多添一笔，就能和他平分多出来的货款。',
+    when: (c) => c.age >= 18 && c.employed,
+    options: [
+      { label: '回绝', hint: '稳妥', kind: 'safe', result: { text: '你装作没听懂。' } },
+      { label: '合伙干一票', hint: '高风险 · 可能坐牢', kind: 'risky', chance: 0.55, success: { coins: 10000, text: `账目没被查出，分到 10,000 ${CURRENCY.symbol}。` }, failure: { text: '稽查员对账时发现了破绽。', jail: { crime: '伪造票据', months: 12 } } },
+    ],
+  },
+  {
+    id: 'noble_clash', title: '冲突', headline: '街上冲撞了贵族的马车', icon: 'alert',
+    desc: '你躲闪不及撞上了贵族的马车，车夫扬起马鞭，车里的老爷探出头来破口大骂。',
+    when: (c) => c.age >= 16 && (c.classId === 'beggar' || c.classId === 'commoner'),
+    options: [
+      { label: '跪地赔罪', hint: '稳妥 · 吃点苦头', kind: 'safe', result: { health: -3, text: '挨了几鞭子，老爷骂骂咧咧地走了。' } },
+      { label: '据理力争', hint: '高风险 · 可能坐牢', kind: 'risky', chance: 0.2, success: { text: '围观的百姓纷纷帮腔，老爷悻悻离去。' }, failure: { text: '巡捕以冲撞贵族的罪名把你押进大牢。', jail: { crime: '冲撞贵族', months: 3 } } },
+    ],
+  },
+];
+SIM_EVENTS.push(...CRIME_EVENTS);
+
 export interface SimEventInstance {
   uid: string;
   defId: string;
@@ -289,7 +349,16 @@ export interface Resolution {
   /** 冒险选项是否成功（稳妥选项为 null） */
   succeeded: boolean | null;
   heirloom?: string;
+  /** 入狱（已按概率判定） */
+  jail?: { crime: string; months: number };
 }
+
+/** 按概率判定结果是否入狱，入狱时把说明接在结果文字后 */
+const applyJail = (r: Outcome, rng: () => number): { text: string; jail?: { crime: string; months: number } } => {
+  if (!r.jail) return { text: r.text };
+  if (r.jail.chance !== undefined && rng() >= r.jail.chance) return { text: r.text };
+  return { text: r.jail.text ? `${r.text}${r.jail.text}` : r.text, jail: { crime: r.jail.crime, months: r.jail.months } };
+};
 
 export const resolveOption = (option: SimOption, rng: () => number = Math.random): Resolution => {
   if (option.kind === 'safe') {
@@ -298,7 +367,8 @@ export const resolveOption = (option: SimOption, rng: () => number = Math.random
   }
   const ok = rng() < (option.chance ?? 0.5);
   const r = (ok ? option.success : option.failure) ?? { text: '' };
-  return { coins: r.coins ?? 0, health: r.health ?? 0, score: ok ? SCORE_RISK_SUCCESS : SCORE_RISK_FAILURE, text: r.text, succeeded: ok, heirloom: r.heirloom };
+  const j = applyJail(r, rng);
+  return { coins: r.coins ?? 0, health: r.health ?? 0, score: ok ? SCORE_RISK_SUCCESS : SCORE_RISK_FAILURE, text: j.text, succeeded: ok, heirloom: r.heirloom, jail: j.jail };
 };
 
 /** 选项是否因现金不足而不可选 */

@@ -42,6 +42,7 @@ import {
 import { CurrencyIcon } from './CurrencyIcon';
 import { CURRENCY } from '../data/seasons';
 import { LicenseId, loadLicenses, meetsLicense, licenseById } from '../lib/vehicles';
+import { isInPrison, PRISON_BLOCK_TEXT, barredByRecord, hasActiveRecord, BARRED_JOB_CATEGORY } from '../lib/prison';
 
 export interface JobModalProps {
   onClose: () => void;
@@ -51,6 +52,9 @@ export interface JobModalProps {
   age: number;
   /** 家族阶层允许打童工（乞丐、平民家庭 8–15 岁） */
   childLaborAllowed?: boolean;
+  /** 当前游戏年月（判断前科是否仍有效） */
+  gameYear: number;
+  gameMonth: number;
 }
 
 export interface JobPosition {
@@ -536,7 +540,7 @@ export const readJobHistoryIds = (): string[] => {
   }
 };
 
-export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, age, childLaborAllowed = false }) => {
+export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, age, childLaborAllowed = false, gameYear, gameMonth }) => {
   const [childJobId, setChildJobId] = useState<string | null>(() => readChildJob()?.id ?? null);
   const setChildJob = (id: string | null) => {
     setChildJobId(id);
@@ -624,6 +628,15 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
     }
     if (currentJobId === job.id) {
       showToast(`当前已在「${job.title}」岗位任职中`);
+      return;
+    }
+    // 狱中不能应聘；有前科时政法治安类岗位不录用（第 67.7 题）
+    if (isInPrison()) {
+      showToast(`⛓️ ${PRISON_BLOCK_TEXT}`);
+      return;
+    }
+    if (barredByRecord(job, hasActiveRecord(gameYear, gameMonth))) {
+      showToast(`有前科在身，${BARRED_JOB_CATEGORY}类岗位不予录用`);
       return;
     }
     if (!meetsLicense(job, loadLicenses())) {

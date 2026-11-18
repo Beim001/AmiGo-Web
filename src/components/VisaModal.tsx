@@ -46,6 +46,7 @@ import {
 import { CurrencyIcon } from './CurrencyIcon';
 import { HistoricalFlag } from './HistoricalFlag';
 import { CURRENCY } from '../data/seasons';
+import { isInPrison, PRISON_BLOCK_TEXT } from '../lib/prison';
 
 export interface VisaItem {
   id: string;
@@ -653,6 +654,11 @@ export const VisaModal: React.FC<VisaModalProps> = ({
 
   // 3. 发起海外出境游历 / 商务考察
   const handleDepartTravel = (issued: IssuedVisa) => {
+    // 狱中不能出国旅行（第 67.7 题）
+    if (isInPrison()) {
+      showToast(`⛓️ ${PRISON_BLOCK_TEXT}`, 'error');
+      return;
+    }
     if (issued.status !== 'valid' || issued.entriesRemaining <= 0) {
       showToast('该签证已失效或入境次数已耗尽，请重新申办', 'error');
       return;

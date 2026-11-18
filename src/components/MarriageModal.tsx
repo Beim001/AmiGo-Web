@@ -26,8 +26,10 @@ import {
   BIRTH_CHANCE,
   BIRTH_MAX_AGE,
   MAX_CHILDREN,
+  SPOUSE_CANDIDATE_COUNT,
 } from '../lib/family';
 import { CURRENCY } from '../data/seasons';
+import { isInPrison, PRISON_BLOCK_TEXT, candidateCount, hasActiveRecord } from '../lib/prison';
 
 export interface MarriageModalProps {
   onClose: () => void;
@@ -88,7 +90,9 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
   const opposite = playerGender === '男' || playerGender === '女' ? (playerGender as '男' | '女') : null;
   const [loverCandidates, setLoverCandidates] = useState<SpouseCandidate[]>(() => generateSpouseCandidates(age).slice(0, 5));
   const [confirmLover, setConfirmLover] = useState<SpouseCandidate | null>(null);
-  const [candidates, setCandidates] = useState<SpouseCandidate[]>(() => generateSpouseCandidates(age, Math.random, undefined, opposite));
+  // 有前科时结婚候选人减半（第 67.7 题）
+  const spouseCount = candidateCount(SPOUSE_CANDIDATE_COUNT, hasActiveRecord(gameYear, gameMonth));
+  const [candidates, setCandidates] = useState<SpouseCandidate[]>(() => generateSpouseCandidates(age, Math.random, spouseCount, opposite));
   const [confirming, setConfirming] = useState<SpouseCandidate | null>(null);
   const [confirmDivorce, setConfirmDivorce] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -99,6 +103,12 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
   };
 
   const handleMarry = (c: SpouseCandidate) => {
+    // 狱中不能结婚（第 67.7 题）
+    if (isInPrison()) {
+      showToast(`⛓️ ${PRISON_BLOCK_TEXT}`);
+      setConfirming(null);
+      return;
+    }
     if (coins < MARRIAGE_FEE) {
       showToast(`现金不足！结婚登记规费需 ${MARRIAGE_FEE.toLocaleString()} ${CURRENCY.symbol}`);
       setConfirming(null);
@@ -123,7 +133,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
     setFamily((prev) => divorce(prev, gameYear, gameMonth));
     onReputationChange?.(REP.divorce);
     setConfirmDivorce(false);
-    setCandidates(generateSpouseCandidates(age, Math.random, undefined, opposite));
+    setCandidates(generateSpouseCandidates(age, Math.random, spouseCount, opposite));
     addLifeLog('大事', `与 ${formerName} 离婚`, '在帝国民政署办理了离婚手续。');
     showToast(`已与 ${formerName} 解除婚姻关系`);
   };
@@ -300,7 +310,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
             <div className="text-gray-400 text-[11px] font-bold">登记规费 {MARRIAGE_FEE.toLocaleString()} {CURRENCY.symbol} · 当前现金 {coins.toLocaleString()} {CURRENCY.symbol}</div>
           </div>
           <button
-            onClick={() => setCandidates(generateSpouseCandidates(age, Math.random, undefined, opposite))}
+            onClick={() => setCandidates(generateSpouseCandidates(age, Math.random, spouseCount, opposite))}
             className="text-gray-200 hover:text-white flex items-center gap-1 bg-[#21232e] px-2 py-1 rounded-lg border border-black text-[11px] font-black cursor-pointer active:scale-95"
           >
             <RefreshCw size={12} /> 换一批

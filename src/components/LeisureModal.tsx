@@ -29,6 +29,7 @@ import {
 } from '../lib/leisure';
 import { loadVehicles } from '../lib/vehicles';
 import { addLifeLog } from '../lib/lifeLog';
+import { isInPrison, PRISON_BLOCK_TEXT, RAID_CHANCE } from '../lib/prison';
 
 // 文娱休闲（第 67.10 题）：剧院、赌场、赛马、斗鸡、斗牛、摔跤，每项每月一次；观赛下注或亲自上场
 
@@ -44,6 +45,8 @@ export interface LeisureModalProps {
   age: number;
   gameYear: number;
   gameMonth: number;
+  /** 入狱（第 67.7 题），返回提示文字 */
+  onJail: (crime: string, months: number) => string;
 }
 
 const TASTE_LABEL: Record<LeisureDef['taste'], [string, string]> = {
@@ -60,7 +63,7 @@ const COMPETE_HINT: Partial<Record<LeisureId, string>> = {
   wrestling: '胜率看年龄与健康（20–30 岁最强），输了受伤',
 };
 
-export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setCoins, health, setHealth, changeReputation, isRegistered, age, gameYear, gameMonth }) => {
+export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setCoins, health, setHealth, changeReputation, isRegistered, age, gameYear, gameMonth, onJail }) => {
   const [record, setRecord] = useState<LeisureRecord>(loadLeisureRecord);
   const [hasCock, setHasCock] = useState(loadFightingCock);
   const [betInput, setBetInput] = useState(String(MIN_BET * 10));
@@ -83,12 +86,31 @@ export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setC
     return v.rep ? `，声望 ${v.rep > 0 ? '+' : ''}${v.rep}` : '';
   };
 
+  /** 狱中不能去文娱场所（第 67.7 题） */
+  const jailed = () => {
+    if (!isInPrison()) return false;
+    showToast(`⛓️ ${PRISON_BLOCK_TEXT}`);
+    return true;
+  };
+
+  /** 赌场、斗鸡场遇上巡捕查抄：赌注没收，拘留 1 个月（第 67.7 题） */
+  const raided = (def: LeisureDef, stake: number) => {
+    if ((def.id !== 'casino' && def.id !== 'cockfight') || Math.random() >= RAID_CHANCE) return false;
+    if (stake > 0) setCoins((prev) => prev - stake);
+    markVisit(def.id);
+    const msg = onJail('聚众赌博', 1);
+    finish(def, `巡捕突然查抄${def.venue}${stake > 0 ? `，${money(stake)} 赌注被没收` : ''}，${msg.replace('⛓️ ', '')}`, false);
+    showToast(msg);
+    return true;
+  };
+
   const finish = (def: LeisureDef, text: string, log: boolean) => {
     setResult(`【${def.name}】${text}`);
     if (log) addLifeLog('财富', `${def.name}：${text.split('，')[0]}`, text);
   };
 
   const watchTheater = (def: LeisureDef) => {
+    if (jailed()) return;
     if (!isRegistered) return showToast('请先完成出生登记');
     if (coins < THEATER_COST) return showToast(`现金不足：需要 ${money(THEATER_COST)}`);
     setCoins((prev) => prev - THEATER_COST);
@@ -97,8 +119,10 @@ export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setC
   };
 
   const bet = (def: LeisureDef, pick: number) => {
+    if (jailed()) return;
     const blocked = betBlocked({ isRegistered, age, coins, amount });
     if (blocked) return showToast(blocked);
+    if (raided(def, amount)) return;
     const contenders = contendersFor(def.id, gameYear, gameMonth);
     const r = resolveBet(contenders, pick, amount);
     setCoins((prev) => prev - amount + r.payout);
@@ -109,8 +133,10 @@ export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setC
 
   const enter = (def: LeisureDef) => {
     const ctx = { isRegistered, age, health, coins, vehicles, hasCock };
+    if (jailed()) return;
     const blocked = competeBlocked(def.id, ctx);
     if (blocked) return showToast(blocked);
+    if (raided(def, 0)) return;
     const r = compete(def.id, ctx);
     if (r.coins) setCoins((prev) => prev + r.coins);
     if (r.health) setHealth((h) => Math.max(0, Math.min(100, h + r.health)));

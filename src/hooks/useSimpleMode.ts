@@ -17,6 +17,7 @@ import { isMinor } from '../lib/monthly';
 import { loadMarket, STOCK_KEYS, StockHolding, StockTradeLog } from '../lib/stockMarket';
 import { JOB_POSITIONS, readCurrentJobId, readJobHistoryIds, CURRENT_JOB_KEY, JOB_HISTORY_KEY } from '../components/JobModal';
 import { loadLicenses, meetsLicense } from '../lib/vehicles';
+import { isInPrison, candidateCount, hasActiveRecord, barredByRecord } from '../lib/prison';
 import { HOUSING_MARKET_PROPERTIES } from '../components/HousingModal';
 import { loadStored, saveStored } from '../lib/storage';
 import { seededRng } from '../lib/appearance';
@@ -143,7 +144,8 @@ export const useSimpleMode = ({
     let fam = family;
     let score = 0;
     const resolved: string[] = [];
-    for (const inst of simEvents) {
+    // 狱中不能处理推演事件（第 67.7 题）
+    for (const inst of isInPrison() ? [] : simEvents) {
       const def = eventDef(inst);
       if (!def) continue;
       const idx = autoOptionIndex(def, cash);
@@ -261,7 +263,7 @@ export const useSimpleMode = ({
   };
 
   const simpleSpouseCandidates = React.useMemo(
-    () => generateSpouseCandidates(currentAge, Math.random, 3, gender === '男' || gender === '女' ? (gender as Gender) : null),
+    () => generateSpouseCandidates(currentAge, Math.random, candidateCount(3, hasActiveRecord(gameYear, gameMonth)), gender === '男' || gender === '女' ? (gender as Gender) : null),
     [gameYear, family.spouse?.name, gender],
   );
 
@@ -281,6 +283,8 @@ export const useSimpleMode = ({
         ],
       };
     }
+    // 狱中不弹出求职、结婚、买房等人生节点（第 67.7 题）
+    if (isInPrison()) return null;
     const hasJob = !!readCurrentJobId();
     const childJob = readChildJob();
     if (currentAge >= 16 && !hasJob && !childJob && !snoozed('job')) {
@@ -291,7 +295,7 @@ export const useSimpleMode = ({
         hint: '有工作才能领俸禄，还能拿到月薪',
         laterLabel: '以后再说',
         // 需要执照的职业只推荐给已持照的人（第 67.4 题）
-        choices: recommendJobs(JOB_POSITIONS.filter((j) => meetsLicense(j, loadLicenses())), familyClass.id, seededRng(`simple_jobs_${gameYear}_${gameMonth}`)).map((j) => ({ id: j.id, title: j.title, detail: `${j.department} · 每月约 ${(j.dailySalary * 22).toLocaleString()} ${CURRENCY.symbol}` })),
+        choices: recommendJobs(JOB_POSITIONS.filter((j) => meetsLicense(j, loadLicenses()) && !barredByRecord(j, hasActiveRecord(gameYear, gameMonth))), familyClass.id, seededRng(`simple_jobs_${gameYear}_${gameMonth}`)).map((j) => ({ id: j.id, title: j.title, detail: `${j.department} · 每月约 ${(j.dailySalary * 22).toLocaleString()} ${CURRENCY.symbol}` })),
       };
     }
     if (currentAge >= 8 && currentAge <= CHILD_LABOR_MAX_AGE && familyClass.childLabor && !childJob && !snoozed('child')) {

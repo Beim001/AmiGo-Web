@@ -7,6 +7,7 @@ import { BASE_STIPEND, monthlySalary } from './monthly';
 import { CHILD_JOBS, CHILD_LABOR_MAX_AGE } from './lineage';
 import { propertyUpkeep, REPOSSESS_AFTER_MONTHS } from './homeUpkeep';
 import { VEHICLE_HEALTH_BONUS, VehicleId, vehicleById, vehicleUpkeep } from './vehicles';
+import { PRISON_HEALTH_LOSS } from './prison';
 
 /** 固定种子的伪随机数，保证每次运行结果相同 */
 const seeded = (seed = 1) => () => {
@@ -54,6 +55,7 @@ const input = (over: Partial<MonthInput> = {}): MonthInput => ({
   vehicles: [],
   licenses: [],
   coachman: null,
+  prison: null,
   job: null,
   childJob: null,
   ...over,
@@ -162,6 +164,32 @@ describe('车马', () => {
     expect(r.notes).toContain('⚠️ 养不起车马，本月只能步行');
     expect(r.netChange).toBe(none.netChange);
     expect(r.health).toBe(none.health);
+  });
+});
+
+describe('监狱服刑（第 67.7 题）', () => {
+  const jail = (monthsLeft: number) => ({ crime: '偷窃', sentence: 3, monthsLeft, year: YEAR, month: 5 });
+
+  it('狱中没有月薪、俸禄与零花，每月健康 -5，不出推演事件', () => {
+    const free = advanceMonth(input({ job: { dailySalary: 100 }, health: 50 }), seeded(5));
+    const r = advanceMonth(input({ job: { dailySalary: 100 }, health: 50, prison: jail(2) }), seeded(5));
+    expect(r.salary).toBe(0);
+    expect(r.netChange).toBe(0);
+    expect(r.health).toBe(free.health - PRISON_HEALTH_LOSS);
+    expect(r.simEvent).toBeNull();
+    expect(r.prison).toEqual(jail(1));
+    expect(r.criminalRecord).toBeNull();
+  });
+
+  it('刑满出狱留下 10 年前科，写入人生日志', () => {
+    const r = advanceMonth(input({ prison: jail(1) }), QUIET);
+    expect(r.prison).toBeNull();
+    expect(r.criminalRecord).toEqual({ crime: '偷窃', until: YEAR * 12 + 6 + 120 });
+    expect(r.logs.some(([, title]) => title === '刑满出狱')).toBe(true);
+  });
+
+  it('不在狱中时服刑状态不变', () => {
+    expect(advanceMonth(input(), QUIET).prison).toBeUndefined();
   });
 });
 

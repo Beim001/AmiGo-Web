@@ -9,6 +9,7 @@ import { CHILD_JOB_KEY } from '../lib/lineage';
 import { addLifeLog, readLifeLog, clearLifeLog } from '../lib/lifeLog';
 import { LAST_WORK_MONTH_KEY } from '../lib/monthly';
 import { LICENSES_KEY } from '../lib/vehicles';
+import { PRISON_KEY, CRIMINAL_RECORD_KEY } from '../lib/prison';
 import { loadAccounts, saveAccounts as persistBankAccounts, currentRateEvent } from '../lib/bank';
 import { CURRENT_JOB_KEY, JOB_HISTORY_KEY } from '../components/JobModal';
 import type { Game } from './useGameState';
@@ -81,6 +82,9 @@ export const useSuccession = ({ game, currentAge, playerOccupation, setShowSucce
       localStorage.removeItem(LAST_WORK_MONTH_KEY);
       // 执照是个人证件，继承人要重新考；车辆属于家族，保留（第 67.4 题）
       localStorage.removeItem(LICENSES_KEY);
+      // 服刑与前科是个人的，继承人不受影响（第 67.7 题）
+      localStorage.removeItem(PRISON_KEY);
+      localStorage.removeItem(CRIMINAL_RECORD_KEY);
     } catch (e) {}
     setShowSuccession(false);
     setPlayerTraits(heir.traits && heir.traits.length > 0 ? heir.traits : randomTraits());

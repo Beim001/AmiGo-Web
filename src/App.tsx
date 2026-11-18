@@ -57,8 +57,10 @@ import { CLOTHING_COUPON_KEY } from './lib/clothingCoupon';
 import { WelfareModal } from './components/WelfareModal';
 import { LicenseModal } from './components/LicenseModal';
 import { LeisureModal } from './components/LeisureModal';
+import { PrisonModal } from './components/PrisonModal';
+import { JAIL_REPUTATION, loadPrison, savePrison, saveCriminalRecord, sentenceTo, isInPrison } from './lib/prison';
 import { loadLicenses, loadVehicles, loadCoachman, saveCoachman } from './lib/vehicles';
-import { JobModal, JOB_POSITIONS, readCurrentJobId, readJobHistoryIds } from './components/JobModal';
+import { JobModal, JOB_POSITIONS, readCurrentJobId, readJobHistoryIds, CURRENT_JOB_KEY } from './components/JobModal';
 import { BirthModal } from './components/BirthModal';
 import { WealthChartModal } from './components/WealthChartModal';
 import { GenderRightsModal } from './components/GenderRightsModal';
@@ -115,6 +117,7 @@ export default function App() {
   const [showWelfare, setShowWelfare] = useState(false);
   const [showLicense, setShowLicense] = useState(false);
   const [showLeisure, setShowLeisure] = useState(false);
+  const [showPrison, setShowPrison] = useState(false);
   const [showJob, setShowJob] = useState(false);
   const [showHousing, setShowHousing] = useState(false);
   const [showVisa, setShowVisa] = useState(false);
@@ -262,6 +265,7 @@ export default function App() {
       vehicles: loadVehicles(),
       licenses: loadLicenses(),
       coachman: loadCoachman(),
+      prison: loadPrison(),
       job: (currentJobId ? JOB_POSITIONS.find((j) => j.id === currentJobId) : null) ?? null,
       childJob: readChildJob(),
     });
@@ -273,6 +277,8 @@ export default function App() {
       } catch (e) {}
     }
     if (r.coachman !== undefined) saveCoachman(r.coachman);
+    if (r.prison !== undefined) savePrison(r.prison);
+    if (r.criminalRecord) saveCriminalRecord(r.criminalRecord);
     if (r.childJobEnded) {
       try {
         localStorage.removeItem(CHILD_JOB_KEY);
@@ -489,6 +495,18 @@ export default function App() {
   // 特质（第 27 题）、声望（第 22 题）、未成年继承的监护（第 25 题）
   const changeReputation = (delta: number) => setReputation((r) => clampReputation(r + delta));
 
+  /** 入狱（第 67.7 题）：丢掉工作与童工，声望下降；返回提示文字 */
+  const jailPlayer = (crime: string, months: number): string => {
+    savePrison(sentenceTo(crime, months, gameYear, gameMonth));
+    try {
+      localStorage.setItem(CURRENT_JOB_KEY, '');
+      localStorage.removeItem(CHILD_JOB_KEY);
+    } catch (e) {}
+    changeReputation(JAIL_REPUTATION);
+    addLifeLog('大事', `因${crime}入狱`, `被判入狱 ${months} 个月，丢掉了工作，声望 ${JAIL_REPUTATION}。`);
+    return `⛓️ 因${crime}入狱 ${months} 个月`;
+  };
+
   /** 慈善捐款：每 10,000 ₽ 声望 +1，每个游戏月最多 +5 */
   const handleDonate = (amount: number): string => {
     if (!isRegistered) return '请先完成出生登记';
@@ -513,6 +531,11 @@ export default function App() {
     const def = inst ? eventDef(inst) : undefined;
     const option = def?.options[optionIndex];
     if (!inst || !def || !option || optionBlocked(option, coins)) return null;
+    // 狱中不能处理推演事件（第 67.7 题）
+    if (isInPrison()) {
+      showToast('⛓️ 正在狱中服刑，出狱后才能处理');
+      return null;
+    }
     const result = resolveOption(option);
     const newHealth = godMode ? 100 : Math.max(0, Math.min(100, health + result.health));
     setCoins((prev) => Math.max(0, prev + result.coins));
@@ -520,6 +543,7 @@ export default function App() {
     setSimScore((n) => n + result.score);
     setSimEvents((prev) => prev.filter((e) => e.uid !== uid));
     addLifeLog('大事', def.headline, `${option.label}：${result.text}`);
+    if (result.jail) showToast(jailPlayer(result.jail.crime, result.jail.months));
     if (result.heirloom) {
       const h = heirloomById(result.heirloom);
       const SOURCE: Record<string, string> = { army: '参军', rescue: '见义勇为', antique: '旧货摊' };
@@ -842,6 +866,7 @@ export default function App() {
              onOpenWelfare={() => setShowWelfare(true)}
              onOpenLicense={() => setShowLicense(true)}
              onOpenLeisure={() => setShowLeisure(true)}
+             onOpenPrison={() => setShowPrison(true)}
              onOpenBirth={() => setShowBirthModal(true)}
              onOpenGender={() => setShowGenderModal(true)}
              onOpenHousing={() => setShowHousing(true)}
@@ -987,6 +1012,19 @@ export default function App() {
              changeReputation={changeReputation}
              isRegistered={isRegistered}
              age={currentAge}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
+             onJail={jailPlayer}
+           />
+         )}
+
+         {/* 监狱服刑 */}
+         {showPrison && (
+           <PrisonModal
+             onClose={() => setShowPrison(false)}
+             coins={coins}
+             setCoins={setCoins}
+             isRegistered={isRegistered}
              gameYear={gameYear}
              gameMonth={gameMonth}
            />
@@ -1179,6 +1217,8 @@ export default function App() {
              setCoins={setCoins}
              age={currentAge}
              childLaborAllowed={isRegistered && familyClass.childLabor}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
            />
          )}
 
