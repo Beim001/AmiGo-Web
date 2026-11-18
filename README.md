@@ -32,7 +32,21 @@ npm run lint                     # 类型检查（前端 + 后端）
 
 - 不想启动后端时，可在 `.env.local` 设置 `VITE_SKIP_AUTH=true` 跳过登录（仅开发模式生效）。
 - `npm run dev` 下右下角有紫色扳手按钮，即开发测试工具（见第五节「已完成 · 开发与测试」），生产构建中不包含。
-- 部署步骤见 `wrangler.toml` 顶部注释：需要 Cloudflare 账号、自有域名（`*.workers.dev` 在中国大陆无法访问）与 Resend 发信密钥；部署前执行 `npm run db:migrate:remote`。赛季排行管理员在 `wrangler.toml` 的 `ADMIN_EMAILS` 中配置。
+- 部署步骤见下方「上线清单」与 `wrangler.toml` 顶部注释。
+
+### 上线清单
+
+每次部署前逐项核对。首次部署做全部项，之后的版本更新至少做第 2、6、7、8、9 项。
+
+1. **Cloudflare 准备（仅首次）**：`npx wrangler login`；`npx wrangler d1 create amigo-web`，把输出的 `database_id` 填进 `wrangler.toml`，替换其中的全零占位 ID。
+2. **数据库迁移**：执行 `npm run db:migrate:remote`，把 `worker/migrations/` 中尚未应用的迁移写入线上 D1。本次新增了 `0004_season_moderation.sql`（赛季作弊标记、管理员隐藏与举报）；不迁移的话，赛季上报、排行与致谢名单接口都会因缺少字段报错。
+3. **域名（仅首次）**：在 Cloudflare 后台为 Worker 绑定自有域名（`*.workers.dev` 在中国大陆无法访问），并把 `wrangler.toml` 中的 `APP_URL` 填成该地址，邮件里的链接会用到它。
+4. **发信（仅首次）**：`npx wrangler secret put RESEND_API_KEY`（密钥不要写进仓库），并填写 `wrangler.toml` 中的 `MAIL_FROM`。两者缺一则不会真正发信，玩家无法验证邮箱，也就无法云存档、上赛季排行。
+5. **赛季排行管理员**：在 `wrangler.toml` 的 `ADMIN_EMAILS` 中填写管理员邮箱（逗号分隔）。这些账号需已注册并验证邮箱，登录后可在个人中心排行榜中处理举报、隐藏或恢复成绩。留空则没有人能处理举报。
+6. **关闭开发模式**：确认线上没有设置 `DEV_MODE`（它只应出现在本地 `.dev.vars` 中），否则接口响应会直接返回邮箱验证与重置密码链接，任何人都能冒用他人邮箱注册或重置密码。
+7. **版本号与测试兑换码**：核对 `src/version.ts` 的 `APP_VERSION`。以 `dev-beta` / `beta-dev` 开头时，测试兑换码 ZWZ666 在线上可用（成绩会被排行排除，但玩家能拿到无限金币与全部成就）；面向公众的正式版本需改为不带这两个前缀的版本号。大版本更新若要换赛季，同时在 `src/data/seasons.ts` 末尾新增赛季。
+8. **构建与发布**：`npm run lint` 通过后执行 `npm run deploy`（先 `vite build` 再 `wrangler deploy`）。
+9. **上线后检查**：在线上注册一个账号并完成邮箱验证；确认云存档能保存与读取；打开个人中心排行榜「本赛季」，确认能正常加载；用管理员账号登录，确认排行榜底部出现「排行管理」区域。
 
 ---
 
