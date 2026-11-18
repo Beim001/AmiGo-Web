@@ -3,6 +3,7 @@ import React from 'react';
 import { Store, Calendar, Sparkles } from 'lucide-react';
 import { CharacterAvatar, CharacterAvatarProps } from './CharacterAvatar';
 import type { Appearance } from '../lib/appearance';
+import { useTranslation } from 'react-i18next';
 
 const AgeIcon = () => (
   <svg viewBox="0 0 24 24" width="22" height="22" className="drop-shadow-sm">
@@ -140,6 +141,7 @@ export const RoleTab: React.FC<RoleTabProps> = ({
   diseaseName,
   onOpenSuccession,
 }) => {
+  const { t } = useTranslation('role');
   const formattedMonth = gameMonth < 10 ? `0${gameMonth}` : `${gameMonth}`;
   const isDeceased = isRegistered && health <= 0;
 
@@ -161,7 +163,7 @@ export const RoleTab: React.FC<RoleTabProps> = ({
                 '-2px -2px 0 #072a66, 2px -2px 0 #072a66, -2px 2px 0 #072a66, 2px 2px 0 #072a66, 0 4px 6px rgba(0,0,0,0.6)',
             }}
           >
-            角色
+            {t('title')}
           </span>
         </div>
       </div>
@@ -170,9 +172,9 @@ export const RoleTab: React.FC<RoleTabProps> = ({
         <div
           onClick={onOpenCalendar}
           className="bg-[#2d2f3d] border-2 border-black rounded-xl px-6 py-2 flex flex-col items-center shadow-[0_4px_0_#000] mb-6 w-4/5 relative z-10 cursor-pointer active:scale-95 transition-transform"
-          title="点击进入卡罗尼亚帝国日历"
+          title={t('calendarHint')}
         >
-          <span className="text-gray-400 text-xs font-bold mb-0.5">卡罗尼亚帝国</span>
+          <span className="text-gray-400 text-xs font-bold mb-0.5">{t('empire')}</span>
           <span className="text-white text-xl font-black font-mono tracking-widest">
             {gameYear}.{formattedMonth}
           </span>
@@ -196,13 +198,13 @@ export const RoleTab: React.FC<RoleTabProps> = ({
                   — CARONIA ARCHIVE —
                 </div>
                 <h3 className="text-gray-100 font-black text-base tracking-wider">
-                  【公民档案未建档】
+                  {t('noRecordTitle')}
                 </h3>
                 <p className="text-gray-300 text-xs font-bold leading-relaxed pt-0.5">
-                  尚未办理出生登记，暂无公民档案。
+                  {t('noRecordDesc')}
                 </p>
                 <p className="text-gray-400 text-[11px] leading-snug pt-0.5">
-                  请前往【功能】界面办理出生登记，申领公民身份。
+                  {t('noRecordHint')}
                 </p>
               </div>
 
@@ -213,7 +215,7 @@ export const RoleTab: React.FC<RoleTabProps> = ({
                 className="w-full bg-[#fcd34d] hover:bg-[#fde047] text-black font-black text-xs py-3 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer flex items-center justify-center gap-1.5 transition-all mt-1"
               >
                 <Sparkles size={16} className="text-amber-700 fill-amber-700" />
-                <span>前往【功能】办理出生登记</span>
+                <span>{t('goRegister')}</span>
               </button>
             </div>
 
@@ -237,20 +239,20 @@ export const RoleTab: React.FC<RoleTabProps> = ({
                   — R . I . P —
                 </div>
                 <h3 className="text-gray-100 font-black text-base tracking-wider">
-                  【公 民 纪 念 碑】
+                  {t('memorialTitle')}
                 </h3>
                 <p className="text-gray-300 text-xs font-bold leading-relaxed pt-0.5">
-                  享年 {age} 岁 · 愿逝者安息于卡罗尼亚大地
+                  {t('memorialAge', { age })}
                 </p>
                 <p className="text-gray-400 text-[11px] leading-snug pt-0.5">
-                  此生历程已谢幕，可由子嗣或兄弟姐妹继承家业，或重开人生。
+                  {t('memorialDesc')}
                 </p>
                 {onOpenSuccession && (
                   <button
                     onClick={onOpenSuccession}
                     className="mt-2 bg-amber-400 hover:bg-amber-300 text-black text-xs font-black px-4 py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
                   >
-                    🕯️ 传承家业
+                    {t('inherit')}
                   </button>
                 )}
               </div>
@@ -264,7 +266,7 @@ export const RoleTab: React.FC<RoleTabProps> = ({
             <div
               className="w-48 h-56 relative z-10 flex justify-center items-end pb-8 cursor-pointer active:scale-95 transition-transform group"
               onClick={onOpenShop}
-              title="点击人物进入装备与服饰商城"
+              title={t('shopHint')}
             >
               <CartoonCharacter clothing={equippedClothing} appearance={appearance} age={isRegistered ? age : 25} gender={gender} />
             </div>
@@ -275,9 +277,9 @@ export const RoleTab: React.FC<RoleTabProps> = ({
                   type="button"
                   onClick={onNextMonth}
                   className="bg-emerald-400 hover:bg-emerald-300 text-black font-black text-xs px-4 py-2 rounded-full border-2 border-black whitespace-nowrap shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer flex items-center gap-1.5 transition-all"
-                  title="点击向前推进 1 个月，获得每月产业与存息结余"
+                  title={t('nextMonthHint')}
                 >
-                  <Calendar size={14} /> 下个月
+                  <Calendar size={14} /> {t('nextMonth')}
                 </button>
               )}
               <button
@@ -285,7 +287,7 @@ export const RoleTab: React.FC<RoleTabProps> = ({
                 onClick={onOpenShop}
                 className="bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs px-4 py-2 rounded-full border-2 border-black whitespace-nowrap shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer flex items-center gap-1.5 transition-all"
               >
-                <Store size={14} /> 点击换装
+                <Store size={14} /> {t('changeOutfit')}
               </button>
             </div>
           </div>
@@ -294,38 +296,38 @@ export const RoleTab: React.FC<RoleTabProps> = ({
         {/* Stats Grid */}
         <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 mt-8">
           <StatCard
-            title="岁数"
-            value={!isRegistered ? '未登记' : isDeceased ? `享年${age}` : age.toString()}
-            unit={!isRegistered || isDeceased ? '' : '岁'}
+            title={t('stats.age')}
+            value={!isRegistered ? t('stats.unregistered') : isDeceased ? t('stats.ageDeceased', { age }) : age.toString()}
+            unit={!isRegistered || isDeceased ? '' : t('stats.ageUnit')}
             color={!isRegistered ? 'bg-[#373b47]' : isDeceased ? 'bg-[#40434f]' : 'bg-[#4d6b8c]'}
             icon={<AgeIcon />}
           />
           <StatCard
-            title="性别"
-            value={isRegistered ? (gender || '男') : '未登记'}
+            title={t('stats.gender')}
+            value={isRegistered ? (gender || '男') : t('stats.unregistered')}
             unit=""
             color={!isRegistered ? 'bg-[#373b47]' : 'bg-[#88508a]'}
             icon={<GenderIcon gender={isRegistered ? gender : null} />}
             onClick={onOpenGender}
           />
           <StatCard
-            title={diseaseName && isRegistered && !isDeceased ? `健康度 · 🤒${diseaseName}` : '健康度'}
-            value={!isRegistered ? '未激活' : isDeceased ? '已故' : health.toString()}
+            title={diseaseName && isRegistered && !isDeceased ? t('stats.healthSick', { disease: diseaseName }) : t('stats.health')}
+            value={!isRegistered ? t('stats.inactive') : isDeceased ? t('stats.deceased') : health.toString()}
             unit={!isRegistered || isDeceased ? '' : '%'}
             color={!isRegistered ? 'bg-[#373b47]' : isDeceased ? 'bg-[#4a3234]' : 'bg-[#a63d40]'}
             icon={<HealthIcon />}
             onClick={isRegistered && !isDeceased ? onOpenHospital : undefined}
           />
           <StatCard
-            title="子嗣"
-            value={!isRegistered ? '未激活' : String(childrenCount)}
-            unit={!isRegistered ? '' : '人'}
+            title={t('stats.children')}
+            value={!isRegistered ? t('stats.inactive') : String(childrenCount)}
+            unit={!isRegistered ? '' : t('stats.childrenUnit')}
             color={!isRegistered ? 'bg-[#373b47]' : 'bg-[#6b4c8a]'}
             icon={<ChildIcon />}
           />
           <StatCard
-            title="资产"
-            value={!isRegistered ? '未激活' : isDeceased ? `遗产 ${coins.toLocaleString()}` : coins.toLocaleString()}
+            title={t('stats.assets')}
+            value={!isRegistered ? t('stats.inactive') : isDeceased ? t('stats.inheritance', { amount: coins.toLocaleString() }) : coins.toLocaleString()}
             unit={!isRegistered ? '' : `${CURRENCY.symbol}`}
             color={!isRegistered ? 'bg-[#373b47]' : 'bg-[#ca8a04]'}
             icon={<WealthIcon />}

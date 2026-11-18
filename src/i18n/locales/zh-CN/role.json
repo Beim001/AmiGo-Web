@@ -1,0 +1,32 @@
+{
+  "title": "角色",
+  "calendarHint": "点击进入卡罗尼亚帝国日历",
+  "empire": "卡罗尼亚帝国",
+  "noRecordTitle": "【公民档案未建档】",
+  "noRecordDesc": "尚未办理出生登记，暂无公民档案。",
+  "noRecordHint": "请前往【功能】界面办理出生登记，申领公民身份。",
+  "goRegister": "前往【功能】办理出生登记",
+  "memorialTitle": "【公 民 纪 念 碑】",
+  "memorialAge": "享年 {{age}} 岁 · 愿逝者安息于卡罗尼亚大地",
+  "memorialDesc": "此生历程已谢幕，可由子嗣或兄弟姐妹继承家业，或重开人生。",
+  "inherit": "🕯️ 传承家业",
+  "shopHint": "点击人物进入装备与服饰商城",
+  "nextMonthHint": "点击向前推进 1 个月，获得每月产业与存息结余",
+  "nextMonth": "下个月",
+  "changeOutfit": "点击换装",
+  "stats": {
+    "age": "岁数",
+    "ageUnit": "岁",
+    "ageDeceased": "享年{{age}}",
+    "gender": "性别",
+    "health": "健康度",
+    "healthSick": "健康度 · 🤒{{disease}}",
+    "children": "子嗣",
+    "childrenUnit": "人",
+    "assets": "资产",
+    "inheritance": "遗产 {{amount}}",
+    "unregistered": "未登记",
+    "inactive": "未激活",
+    "deceased": "已故"
+  }
+}

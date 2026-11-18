@@ -1,0 +1,23 @@
+{
+  "vaccine": {
+    "notAvailable": "这种疫苗还没有问世",
+    "alreadyHas": "你已经有{{disease}}抗体了",
+    "noMoney": "钱不够，接种要 {{cost}} {{symbol}}",
+    "success": "💉 接种{{disease}}疫苗成功，获得抗体（-{{cost}} {{symbol}}）",
+    "failed": "💉 接种了{{disease}}疫苗（-{{cost}} {{symbol}}），可惜没有产生抗体",
+    "kidsAllHave": "孩子们都已经有{{disease}}抗体（或还没有孩子）",
+    "kidsNoMoney": "钱不够，给 {{count}} 个孩子接种要 {{total}} {{symbol}}",
+    "kidsDone": "💉 为 {{count}} 个孩子接种了{{disease}}疫苗（-{{total}} {{symbol}}）"
+  },
+  "succession": {
+    "coup": "⚔️ {{relation}} {{heir}} 逼宫！{{player}} 被迫退位，由 {{heir}}（{{age}} 岁）当家（起始健康 {{health}}）",
+    "retire": "👑 {{player}} 退居幕后，{{relation}} {{heir}}（{{age}} 岁）接过家业（起始健康 {{health}}）",
+    "inherit": "🕯️ {{relation}} {{heir}}（{{age}} 岁）继承了家业（起始健康 {{health}}）",
+    "deceased": "角色已故，请使用传承",
+    "retireMinAge": "年满 {{age}} 岁才能传位",
+    "onlyDescendants": "只能传位给自己的子女或孙辈",
+    "childTooYoung": "子女年满 18 岁才能接班",
+    "grandchildTooYoung": "孙辈年满 18 岁才能接班"
+  },
+  "godMode": "🛠️ 测试兑换码生效：无限现金、无限体力、无限寿命，已解锁全部成就（新增 {{added}} 项）。本赛季成绩不计入排行。"
+}

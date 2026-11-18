@@ -2,6 +2,7 @@ import React from 'react';
 import { User } from 'lucide-react';
 import { CurrencyIcon } from './CurrencyIcon';
 import { AppUser } from '../lib/bilibiliToy';
+import { useTranslation } from 'react-i18next';
 
 // 顶部栏：玩家头像、昵称、现金（卢布）余额与个人中心入口
 
@@ -21,7 +22,9 @@ export const TopBar = ({
   onOpenAuth?: () => void,
   authUser?: AppUser | null,
   avatarContent?: React.ReactNode,
-}) => (
+}) => {
+  const { t } = useTranslation('nav');
+  return (
   <div className="flex justify-between items-center bg-[#252632] px-3 py-2.5 border-b-2 border-black z-20 shadow-md">
     <div className="flex items-center gap-1.5 min-w-0">
       <div
@@ -33,7 +36,7 @@ export const TopBar = ({
         </div>
         <span className="text-[11px] text-white ml-6 font-black truncate max-w-[80px]">{playerName}</span>
         <span className="text-[9px] bg-yellow-400 text-black font-extrabold px-1 rounded border border-black ml-1 flex-shrink-0">
-          我的
+          {t('mine')}
         </span>
       </div>
     </div>
@@ -41,7 +44,7 @@ export const TopBar = ({
     <div className="flex gap-1.5 items-center shrink-0">
       <div
         onClick={onOpenWealthChart || onOpenBank}
-        title="点击查看个人资产全景"
+        title={t('wealthOverview')}
         className={`flex items-center bg-[#1b1c25] rounded-full pl-1 pr-2.5 py-1 border-2 border-black ${(onOpenWealthChart || onOpenBank) ? 'cursor-pointer hover:border-yellow-400 active:scale-95 transition-all' : ''}`}
       >
         <div className="w-5 h-5 bg-yellow-400 rounded-full border border-yellow-700 flex justify-center items-center mr-1">
@@ -51,4 +54,5 @@ export const TopBar = ({
       </div>
     </div>
   </div>
-);
+  );
+};

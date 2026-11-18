@@ -1,0 +1,11 @@
+{
+  "mine": "我的",
+  "wealthOverview": "点击查看个人资产全景",
+  "tabs": {
+    "role": "角色",
+    "bag": "功能",
+    "combat": "推演",
+    "log": "日志",
+    "map": "家族"
+  }
+}

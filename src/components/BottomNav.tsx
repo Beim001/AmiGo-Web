@@ -1,16 +1,18 @@
 import { User, BookOpen, Swords, Map as MapIcon, Briefcase } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // 底部导航：角色、功能、推演、日志、家族五个标签页切换
 
 const TABS = [
-  { id: 'role', label: '角色', icon: User, badge: false },
-  { id: 'bag', label: '功能', icon: Briefcase, badge: false },
-  { id: 'combat', label: '推演', icon: Swords, badge: false },
-  { id: 'log', label: '日志', icon: BookOpen, badge: true },
-  { id: 'map', label: '家族', icon: MapIcon, badge: false },
-];
+  { id: 'role', icon: User, badge: false },
+  { id: 'bag', icon: Briefcase, badge: false },
+  { id: 'combat', icon: Swords, badge: false },
+  { id: 'log', icon: BookOpen, badge: true },
+  { id: 'map', icon: MapIcon, badge: false },
+] as const;
 
 export const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (id: string) => void }) => {
+  const { t } = useTranslation('nav');
   return (
     <div className="h-[75px] bg-[#3a3b46] flex relative mt-auto border-t-[3px] border-black z-20">
       {TABS.map((tab) => {
@@ -53,7 +55,7 @@ export const BottomNav = ({ activeTab, setActiveTab }: { activeTab: string, setA
                      className="text-white font-black text-[13px] sm:text-[14px] tracking-wider block whitespace-nowrap"
                      style={{ textShadow: '-1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 3px 0 #000, 0 0 4px #000' }}
                    >
-                     {tab.label}
+                     {t(`tabs.${tab.id}`)}
                    </span>
                 </div>
               )}

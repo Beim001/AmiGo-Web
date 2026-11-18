@@ -15,6 +15,7 @@ import { loadAccounts, saveAccounts as persistBankAccounts, currentRateEvent } f
 import { CURRENT_JOB_KEY, JOB_HISTORY_KEY } from '../components/JobModal';
 import type { Game } from './useGameState';
 import { CURRENCY } from '../data/seasons';
+import i18n from '../i18n';
 
 // 家族传承：角色去世后由子嗣或兄弟姐妹继承（第 21 题），50 岁后主动传位（第 58 题），子嗣逼宫（第 59 题）。
 // 未成年继承时一半家产交由监护人托管（第 25 题）。
@@ -128,7 +129,7 @@ export const useSuccession = ({ game, currentAge, playerOccupation, setShowSucce
       coup ? `联合族人逼宫，迫使 ${playerName} 退位，接过了家业。` : retire ? `${playerName} 退居幕后，作为${heir.relation}接过了家业。` : `${playerName} 辞世后，作为${heir.relation}继承了家业。`,
       { year: gameYear, month: gameMonth, age: heir.age },
     );
-    showToast((coup ? `⚔️ ${heir.relation} ${heir.name} 逼宫！${playerName} 被迫退位，由 ${heir.name}（${heir.age} 岁）当家` : retire ? `👑 ${playerName} 退居幕后，${heir.relation} ${heir.name}（${heir.age} 岁）接过家业` : `🕯️ ${heir.relation} ${heir.name}（${heir.age} 岁）继承了家业`) + `（起始健康 ${startHealth}）`);
+    showToast(i18n.t(coup ? 'game:succession.coup' : retire ? 'game:succession.retire' : 'game:succession.inherit', { relation: heir.relation, heir: heir.name, player: playerName, age: heir.age, health: startHealth }));
   };
   const [pendingCoup, setPendingCoup] = useState<string | null>(null);
   React.useEffect(() => {
@@ -141,13 +142,13 @@ export const useSuccession = ({ game, currentAge, playerOccupation, setShowSucce
     }
   }, [pendingCoup]);
   const handleRetire = (heirId: string): string | null => {
-    if (!isRegistered || health <= 0) return '角色已故，请使用传承';
-    if (currentAge < RETIRE_MIN_AGE) return `年满 ${RETIRE_MIN_AGE} 岁才能传位`;
+    if (!isRegistered || health <= 0) return i18n.t('game:succession.deceased');
+    if (currentAge < RETIRE_MIN_AGE) return i18n.t('game:succession.retireMinAge', { age: RETIRE_MIN_AGE });
     // 第 73 题：可以跳过子辈，直接传给孙辈
     const path = findDescendantPath(family.children, heirId);
-    if (!path || path.length > HEIR_MAX_DEPTH) return '只能传位给自己的子女或孙辈';
+    if (!path || path.length > HEIR_MAX_DEPTH) return i18n.t('game:succession.onlyDescendants');
     const heir = path[path.length - 1];
-    if (ageAt(heir.birthYear, heir.birthMonth, gameYear, gameMonth) < 18) return `${path.length === 1 ? '子女' : '孙辈'}年满 18 岁才能接班`;
+    if (ageAt(heir.birthYear, heir.birthMonth, gameYear, gameMonth) < 18) return i18n.t(path.length === 1 ? 'game:succession.childTooYoung' : 'game:succession.grandchildTooYoung');
     handleSuccession(heirId, true, true);
     return null;
   };

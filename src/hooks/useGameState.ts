@@ -12,6 +12,7 @@ import { Auction, AUCTION_KEY } from '../lib/heirlooms';
 import { Appearance, APPEARANCE_KEY } from '../lib/appearance';
 import { GiftInventory, GIFT_INVENTORY_KEY } from '../lib/gifts';
 import { GOD_MODE_KEY } from '../lib/testCode';
+import i18n from '../i18n';
 
 // 统一的游戏状态：一局人生中需要存档的数据集中在一个 reducer 里。
 // - 每个字段都有同名 setter（setCoins、setFamily…），接受新值或更新函数，语义与 useState 的 setter 相同，
@@ -111,7 +112,7 @@ const createInitialState = (): GameState => {
       }
     })(),
     birthRegisteredYear: readInt('amigo_birth_registered_year', 1870),
-    playerName: registeredName() || readCachedUser()?.displayName || 'AmiGo·玩家',
+    playerName: registeredName() || readCachedUser()?.displayName || i18n.t('app:defaultPlayerName'),
     coins: loadStored('amigo_coins', 1047650),
     health: loadStored('amigo_health', 100),
     gameYear: readInt('amigo_game_year', 1870),

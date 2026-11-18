@@ -89,6 +89,7 @@ import {
   AppUser,
 } from './lib/bilibiliToy';
 import { SENSITIVE_WORDS_CONFIG } from './utils/sensitiveWords';
+import { useTranslation } from 'react-i18next';
 
 // 本地测试开关：仅在 `npm run dev` 且 .env.local 设置 VITE_SKIP_AUTH=true 时生效，
 // 跳过 Firebase 登录门禁，使用本地测试账号。生产构建 (npm run build) 中永远为 false。
@@ -108,6 +109,7 @@ const DEV_MOCK_USER: AppUser = {
 const KEYS_KEPT_ON_RESET = new Set(['amigo_owned_clothes', 'amigo_equipped_clothing', CLOTHING_COUPON_KEY, 'amigo_simple_mode', 'amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements', 'amigo_credits_seen', 'amigo_credits_rank', 'amigo_gifts_given', 'amigo_season_id', 'amigo_season_joined_at', 'amigo_season_sim_points', 'amigo_season_lazy', 'amigo_season_cheat']);
 
 export default function App() {
+  const { t, i18n } = useTranslation('app');
   const [activeTab, setActiveTab] = useState('role');
   const [showShop, setShowShop] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -151,7 +153,7 @@ export default function App() {
     cacheUser(user);
     // 已办理出生登记的角色名以存档为准，不被账号昵称覆盖
     if (!registeredName() && (user.displayName || user.email)) {
-      setPlayerName(user.displayName || user.email?.split('@')[0] || 'AmiGo·玩家');
+      setPlayerName(user.displayName || user.email?.split('@')[0] || t('defaultPlayerName'));
     }
   };
 
@@ -209,7 +211,7 @@ export default function App() {
   const handleNextMonth = () => {
     // 角色已故：不能继续推进时间（undefined.md 第 1 题）
     if (isRegistered && health <= 0) {
-      showToast('💀 角色已故，无法继续推进时间。可在「推演」或个人中心「重置人生」');
+      showToast(t('toast.deceasedCannotAdvance'));
       return;
     }
 
@@ -222,7 +224,7 @@ export default function App() {
     // 第 58 题：本赛季只推演到卡罗尼亚帝国结束（1920 年）
     const seasonEnd = currentSeason().endGameYear;
     if (seasonEnd !== undefined && nextY > seasonEnd) {
-      showToast(`📜 ${seasonEnd} 年，${currentSeason().endEvent ?? '本赛季结束'}。本赛季推演到此为止，下一赛季开放后继续。`);
+      showToast(t('toast.seasonEnded', { year: seasonEnd, event: currentSeason().endEvent ?? t('toast.seasonEndedDefault') }));
       setFastForwardRemaining(0);
       return;
     }
@@ -326,11 +328,11 @@ export default function App() {
     const { notes, enteredEvent, ageNextMonth } = r;
     if (r.died) {
       setShowSuccession(true);
-      showToast(`💀 ${nextY}.${mStr}：${playerName} 因健康耗尽离世，享年 ${ageNextMonth} 岁`);
+      showToast(t('toast.died', { date: `${nextY}.${mStr}`, name: playerName, age: ageNextMonth }));
     } else if (enteredEvent) {
-      showToast(`⚠️ 时局剧变：${enteredEvent.title}！贷款利率上浮 ${formatRate(enteredEvent.loanRateDelta)}｜${notes.join('｜')}`);
+      showToast(t('toast.crisis', { title: enteredEvent.title, rate: formatRate(enteredEvent.loanRateDelta), notes: notes.join('｜') }));
     } else {
-      showToast(`🗓️ 已步入 ${nextY}.${mStr}｜${notes.join('｜')}`);
+      showToast(t('toast.newMonth', { date: `${nextY}.${mStr}`, notes: notes.join('｜') }));
     }
     // 等本月结算写入本地存档后再同步到云端
     setTimeout(() => void cloud.saveNow(), 1500);
@@ -382,7 +384,7 @@ export default function App() {
     addLifeLog('成长', '出生登记', `出生于${cls.label}之家（${origin.surname}家族），性别${generatedGender}，特质：${traitNames(traits).join('、')}。`, { year: gameYear, month: gameMonth, age: 8 });
     unlockAchievement('born');
     if (simpleMode) setShowBirthModal(false);
-    showToast(`🎉 出生登记成功！${finalName}，出生在${cls.label}之家（${origin.surname}家族），性别：${generatedGender}，初始年龄：8岁`);
+    showToast(t('toast.birthRegistered', { name: finalName, classLabel: cls.label, surname: origin.surname, gender: generatedGender }));
     return { gender: generatedGender, age: 8, classLabel: cls.label, surname: origin.surname, name: finalName };
   };
 
@@ -392,7 +394,7 @@ export default function App() {
     setIsRegistered(false);
     setGender(null);
     setBirthRegisteredYear(1870);
-    setPlayerName('阿米诺斯市民');
+    setPlayerName(t('resetPlayerName'));
 
     // 2. 重置角色形象（服饰跟随账号，保留已拥有与已穿戴的服饰）
     setAvatarSource('cartoon');
@@ -441,7 +443,7 @@ export default function App() {
     saveStored('amigo_free_draw_used', false);
     saveStored('amigo_family', INITIAL_FAMILY_STATE);
 
-    showToast('✨ 人生已重置！角色与所有状态已恢复初始状态');
+    showToast(t('toast.lifeReset'));
   };
 
   const [bilibiliAvatar, setBilibiliAvatar] = useState<string | null>(null);
@@ -509,20 +511,20 @@ export default function App() {
     // 服刑期间可以到法院上诉（第 67.6 题）
     saveCases(addCase(loadCases(), appealCase(crime, gameYear, gameMonth)));
     addLifeLog('大事', `因${crime}入狱`, `被判入狱 ${months} 个月，丢掉了工作，声望 ${JAIL_REPUTATION}。可以到法院上诉。`);
-    return `⛓️ 因${crime}入狱 ${months} 个月`;
+    return t('jailed', { crime, months });
   };
 
   /** 慈善捐款：每 10,000 ₽ 声望 +1，每个游戏月最多 +5 */
   const handleDonate = (amount: number): string => {
-    if (!isRegistered) return '请先完成出生登记';
-    if (coins < amount) return `现金不足（需 ${amount.toLocaleString()} ${CURRENCY.symbol}）`;
+    if (!isRegistered) return t('donate.notRegistered');
+    if (coins < amount) return t('donate.noMoney', { amount: amount.toLocaleString(), symbol: CURRENCY.symbol });
     const monthKey = `${gameYear}-${gameMonth}`;
     const gain = Math.min(Math.floor(amount / CHARITY_UNIT), charityRemaining(charity, monthKey));
     setCoins((c) => c - amount);
     changeReputation(gain);
     setCharity({ month: monthKey, gained: (charity?.month === monthKey ? charity.gained : 0) + gain });
     if (amount >= 100000) addLifeLog('大事', '慷慨解囊', `向慈善会捐款 ${amount.toLocaleString()} ${CURRENCY.symbol}。`);
-    return gain > 0 ? `感谢你的善举！声望 +${gain}` : '已捐款（本月因慈善获得的声望已达上限）';
+    return gain > 0 ? t('donate.thanks', { gain }) : t('donate.capped');
   };
 
 
@@ -538,7 +540,7 @@ export default function App() {
     if (!inst || !def || !option || optionBlocked(option, coins)) return null;
     // 狱中不能处理推演事件（第 67.7 题）
     if (isInPrison()) {
-      showToast('⛓️ 正在狱中服刑，出狱后才能处理');
+      showToast(t('toast.inPrison'));
       return null;
     }
     const result = resolveOption(option);
@@ -699,7 +701,7 @@ export default function App() {
   React.useEffect(() => {
     const onUnlock = (e: Event) => {
       const def = ACHIEVEMENTS.find((a) => a.id === (e as CustomEvent).detail);
-      if (def) showToast(`🏆 成就达成：${def.title} —— ${def.desc}`);
+      if (def) showToast(t('toast.achievement', { title: def.title, desc: def.desc }));
       autoPlayCreditsIfComplete();
     };
     autoPlayCreditsIfComplete();
@@ -749,7 +751,7 @@ export default function App() {
       <div className="h-[100dvh] w-full bg-[#0d0e15] flex justify-center items-center text-white font-sans">
         <div className="flex flex-col items-center gap-3">
           <RefreshCw size={28} className="animate-spin text-amber-400" />
-          <span className="text-xs font-black text-gray-300">正在连接 AmiGO 账号服务...</span>
+          <span className="text-xs font-black text-gray-300">{t('connecting')}</span>
         </div>
       </div>
     );
@@ -796,7 +798,7 @@ export default function App() {
              deposit={bankDeposit}
              year={gameYear}
              month={gameMonth}
-             familyLabel={isRegistered ? `${familyOrigin.surname}家 · ${familyClass.label}` : ''}
+             familyLabel={isRegistered ? t('familyLabel', { surname: familyOrigin.surname, classLabel: familyClass.label }) : ''}
              diseaseName={currentDisease?.name ?? null}
              jobTitle={(() => {
                const id = readCurrentJobId();
@@ -996,12 +998,12 @@ export default function App() {
              parentsPay={isRegistered && isMinor(currentAge) && familyClass.parentsPayMedical}
              disease={currentDisease}
              onCureDisease={() => {
-               if (currentDisease && gainRecoveryImmunity(currentDisease.id)) showToast(`🛡️ 痊愈后获得了${currentDisease.name}抗体`);
+               if (currentDisease && gainRecoveryImmunity(currentDisease.id)) showToast(t('toast.immunity', { disease: currentDisease.name }));
                setDisease(null);
                unlockAchievement('cured');
              }}
              vaccines={vaccineList}
-             antibodyText={antibodies.length ? antibodyNames(antibodies).join('、') : '暂无'}
+             antibodyText={antibodies.length ? antibodyNames(antibodies).join(t('listSeparator', { ns: 'common' })) : t('noAntibodies')}
              onVaccinate={handleVaccinate}
              onMaintenance={handleMaintenance}
              hasSpouse={!!family.spouse}
@@ -1191,7 +1193,7 @@ export default function App() {
              ownedClothes={ownedClothes}
              isRegistered={isRegistered}
              age={currentAge}
-             originLabel={isRegistered ? `${familyOrigin.classLabel} · ${familyOrigin.surname}家族` : '尚未出生登记'}
+             originLabel={isRegistered ? t('originLabel', { classLabel: familyOrigin.classLabel, surname: familyOrigin.surname }) : t('notRegistered')}
              simScore={simScore}
              reputation={reputation}
              playerTraits={playerTraits}
@@ -1338,33 +1340,33 @@ export default function App() {
              coins={coins}
              onClose={() => setShowAuction(false)}
              onBuyTicket={() => {
-               if (auction.admitted) return '你已经可以入场了';
-               if (coins < TICKET_PRICE) return `现金不足，门票需要 ${TICKET_PRICE.toLocaleString()} ${CURRENCY.symbol}`;
+               if (auction.admitted) return t('auction.alreadyAdmitted');
+               if (coins < TICKET_PRICE) return t('auction.ticketNoMoney', { price: TICKET_PRICE.toLocaleString(), symbol: CURRENCY.symbol });
                setCoins((c) => c - TICKET_PRICE);
                setAuction({ ...auction, admitted: true });
-               return `🎟️ 已购买门票（-${TICKET_PRICE.toLocaleString()} ${CURRENCY.symbol}），欢迎入场`;
+               return t('auction.ticketBought', { price: TICKET_PRICE.toLocaleString(), symbol: CURRENCY.symbol });
              }}
              onAction={(i, action) => {
                const lot = auction.lots[i];
-               if (!lot) return '拍品不存在';
+               if (!lot) return t('auction.lotMissing');
                const h = heirloomById(lot.heirloomId);
                const update = (next: typeof lot) => setAuction({ ...auction, lots: auction.lots.map((l, idx) => (idx === i ? next : l)) });
                if (action.type === 'pass') {
                  update(passLot(lot));
-                 return `你放弃了「${h?.name ?? '拍品'}」`;
+                 return t('auction.passed', { name: h?.name ?? t('auction.lotFallbackName') });
                }
                const want = action.type === 'buyout' ? normalizeLot(lot).buyout : action.amount;
-               if (!Number.isFinite(want) || want <= 0) return '请输入出价';
-               if (want > coins) return `现金不足（需要 ${want.toLocaleString()} ${CURRENCY.symbol}，现金 ${coins.toLocaleString()} ${CURRENCY.symbol}）`;
+               if (!Number.isFinite(want) || want <= 0) return t('auction.bidRequired');
+               if (want > coins) return t('auction.bidNoMoney', { want: want.toLocaleString(), coins: coins.toLocaleString(), symbol: CURRENCY.symbol });
                const res = action.type === 'buyout' ? buyoutLot(lot) : raiseBid(lot, want);
-               if (res.outcome === 'error') return res.error ?? '出价无效';
+               if (res.outcome === 'error') return res.error ?? t('auction.bidInvalid');
                update(res.lot);
-               if (res.outcome === 'outbid') return `其他竞买人跟价到 ${(res.lot.currentPrice ?? 0).toLocaleString()} ${CURRENCY.symbol}，要继续加价吗？`;
+               if (res.outcome === 'outbid') return t('auction.outbid', { price: (res.lot.currentPrice ?? 0).toLocaleString(), symbol: CURRENCY.symbol });
                const paid = res.lot.paid ?? want;
                setCoins((c) => c - paid);
                setFamily((prev) => addHeirloom(prev, { id: lot.heirloomId, source: '拍卖会', year: gameYear, month: gameMonth, keeper: '当家人' }));
                addLifeLog('财富', `拍得传家宝：${h?.name ?? ''}`, `在北城拍卖会以 ${paid.toLocaleString()} ${CURRENCY.symbol} ${action.type === 'buyout' ? '一口价买下' : '落槌拍得'}。`);
-               return `🎉 ${action.type === 'buyout' ? '一口价' : '落槌！'}以 ${paid.toLocaleString()} ${CURRENCY.symbol} 拍得「${h?.name ?? ''}」`;
+               return t(action.type === 'buyout' ? 'auction.wonBuyout' : 'auction.wonHammer', { paid: paid.toLocaleString(), symbol: CURRENCY.symbol, name: h?.name ?? '' });
              }}
            />
          )}
@@ -1398,13 +1400,13 @@ export default function App() {
          {cloud.conflict && (
            <div className="fixed inset-0 z-[120] bg-black/80 flex items-center justify-center p-4">
              <div className="bg-[#2d2f3d] border-4 border-black rounded-2xl p-4 max-w-sm w-full shadow-[0_8px_0_#000] space-y-3 text-white">
-               <h3 className="font-black text-base text-center">☁️ 发现两份不同的存档</h3>
+               <h3 className="font-black text-base text-center">{t('cloudConflict.title')}</h3>
                <p className="text-xs text-gray-300 font-bold leading-relaxed text-center">
-                 这台设备上的进度与云端存档不一致（可能在其他设备上玩过）。请选择要保留哪一份，另一份将被覆盖。
+                 {t('cloudConflict.desc')}
                </p>
                {cloud.conflict.remoteUpdatedAt && (
                  <p className="text-[11px] text-gray-400 font-bold text-center">
-                   云端存档保存于 {new Date(cloud.conflict.remoteUpdatedAt).toLocaleString('zh-CN')}
+                   {t('cloudConflict.remoteSavedAt', { time: new Date(cloud.conflict.remoteUpdatedAt).toLocaleString(i18n.language) })}
                  </p>
                )}
                <div className="grid grid-cols-2 gap-2">
@@ -1412,13 +1414,13 @@ export default function App() {
                    onClick={() => void cloud.resolveConflict('cloud')}
                    className="bg-sky-400 hover:bg-sky-300 text-black text-xs font-black py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
                  >
-                   使用云端存档
+                   {t('cloudConflict.useCloud')}
                  </button>
                  <button
                    onClick={() => void cloud.resolveConflict('local')}
                    className="bg-amber-400 hover:bg-amber-300 text-black text-xs font-black py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
                  >
-                   使用本机存档
+                   {t('cloudConflict.useLocal')}
                  </button>
                </div>
              </div>
@@ -1542,7 +1544,7 @@ export default function App() {
              onUserChange={(user) => setAuthUser(user)}
              setPlayerName={setPlayerName}
              onLogout={async () => {
-               if (!(await handleLogout())) showToast('⚠️ 无法同步存档到云端，请检查网络后再退出');
+               if (!(await handleLogout())) showToast(t('toast.logoutSyncFailed'));
              }}
            />
          )}

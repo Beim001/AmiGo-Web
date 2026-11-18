@@ -28,7 +28,6 @@ import {
   AFFINITY_GAIN,
   buildFamilyMembers,
   getOrigin,
-  ArrangedStatus,
   arrangeMarriage,
   canArrangeMarriage,
   MATCHMAKING_FEE,
@@ -43,6 +42,7 @@ import {
   applyInteraction,
 } from '../lib/family';
 import { CURRENCY } from '../data/seasons';
+import { useTranslation } from 'react-i18next';
 
 
 export interface FamilyTabProps {
@@ -89,8 +89,6 @@ export interface FamilyTabProps {
 const FOLD_ABOVE_LEVEL = 2;
 const FOLD_BELOW_LEVEL = -3;
 
-const ARRANGED_LABEL: Record<ArrangedStatus, string> = { pending: '磨合中', content: '婚后和睦', estranged: '受枕边风影响，与家族生分' };
-
 export const FamilyTab: React.FC<FamilyTabProps> = ({
   isRegistered,
   playerName,
@@ -123,6 +121,8 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   playerAppearance = null,
   equippedClothing = 'default',
 }) => {
+  const { t } = useTranslation('family');
+  const sep = t('listSeparator', { ns: 'common' });
   const [subTab, setSubTab] = useState<'tree' | 'ranking' | 'heirlooms' | 'chronicles'>('tree');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -139,18 +139,18 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
       return;
     }
     if (coins < MATCHMAKING_FEE) {
-      showToast(`钱不够，包办婚事要 ${MATCHMAKING_FEE.toLocaleString()} ${CURRENCY.symbol}`);
+      showToast(t('toast.matchmakingNoMoney', { fee: MATCHMAKING_FEE.toLocaleString(), symbol: CURRENCY.symbol }));
       return;
     }
     const r = arrangeMarriage(family, member.id, gameYear, gameMonth);
     if (!r) {
-      showToast('暂时没有合适的人选');
+      showToast(t('toast.matchmakingNoCandidate'));
       return;
     }
     setCoins((prev) => prev - MATCHMAKING_FEE);
     setFamily(r.state);
     addLifeLog('大事', `为${member.name}包办婚事`, `${member.name}奉家主之命与 ${r.spouse.name}（${r.spouse.occupation}）成婚。`);
-    showToast(`💍 ${member.name} 奉命与 ${r.spouse.name} 成婚（-${MATCHMAKING_FEE.toLocaleString()} ${CURRENCY.symbol}，好感 -${MATCHMAKING_AFFINITY_PENALTY}）`);
+    showToast(t('toast.matchmakingDone', { name: member.name, spouse: r.spouse.name, fee: MATCHMAKING_FEE.toLocaleString(), symbol: CURRENCY.symbol, penalty: MATCHMAKING_AFFINITY_PENALTY }));
   };
 
   const showToast = (msg: string) => {
@@ -210,7 +210,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                     <span className="text-[10px] text-gray-400 font-bold shrink-0">({member.relation})</span>
                   </div>
                   <div className="text-[10px] text-gray-300 font-bold mt-0.5 truncate max-w-[160px]">
-                    {member.status === '已故' ? `享年 ${member.age} 岁` : `${member.age} 岁`} · {member.occupation}
+                    {member.status === '已故' ? t('ageDeceased', { age: member.age }) : t('age', { age: member.age })} · {member.occupation}
                   </div>
                 </div>
               </div>
@@ -227,7 +227,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                 >
                   {member.status}
                 </span>
-                {!member.isPlayer && <span className="text-[10px] text-yellow-400 font-bold">好感 {member.affinity}%</span>}
+                {!member.isPlayer && <span className="text-[10px] text-yellow-400 font-bold">{t('affinity', { affinity: member.affinity })}</span>}
               </div>
             </div>
           ))}
@@ -242,9 +242,9 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
       >
         <span className="flex items-center gap-2">
           <GitFork size={16} />
-          {label}（{gens.join('、')}，共 {members.filter((m) => gens.includes(m.generation)).length} 人）
+          {t('foldRow', { label, generations: gens.join(sep), count: members.filter((m) => gens.includes(m.generation)).length })}
         </span>
-        <span className="text-gray-300">{open ? '收起 ▴' : '展开 ▾'}</span>
+        <span className="text-gray-300">{open ? t('collapse') : t('expand')}</span>
       </button>
     );
 
@@ -257,7 +257,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
 
     if (kind === 'gift') {
       if (coins < GIFT_COST) {
-        showToast(`现金不足！准备礼物需要 ${GIFT_COST.toLocaleString()} ${CURRENCY.symbol}`);
+        showToast(t('toast.giftNoMoney', { cost: GIFT_COST.toLocaleString(), symbol: CURRENCY.symbol }));
         return;
       }
       setCoins((prev) => prev - GIFT_COST);
@@ -269,13 +269,13 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
 
     if (kind === 'spar') {
       setHealth((prev) => Math.min(100, prev + SPAR_HEALTH_GAIN));
-      showToast(`你与 ${member.name} 切磋交流，健康 +${SPAR_HEALTH_GAIN}，好感度 ${newAffinity}%`);
+      showToast(t('toast.spar', { name: member.name, health: SPAR_HEALTH_GAIN, affinity: newAffinity }));
     } else if (kind === 'consult') {
       const reward = CONSULT_REWARD_MIN + Math.floor(Math.random() * (CONSULT_REWARD_MAX - CONSULT_REWARD_MIN + 1));
       setCoins((prev) => prev + reward);
-      showToast(`向 ${member.name} 请教，获得资助 +${reward.toLocaleString()} ${CURRENCY.symbol}，好感度 ${newAffinity}%`);
+      showToast(t('toast.consult', { name: member.name, reward: reward.toLocaleString(), symbol: CURRENCY.symbol, affinity: newAffinity }));
     } else {
-      showToast(`送给 ${member.name} 一份礼物（-${GIFT_COST.toLocaleString()} ${CURRENCY.symbol}），好感度 ${newAffinity}%`);
+      showToast(t('toast.gift', { name: member.name, cost: GIFT_COST.toLocaleString(), symbol: CURRENCY.symbol, affinity: newAffinity }));
     }
     setSelectedId(null);
   };
@@ -290,7 +290,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
     const gift = giftById(giftId);
     const remaining = removeGift(giftInventory, giftId);
     if (!gift || !remaining || !setGiftInventory) {
-      showToast('背包里没有这件礼物');
+      showToast(t('toast.giftMissing'));
       return;
     }
     const gain = giftAffinityGain(gift, member, family.giftTastes);
@@ -300,7 +300,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
     setFamily((prev) => applyInteraction(prev, member, 'gift', gameYear, gameMonth, bonus, gain));
     const newAffinity = Math.min(100, member.affinity + gain + bonus);
     const liked = tasteOf(member, family.giftTastes) === gift.taste;
-    showToast(`送给 ${member.name}「${gift.name}」${liked ? '，对方非常喜欢！' : '，'}好感 +${gain + bonus}（${newAffinity}%）`);
+    showToast(t(liked ? 'toast.giftLiked' : 'toast.giftGiven', { name: member.name, gift: gift.name, gain: gain + bonus, affinity: newAffinity }));
     setSelectedId(null);
   };
 
@@ -308,13 +308,13 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
     return (
       <div className="flex-1 overflow-y-auto bg-[#252632] flex flex-col items-center justify-center p-6 text-center gap-3">
         <ShieldCheck size={48} className="text-yellow-400" />
-        <p className="text-white font-black">尚未录入家族世系</p>
-        <p className="text-gray-400 text-xs font-bold">完成出生登记后，会随机决定你出身的家族（从乞丐到皇族），并记入族谱。</p>
+        <p className="text-white font-black">{t('notRegisteredTitle')}</p>
+        <p className="text-gray-400 text-xs font-bold">{t('notRegisteredDesc')}</p>
         <button
           onClick={onGoToBirthRegistration}
           className="bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black py-2 px-4 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer"
         >
-          前往出生登记
+          {t('goRegister')}
         </button>
       </div>
     );
@@ -348,7 +348,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
           <div className="w-24 h-24 border-[6px] border-black rounded-full absolute -top-8 left-10"></div>
           <div className="w-32 h-32 border-[6px] border-black rounded-full absolute -bottom-16 right-0"></div>
         </div>
-        <span className="relative z-10 drop-shadow-[0_2px_0_#000] font-black tracking-widest text-2xl">家族世系</span>
+        <span className="relative z-10 drop-shadow-[0_2px_0_#000] font-black tracking-widest text-2xl">{t('title')}</span>
       </div>
 
       <div className="p-4 space-y-4">
@@ -360,51 +360,51 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <h2 className="text-white font-black text-lg drop-shadow-[0_1.5px_0_#000]">{origin.surname}家族</h2>
+                <h2 className="text-white font-black text-lg drop-shadow-[0_1.5px_0_#000]">{t('familyName', { surname: origin.surname })}</h2>
                 <span className="text-[10px] font-black bg-yellow-400 text-black px-2 py-0.5 rounded border border-black shadow-[0_1px_0_#000]">
                   {origin.classLabel}
                 </span>
               </div>
-              <p className="text-gray-300 text-xs font-bold mt-1 italic">{origin.isValentine ? '“坚忍如钢，智慧永存”' : `${origin.classLabel}出身 · 卡罗尼亚帝国`}</p>
+              <p className="text-gray-300 text-xs font-bold mt-1 italic">{origin.isValentine ? '“坚忍如钢，智慧永存”' : t('origin', { classLabel: origin.classLabel })}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-gray-700/80 text-center">
             <div className="bg-[#21232e] p-1.5 rounded-lg border border-black">
-              <div className="text-[10px] text-gray-400 font-bold">传承</div>
-              <div className="text-yellow-400 font-black text-sm">{generationCount} 代</div>
+              <div className="text-[10px] text-gray-400 font-bold">{t('overview.generations')}</div>
+              <div className="text-yellow-400 font-black text-sm">{t('overview.generationsValue', { count: generationCount })}</div>
             </div>
             <div className="bg-[#21232e] p-1.5 rounded-lg border border-black">
-              <div className="text-[10px] text-gray-400 font-bold">在世族员</div>
-              <div className="text-white font-black text-sm">{livingCount} 人</div>
+              <div className="text-[10px] text-gray-400 font-bold">{t('overview.living')}</div>
+              <div className="text-white font-black text-sm">{t('overview.people', { count: livingCount })}</div>
             </div>
             <div className="bg-[#21232e] p-1.5 rounded-lg border border-black">
-              <div className="text-[10px] text-gray-400 font-bold">婚姻</div>
+              <div className="text-[10px] text-gray-400 font-bold">{t('overview.marriage')}</div>
               <div className={`font-black text-xs mt-0.5 truncate ${family.spouse ? 'text-rose-300' : 'text-gray-400'}`}>
-                {family.spouse ? '已婚' : '未婚'}
+                {family.spouse ? t('overview.married') : t('overview.unmarried')}
               </div>
             </div>
             <div className="bg-[#21232e] p-1.5 rounded-lg border border-black">
-              <div className="text-[10px] text-gray-400 font-bold">子嗣</div>
-              <div className="text-amber-300 font-black text-sm">{family.children.length} 人</div>
+              <div className="text-[10px] text-gray-400 font-bold">{t('overview.children')}</div>
+              <div className="text-amber-300 font-black text-sm">{t('overview.people', { count: family.children.length })}</div>
             </div>
           </div>
 
           {guardianship && (
             <div className="mt-3 bg-sky-950/70 border-2 border-sky-500/60 rounded-xl p-2.5 text-[11px] font-bold text-sky-100">
               {guardianship.phase === 'holding'
-                ? `👪 监护托管：${guardianship.guardianName}代管一半家产 ${guardianship.held.toLocaleString()} ${CURRENCY.symbol}，你年满 18 岁时返还。`
-                : `🙏 赡养${guardianship.guardianName}：每月上缴 ${guardianship.supportPerMonth.toLocaleString()} ${CURRENCY.symbol}，还剩 ${guardianship.supportMonthsLeft} 个月。`}
+                ? t('guardianHolding', { guardian: guardianship.guardianName, amount: guardianship.held.toLocaleString(), symbol: CURRENCY.symbol })
+                : t('guardianSupport', { guardian: guardianship.guardianName, amount: guardianship.supportPerMonth.toLocaleString(), symbol: CURRENCY.symbol, months: guardianship.supportMonthsLeft })}
             </div>
           )}
           {(() => {
             const unhappy = members.filter((m) => !m.isPlayer && m.status !== '已故' && m.age >= 18 && (family.discontent?.[m.id] ?? 0) > 0);
             return unhappy.length > 0 ? (
               <div className="mt-3 bg-red-950/70 border-2 border-red-500/60 rounded-xl p-2.5 text-[11px] font-bold text-red-100 space-y-0.5">
-                <div className="text-red-300 font-black">⚠️ 族人不满（好感低于 {DISCONTENT_THRESHOLD}% 连续 {SPLIT_AFTER_MONTHS} 个月的旁系会分家）</div>
+                <div className="text-red-300 font-black">{t('discontentTitle', { threshold: DISCONTENT_THRESHOLD, months: SPLIT_AFTER_MONTHS })}</div>
                 {unhappy.map((m) => (
                   <div key={m.id}>
-                    {m.relation} {m.name}：好感 {m.affinity}%，已不满 {family.discontent?.[m.id]} 个月
+                    {t('discontentRow', { relation: m.relation, name: m.name, affinity: m.affinity, months: family.discontent?.[m.id] })}
                   </div>
                 ))}
               </div>
@@ -416,7 +416,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
               onClick={onOpenMarriage}
               className="mt-3 w-full bg-rose-400 hover:bg-rose-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 flex items-center justify-center gap-1 cursor-pointer"
             >
-              <Heart size={14} /> 前往结婚登记
+              <Heart size={14} /> {t('goMarriage')}
             </button>
           )}
         </div>
@@ -424,11 +424,11 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
         {/* Sub-tab Navigation */}
         <div className="flex bg-[#21232e] p-1 rounded-xl border-2 border-black gap-1 shadow-[0_2px_0_#000]">
           {([
-            ['tree', '世系族谱'],
-            ['ranking', '家族排行'],
-            ['heirlooms', '传家宝'],
-            ['chronicles', '家族大事记'],
-          ] as const).map(([id, label]) => (
+            'tree',
+            'ranking',
+            'heirlooms',
+            'chronicles',
+          ] as const).map((id) => (
             <button
               key={id}
               onClick={() => setSubTab(id)}
@@ -436,7 +436,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                 subTab === id ? 'bg-yellow-400 text-black border-black shadow-[0_1px_0_#000]' : 'text-gray-400 border-transparent hover:text-white'
               }`}
             >
-              {label}
+              {t(`tabs.${id}`)}
             </button>
           ))}
         </div>
@@ -444,10 +444,10 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
         {/* Tab 1: 世系族谱 */}
         {subTab === 'tree' && (
           <div className="space-y-4">
-            {foldRow(showElders, () => setShowElders((v) => !v), '祖辈及以上', elderGenerations)}
+            {foldRow(showElders, () => setShowElders((v) => !v), t('foldElders'), elderGenerations)}
             {showElders && elderGenerations.map(renderGeneration)}
             {mainGenerations.map(renderGeneration)}
-            {foldRow(showYounger, () => setShowYounger((v) => !v), '曾孙辈及以下', youngerGenerations)}
+            {foldRow(showYounger, () => setShowYounger((v) => !v), t('foldYounger'), youngerGenerations)}
             {showYounger && youngerGenerations.map(renderGeneration)}
           </div>
         )}
@@ -460,7 +460,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
               if (!promo) {
                 return (
                   <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] text-xs font-bold text-gray-300">
-                    🎖️ {origin.classLabel}已是可晋升的最高阶层{origin.classId === 'noble' ? '（皇族无法通过晋升获得）' : ''}。
+                    {t(origin.classId === 'noble' ? 'ranking.topClassNoble' : 'ranking.topClass', { classLabel: origin.classLabel })}
                   </div>
                 );
               }
@@ -469,29 +469,29 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
               const repOk = reputation >= promo.minReputation;
               return (
                 <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] space-y-1.5 text-xs font-bold">
-                  <div className="text-white font-black">🎖️ 晋升为{toLabel}的条件（每月推进时自动检查）</div>
+                  <div className="text-white font-black">{t('ranking.promotionTitle', { classLabel: toLabel })}</div>
                   <div className={wealthOk ? 'text-emerald-300' : 'text-gray-400'}>
-                    {wealthOk ? '✔' : '✘'} 家族资产 ≥ {promo.minNetWorth.toLocaleString()} {CURRENCY.symbol}（当前 {wealth.toLocaleString()} {CURRENCY.symbol}）
+                    {t('ranking.promotionWealth', { mark: wealthOk ? '✔' : '✘', required: promo.minNetWorth.toLocaleString(), current: wealth.toLocaleString(), symbol: CURRENCY.symbol })}
                   </div>
                   <div className={repOk ? 'text-emerald-300' : 'text-gray-400'}>
-                    {repOk ? '✔' : '✘'} 当家人声望 ≥ {promo.minReputation}（当前 {reputation}）
+                    {t('ranking.promotionReputation', { mark: repOk ? '✔' : '✘', required: promo.minReputation, current: reputation })}
                   </div>
                 </div>
               );
             })()}
             <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] grid grid-cols-3 gap-2 text-center">
               <div className="bg-[#21232e] rounded-lg border border-black p-1.5">
-                <div className="text-[10px] text-gray-400 font-bold">凝聚力</div>
+                <div className="text-[10px] text-gray-400 font-bold">{t('ranking.cohesion')}</div>
                 <div className="text-rose-300 font-black text-sm">{cohesion}</div>
-                <div className="text-[9px] text-gray-500 font-bold">族人平均好感</div>
+                <div className="text-[9px] text-gray-500 font-bold">{t('ranking.cohesionHint')}</div>
               </div>
               <div className="bg-[#21232e] rounded-lg border border-black p-1.5">
-                <div className="text-[10px] text-gray-400 font-bold">财力</div>
+                <div className="text-[10px] text-gray-400 font-bold">{t('ranking.wealth')}</div>
                 <div className="text-amber-300 font-black text-sm">{Math.round(wealthScore(wealth))}</div>
                 <div className="text-[9px] text-gray-500 font-bold truncate">{wealth.toLocaleString()} {CURRENCY.symbol}</div>
               </div>
               <div className="bg-[#21232e] rounded-lg border border-black p-1.5">
-                <div className="text-[10px] text-gray-400 font-bold">影响力</div>
+                <div className="text-[10px] text-gray-400 font-bold">{t('ranking.influence')}</div>
                 <div className="text-sky-300 font-black text-sm">{reputation}</div>
                 <div className="text-[9px] text-gray-500 font-bold">{reputationLevel(reputation)}</div>
               </div>
@@ -506,11 +506,11 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                     <span className={`w-6 text-center font-black text-xs ${f.rank <= 3 ? 'text-yellow-400' : 'text-gray-400'}`}>#{f.rank}</span>
                     <div className="min-w-0">
                       <div className={`font-black text-xs truncate ${f.isPlayer ? 'text-yellow-300' : 'text-white'}`}>
-                        {f.surname}家族{f.isPlayer ? '（你）' : ''}
-                        {f.isPlayer && lazy && <span className="ml-1 text-[9px] font-black px-1 rounded border border-black bg-gray-500 text-white align-middle">偷懒</span>}
+                        {t('familyName', { surname: f.surname })}{f.isPlayer ? t('ranking.you') : ''}
+                        {f.isPlayer && lazy && <span className="ml-1 text-[9px] font-black px-1 rounded border border-black bg-gray-500 text-white align-middle">{t('ranking.lazy')}</span>}
                       </div>
                       <div className="text-[10px] text-gray-400 font-bold">
-                        {f.classLabel} · 凝聚 {Math.round(f.cohesion)} · 财力 {Math.round(wealthScore(f.wealth))} · 影响 {Math.round(f.influence)}
+                        {t('ranking.rowStats', { classLabel: f.classLabel, cohesion: Math.round(f.cohesion), wealth: Math.round(wealthScore(f.wealth)), influence: Math.round(f.influence) })}
                       </div>
                     </div>
                   </div>
@@ -520,13 +520,13 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
             </div>
             {(family.splitBranches?.length ?? 0) > 0 && (
               <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] text-[11px] font-bold text-gray-300 space-y-0.5">
-                <div className="text-white font-black text-xs mb-1">分家出去的支系</div>
+                <div className="text-white font-black text-xs mb-1">{t('ranking.branches')}</div>
                 {family.splitBranches!.map((b, i) => (
                   <div key={i}>{b.year}.{b.month} · {b.relation} {b.name}</div>
                 ))}
               </div>
             )}
-            <p className="text-[10px] text-gray-500 font-bold text-center">综合分 = 凝聚力 × 30% + 财力 × 40% + 影响力 × 30%</p>
+            <p className="text-[10px] text-gray-500 font-bold text-center">{t('ranking.formula')}</p>
           </div>
         )}
 
@@ -538,13 +538,13 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                 onClick={onOpenAuction}
                 className="w-full bg-amber-700 hover:bg-amber-600 text-amber-50 text-xs font-black py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Gavel size={14} /> 本月北城拍卖会开幕，前往竞拍
+                <Gavel size={14} /> {t('heirlooms.auctionOpen')}
               </button>
             )}
-            <p className="text-[10px] text-gray-500 font-bold text-center">传家宝可在拍卖会拍得，也可能在「机遇」推演事件中获得（如参军获授勋章）。估价计入家族财力。</p>
+            <p className="text-[10px] text-gray-500 font-bold text-center">{t('heirlooms.hint')}</p>
             {heirlooms.length === 0 && (
               <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-4 shadow-[0_4px_0_#000] text-center text-gray-400 text-xs font-bold">
-                {origin.surname}家族尚无传家之宝。
+                {t('heirlooms.empty', { surname: origin.surname })}
               </div>
             )}
             {heirlooms.map((owned) => {
@@ -571,7 +571,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                         <Sparkles size={12} /> {item.meaning}
                       </span>
                       <span className="text-[10px] text-gray-400 font-bold text-right">
-                        {owned.source} · {owned.year} 年 · 估价 {item.value.toLocaleString()} {CURRENCY.symbol}
+                        {t('heirlooms.meta', { source: owned.source, year: owned.year, value: item.value.toLocaleString(), symbol: CURRENCY.symbol })}
                       </span>
                     </div>
                   </div>
@@ -592,7 +592,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                 </div>
                 <div className="flex-1 pb-1">
                   <div className="flex items-center gap-2">
-                    <span className="bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded border border-black">{c.year}年</span>
+                    <span className="bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded border border-black">{t('chronicleYear', { year: c.year })}</span>
                     <h4 className="text-white font-black text-sm">{c.title}</h4>
                   </div>
                   <p className="text-gray-300 text-xs font-bold mt-1 leading-relaxed">{c.desc}</p>
@@ -624,33 +624,33 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
               <div>
                 <h3 className="text-white font-black text-base">{selectedMember.name}</h3>
                 <div className="text-xs text-yellow-400 font-bold">
-                  {selectedMember.relation} · {selectedMember.status === '已故' ? `享年 ${selectedMember.age} 岁` : `${selectedMember.age} 岁`}
+                  {selectedMember.relation} · {selectedMember.status === '已故' ? t('ageDeceased', { age: selectedMember.age }) : t('age', { age: selectedMember.age })}
                 </div>
               </div>
             </div>
 
             <div className="bg-[#21232e] p-2.5 rounded-xl border-2 border-black space-y-1.5 text-xs font-bold mb-3">
               <div className="flex justify-between text-gray-300">
-                <span>身份职业:</span>
+                <span>{t('member.occupation')}</span>
                 <span className="text-white font-black">{selectedMember.occupation}</span>
               </div>
               <div className="flex justify-between text-gray-300">
-                <span>家族辈分:</span>
+                <span>{t('member.generation')}</span>
                 <span className="text-white font-black">{selectedMember.generation}</span>
               </div>
               {selectedMember.parents && (
                 <div className="flex justify-between gap-3 text-gray-300">
-                  <span className="shrink-0">父母:</span>
+                  <span className="shrink-0">{t('member.parents')}</span>
                   <span className="text-white font-black text-right">{selectedMember.parents}</span>
                 </div>
               )}
               <div className="flex justify-between text-gray-300">
-                <span>生存状态:</span>
+                <span>{t('member.status')}</span>
                 <span className="text-emerald-400 font-black">{selectedMember.status}</span>
               </div>
               {!selectedMember.isPlayer && (
                 <div className="flex justify-between text-gray-300">
-                  <span>好感度:</span>
+                  <span>{t('member.affinity')}</span>
                   <span className="text-yellow-400 font-black">{selectedMember.affinity}%</span>
                 </div>
               )}
@@ -679,13 +679,13 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
             )}
             {selectedMember.isChild && selectedMember.ambition !== undefined && (
               <div className={`text-[10px] font-bold mb-2 ${selectedMember.ambition >= 80 ? 'text-rose-300' : 'text-gray-400'}`}>
-                ⚔️ 野心 {selectedMember.ambition}
-                {selectedMember.ambition >= 80 && selectedMember.age >= 18 ? '（野心很大，好感过低时可能逼宫）' : ''}
+                {t('member.ambition', { ambition: selectedMember.ambition })}
+                {selectedMember.ambition >= 80 && selectedMember.age >= 18 ? t('member.ambitionHigh') : ''}
               </div>
             )}
             {(selectedMember.isPlayer ? playerAntibodies : selectedMember.antibodies ?? []).length > 0 && (
               <div className="text-[10px] text-sky-300 font-bold mb-2">
-                🛡️ 抗体：{antibodyNames(selectedMember.isPlayer ? playerAntibodies : selectedMember.antibodies).join('、')}
+                {t('member.antibodies', { names: antibodyNames(selectedMember.isPlayer ? playerAntibodies : selectedMember.antibodies).join(sep) })}
               </div>
             )}
             <div className="flex flex-wrap gap-1.5 mb-4">
@@ -698,7 +698,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
 
             {selectedMember.isChild && (
               <div className="bg-[#21232e] border-2 border-black rounded-xl p-2.5 mb-3 space-y-1.5">
-                <div className="text-[11px] text-gray-300 font-bold">为孩子取名（只填名字即可，会自动加上家族姓「{origin.surname}」）</div>
+                <div className="text-[11px] text-gray-300 font-bold">{t('member.nameChildHint', { surname: origin.surname })}</div>
                 <div className="flex gap-1.5">
                   <input
                     value={nameDraft}
@@ -712,20 +712,20 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                       const full = applySurname(nameDraft, origin.surname);
                       const check = validatePlayerName(full);
                       if (!nameDraft.trim() || !check.valid) {
-                        showToast(`❌ ${check.reason || '请输入名字'}`);
+                        showToast(t('toast.nameInvalid', { reason: check.reason || t('toast.nameRequired') }));
                         return;
                       }
                       if (members.some((m) => m.name === full && m.id !== selectedMember.id)) {
-                        showToast('❌ 家族里已经有人叫这个名字了');
+                        showToast(t('toast.nameTaken'));
                         return;
                       }
                       setFamily((prev) => renameChild(prev, selectedMember.id, full));
-                      showToast(`👶 孩子从此名叫 ${full}`);
+                      showToast(t('toast.renamed', { name: full }));
                       setNameDraft('');
                     }}
                     className="bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black px-3 rounded-lg border-2 border-black cursor-pointer shrink-0"
                   >
-                    取名
+                    {t('member.nameChild')}
                   </button>
                 </div>
               </div>
@@ -745,17 +745,17 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                 }}
                 className="w-full mb-3 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
               >
-                {confirmRetire === selectedMember.id ? `再点一次：确定把家业传给 ${selectedMember.name}？` : '👑 传位给 TA（退居幕后）'}
+                {confirmRetire === selectedMember.id ? t('member.retireConfirm', { name: selectedMember.name }) : t('member.retire')}
               </button>
             )}
             {selectedMember.income !== undefined && (
               <div className="text-[10px] text-emerald-300 font-bold mb-2">
-                💼 {selectedMember.occupation} · 月收入 {selectedMember.income.toLocaleString()} {CURRENCY.symbol}（计入家族财力）
+                {t('member.income', { occupation: selectedMember.occupation, income: selectedMember.income.toLocaleString(), symbol: CURRENCY.symbol })}
               </div>
             )}
             {selectedMember.arranged && (
               <div className={`text-[10px] font-bold mb-2 ${selectedMember.arranged === 'estranged' ? 'text-rose-300' : 'text-gray-300'}`}>
-                💍 包办婚姻 · {ARRANGED_LABEL[selectedMember.arranged]}
+                {t('member.arranged', { status: t(`arranged.${selectedMember.arranged}`) })}
               </div>
             )}
             {canArrangeMarriage(selectedMember) === null && (
@@ -763,26 +763,26 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                 onClick={() => handleArrange(selectedMember)}
                 className="w-full mb-3 bg-pink-400 hover:bg-pink-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
               >
-                💍 强制相亲（家主权限，-{MATCHMAKING_FEE.toLocaleString()} {CURRENCY.symbol}，好感 -{MATCHMAKING_AFFINITY_PENALTY}）
+                {t('member.matchmaking', { fee: MATCHMAKING_FEE.toLocaleString(), symbol: CURRENCY.symbol, penalty: MATCHMAKING_AFFINITY_PENALTY })}
               </button>
             )}
             {!selectedMember.isPlayer && selectedMember.status !== '已故' && (
               <>
                 <div className="text-[11px] text-gray-300 font-bold mb-2">
-                  礼物喜好：<span className="text-rose-300 font-black">{GIFT_TASTE_LABEL[tasteOf(selectedMember, family.giftTastes) ?? 'toy']}</span>
-                  <span className="text-gray-500">（送对喜好好感翻倍）</span>
+                  {t('member.giftTaste')}<span className="text-rose-300 font-black">{GIFT_TASTE_LABEL[tasteOf(selectedMember, family.giftTastes) ?? 'toy']}</span>
+                  <span className="text-gray-500">{t('member.giftTasteHint')}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  {actionBtn('spar', '切磋交流', 'bg-yellow-400 hover:bg-yellow-300')}
-                  {actionBtn('consult', '家族请教', 'bg-sky-400 hover:bg-sky-300')}
-                  {actionBtn('gift', `赠礼 ${GIFT_COST}${CURRENCY.symbol}`, 'bg-rose-400 hover:bg-rose-300')}
+                  {actionBtn('spar', t('member.spar'), 'bg-yellow-400 hover:bg-yellow-300')}
+                  {actionBtn('consult', t('member.consult'), 'bg-sky-400 hover:bg-sky-300')}
+                  {actionBtn('gift', t('member.gift', { cost: GIFT_COST, symbol: CURRENCY.symbol }), 'bg-rose-400 hover:bg-rose-300')}
                 </div>
                 <p className="text-[10px] text-gray-400 font-bold mt-2 text-center">
-                  {blockedThisMonth || '每位家人每月可互动 1 次'}
+                  {blockedThisMonth || t('member.interactLimit')}
                 </p>
                 {Object.keys(giftInventory).length > 0 && (
                   <div className="mt-3 border-t border-gray-700 pt-2">
-                    <div className="text-[10px] text-gray-400 font-black mb-1.5">背包礼物（宝箱抽得，点击赠送）</div>
+                    <div className="text-[10px] text-gray-400 font-black mb-1.5">{t('member.giftBag')}</div>
                     <div className="flex flex-wrap gap-1.5">
                       {Object.entries(giftInventory).map(([id, count]) => {
                         const gift = giftById(id);

@@ -2,6 +2,7 @@ import React from 'react';
 import { Heart, LogOut, TrendingUp, TrendingDown } from 'lucide-react';
 import { CurrencyIcon } from './CurrencyIcon';
 import { CURRENCY } from '../data/seasons';
+import { useTranslation } from 'react-i18next';
 
 // 简洁模式：把用户当成 7 岁儿童来设计的一屏界面。
 // 只保留影响人生模拟的事：一个「过一个月」大按钮（自动治病、处理推演、给家人送礼），
@@ -64,8 +65,9 @@ export interface SimpleModeViewProps {
 const bar = (value: number) => (value >= 60 ? 'bg-emerald-400' : value >= 30 ? 'bg-amber-400' : 'bg-rose-500');
 
 export const SimpleModeView: React.FC<SimpleModeViewProps> = (p) => {
+  const { t } = useTranslation('simple');
   const dead = p.isRegistered && p.health <= 0;
-  const monthText = `${p.year} 年 ${p.month} 月`;
+  const monthText = t('monthText', { year: p.year, month: p.month });
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#fff7e6] text-[#3b2a1a] flex flex-col">
@@ -76,19 +78,19 @@ export const SimpleModeView: React.FC<SimpleModeViewProps> = (p) => {
           onClick={p.onExit}
           className="flex items-center gap-1 text-xs font-black bg-white border-2 border-[#3b2a1a] rounded-full px-3 py-1.5 cursor-pointer active:scale-95"
         >
-          <LogOut size={14} /> 完整模式
+          <LogOut size={14} /> {t('fullMode')}
         </button>
       </div>
 
       {!p.isRegistered ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-5 p-6 text-center">
           <div className="text-7xl">👶</div>
-          <p className="text-2xl font-black">你还没有出生哦</p>
+          <p className="text-2xl font-black">{t('notBorn')}</p>
           <button
             onClick={p.onRegister}
             className="w-full max-w-xs bg-[#facc15] border-4 border-[#3b2a1a] rounded-3xl py-5 text-2xl font-black shadow-[0_6px_0_#3b2a1a] active:translate-y-1 active:shadow-none cursor-pointer"
           >
-            出生！
+            {t('beBorn')}
           </button>
         </div>
       ) : (
@@ -100,33 +102,33 @@ export const SimpleModeView: React.FC<SimpleModeViewProps> = (p) => {
               <div className="min-w-0">
                 <div className="text-2xl font-black truncate">{p.name}</div>
                 <div className="text-base font-bold text-[#8a6d4b]">
-                  {p.age} 岁 · {p.familyLabel}
+                  {t('ageFamily', { age: p.age, family: p.familyLabel })}
                 </div>
               </div>
             </div>
             <div className="mt-3 space-y-2">
               <div className="flex items-center gap-2 text-lg font-black">
-                <Heart size={22} className="text-rose-500 fill-rose-500" /> 健康
+                <Heart size={22} className="text-rose-500 fill-rose-500" /> {t('health')}
                 <div className="flex-1 h-4 bg-gray-200 rounded-full border-2 border-[#3b2a1a] overflow-hidden">
                   <div className={`h-full ${bar(p.health)}`} style={{ width: `${Math.max(0, Math.min(100, p.health))}%` }} />
                 </div>
                 <span className="w-10 text-right">{p.health}</span>
               </div>
               <div className="flex items-center gap-2 text-lg font-black">
-                <CurrencyIcon size={22} className="text-amber-500" /> 钱
+                <CurrencyIcon size={22} className="text-amber-500" /> {t('money')}
                 <span className="ml-auto">{p.coins.toLocaleString()} {CURRENCY.symbol}</span>
               </div>
               {p.deposit > 0 && (
                 <div className="flex items-center gap-2 text-sm font-bold text-[#8a6d4b]">
-                  🏦 银行里还有 <span className="ml-auto">{p.deposit.toLocaleString()} {CURRENCY.symbol}</span>
+                  {t('bankDeposit')} <span className="ml-auto">{p.deposit.toLocaleString()} {CURRENCY.symbol}</span>
                 </div>
               )}
             </div>
             <div className="mt-3 flex flex-wrap gap-2 text-sm font-black">
               {p.diseaseName && <span className="bg-rose-100 border-2 border-rose-400 rounded-full px-2 py-0.5">🤒 {p.diseaseName}</span>}
-              <span className="bg-sky-100 border-2 border-sky-400 rounded-full px-2 py-0.5">💼 {p.jobTitle ?? '没有工作'}</span>
-              <span className="bg-pink-100 border-2 border-pink-400 rounded-full px-2 py-0.5">💍 {p.spouseName ?? '单身'}</span>
-              <span className="bg-lime-100 border-2 border-lime-500 rounded-full px-2 py-0.5">👶 {p.childrenCount} 个孩子</span>
+              <span className="bg-sky-100 border-2 border-sky-400 rounded-full px-2 py-0.5">💼 {p.jobTitle ?? t('noJob')}</span>
+              <span className="bg-pink-100 border-2 border-pink-400 rounded-full px-2 py-0.5">💍 {p.spouseName ?? t('single')}</span>
+              <span className="bg-lime-100 border-2 border-lime-500 rounded-full px-2 py-0.5">👶 {t('children', { count: p.childrenCount })}</span>
             </div>
           </div>
 
@@ -163,11 +165,11 @@ export const SimpleModeView: React.FC<SimpleModeViewProps> = (p) => {
               disabled={!!p.card && p.card.kind === 'heir'}
               className="w-full bg-[#22c55e] text-white border-4 border-[#3b2a1a] rounded-3xl py-6 text-3xl font-black shadow-[0_7px_0_#3b2a1a] active:translate-y-1 active:shadow-none cursor-pointer disabled:opacity-50"
             >
-              ⏩ 过一个月
+              {t('advanceMonth')}
             </button>
           )}
           {!dead && (
-            <p className="text-center text-sm font-bold text-[#8a6d4b] -mt-2">会自动看病、处理生活小事、给爸爸妈妈和爱人送礼物</p>
+            <p className="text-center text-sm font-bold text-[#8a6d4b] -mt-2">{t('advanceMonthHint')}</p>
           )}
 
           {/* 连续推进：遇到需要你选择的事情会自动停下 */}
@@ -177,14 +179,14 @@ export const SimpleModeView: React.FC<SimpleModeViewProps> = (p) => {
                 onClick={p.onStopAdvance}
                 className="w-full bg-rose-400 text-white border-4 border-[#3b2a1a] rounded-2xl py-3 text-xl font-black shadow-[0_4px_0_#3b2a1a] active:translate-y-1 active:shadow-none cursor-pointer"
               >
-                ⏸ 停下来（还剩 {p.advanceRemaining} 个月）
+                {t('stopAdvance', { count: p.advanceRemaining })}
               </button>
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 {([
-                  [6, '过半年'],
-                  [12, '过一年'],
-                  [120, '过十年'],
+                  [6, t('advanceHalfYear')],
+                  [12, t('advanceYear')],
+                  [120, t('advanceDecade')],
                 ] as const).map(([n, label]) => (
                   <button
                     key={n}
@@ -197,35 +199,35 @@ export const SimpleModeView: React.FC<SimpleModeViewProps> = (p) => {
                 ))}
               </div>
             ))}
-          {!dead && <p className="text-center text-xs font-bold text-[#8a6d4b] -mt-2">遇到要你做决定的事会自动停下来</p>}
+          {!dead && <p className="text-center text-xs font-bold text-[#8a6d4b] -mt-2">{t('autoStopHint')}</p>}
 
           {/* 一键炒股 */}
           {!dead && (
             <div className="bg-white border-4 border-[#3b2a1a] rounded-3xl p-4 shadow-[0_5px_0_#3b2a1a]">
-              <div className="text-xl font-black mb-2">📈 炒股</div>
+              <div className="text-xl font-black mb-2">{t('stockTitle')}</div>
               {p.stockOpened ? (
                 <>
                   <p className="text-sm font-bold text-[#8a6d4b] mb-3">
-                    手里的股票值 {p.stockValue.toLocaleString()} {CURRENCY.symbol}。买入会用三成现金买最近涨得好的股票。
+                    {t('stockValue', { value: p.stockValue.toLocaleString(), symbol: CURRENCY.symbol })}
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={p.onBuyStocks}
                       className="flex items-center justify-center gap-1 bg-rose-400 text-white border-4 border-[#3b2a1a] rounded-2xl py-3 text-xl font-black shadow-[0_4px_0_#3b2a1a] active:translate-y-1 active:shadow-none cursor-pointer"
                     >
-                      <TrendingUp size={22} /> 买入
+                      <TrendingUp size={22} /> {t('buy')}
                     </button>
                     <button
                       onClick={p.onSellStocks}
                       disabled={p.stockValue <= 0}
                       className="flex items-center justify-center gap-1 bg-sky-400 text-white border-4 border-[#3b2a1a] rounded-2xl py-3 text-xl font-black shadow-[0_4px_0_#3b2a1a] active:translate-y-1 active:shadow-none cursor-pointer disabled:opacity-40"
                     >
-                      <TrendingDown size={22} /> 全卖
+                      <TrendingDown size={22} /> {t('sellAll')}
                     </button>
                   </div>
                 </>
               ) : (
-                <p className="text-sm font-bold text-[#8a6d4b]">家里要有人做过金融工作（比如交易所经纪人、账房）才能炒股。</p>
+                <p className="text-sm font-bold text-[#8a6d4b]">{t('stockLocked')}</p>
               )}
             </div>
           )}
@@ -233,14 +235,14 @@ export const SimpleModeView: React.FC<SimpleModeViewProps> = (p) => {
           {/* 保养身体 */}
           {!dead && (
             <div className="bg-white border-4 border-[#3b2a1a] rounded-3xl p-4 shadow-[0_5px_0_#3b2a1a]">
-              <div className="text-xl font-black mb-1">💆 保养身体</div>
+              <div className="text-xl font-black mb-1">{t('maintenanceTitle')}</div>
               <p className="text-sm font-bold text-[#8a6d4b] mb-1">{p.fertilityText}</p>
-              <p className="text-xs font-bold text-[#8a6d4b] mb-3">每个月会自动给你、爱人和长大的孩子保养（每人每月一次，钱够才做，自动保养效果比手动差一些）。</p>
+              <p className="text-xs font-bold text-[#8a6d4b] mb-3">{t('maintenanceHint')}</p>
               <button
                 onClick={p.onMaintenance}
                 className="w-full bg-violet-400 text-white border-4 border-[#3b2a1a] rounded-2xl py-3 text-xl font-black shadow-[0_4px_0_#3b2a1a] active:translate-y-1 active:shadow-none cursor-pointer"
               >
-                保养一次（{p.maintenanceCost.toLocaleString()} {CURRENCY.symbol}）
+                {t('maintenanceOnce', { cost: p.maintenanceCost.toLocaleString(), symbol: CURRENCY.symbol })}
               </button>
             </div>
           )}
@@ -248,7 +250,7 @@ export const SimpleModeView: React.FC<SimpleModeViewProps> = (p) => {
           {/* 上个月发生了什么 */}
           {p.lastSummary.length > 0 && (
             <div className="bg-white border-4 border-[#3b2a1a] rounded-3xl p-4 shadow-[0_5px_0_#3b2a1a]">
-              <div className="text-xl font-black mb-2">📰 刚刚发生</div>
+              <div className="text-xl font-black mb-2">{t('recentTitle')}</div>
               <ul className="space-y-1 text-base font-bold">
                 {p.lastSummary.slice(0, 8).map((s, i) => (
                   <li key={i}>• {s}</li>
@@ -259,7 +261,7 @@ export const SimpleModeView: React.FC<SimpleModeViewProps> = (p) => {
 
           {p.recent.length > 0 && (
             <div className="bg-white border-4 border-[#3b2a1a] rounded-3xl p-4 shadow-[0_5px_0_#3b2a1a]">
-              <div className="text-xl font-black mb-2">📖 我的人生</div>
+              <div className="text-xl font-black mb-2">{t('lifeTitle')}</div>
               <ul className="space-y-1.5">
                 {p.recent.slice(0, 6).map((r, i) => (
                   <li key={i} className="text-base font-bold">

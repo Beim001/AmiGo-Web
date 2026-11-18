@@ -5,6 +5,7 @@ import { submitSeasonScore } from '../lib/authClient';
 import { currentSeason } from '../data/seasons';
 import { readAchievements, unlockAllForTesting } from '../lib/achievements';
 import type { ActiveDisease } from '../lib/disease';
+import i18n from '../i18n';
 
 // 测试兑换码（第 57 题）：无限金币、无限体力与寿命，立即解锁全部成就；本赛季成绩标记为作弊，由服务器排除。是否生效（godMode）存放在统一游戏状态中
 
@@ -42,7 +43,7 @@ export const useGodMode = ({ godMode, setGodMode, coins, setCoins, health, setHe
     }
     const added = unlockAllForTesting();
     autoPlayCreditsIfComplete();
-    return `🛠️ 测试兑换码生效：无限现金、无限体力、无限寿命，已解锁全部成就（新增 ${added} 项）。本赛季成绩不计入排行。`;
+    return i18n.t('game:godMode', { added });
   };
 
   return { activateGodMode };

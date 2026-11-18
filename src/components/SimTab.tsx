@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   SimEventInstance,
   SimEventDef,
@@ -88,7 +89,7 @@ export const SimTab: React.FC<SimTabProps> = ({
   isRegistered = false,
   health = 100,
   age = 8,
-  playerName = '旅人',
+  playerName,
   gameYear = 1870,
   gameMonth = 1,
   onGoToBirthRegistration,
@@ -102,6 +103,7 @@ export const SimTab: React.FC<SimTabProps> = ({
   auctionOpen = false,
   onOpenAuction,
 }) => {
+  const { t } = useTranslation('sim');
   const [activeUid, setActiveUid] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<{ title: string; result: Resolution } | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -120,7 +122,7 @@ export const SimTab: React.FC<SimTabProps> = ({
             <div className="w-32 h-32 border-[6px] border-black rounded-full absolute -bottom-16 right-0" />
           </div>
           <span className="relative z-10 drop-shadow-[0_2px_0_#000] font-black tracking-widest text-2xl">
-            推演
+            {t('title')}
           </span>
         </div>
 
@@ -136,13 +138,13 @@ export const SimTab: React.FC<SimTabProps> = ({
                 — SIMULATION PAUSED —
               </div>
               <h3 className="text-white font-black text-lg tracking-wide">
-                【人生推演未开启】
+                {t('notStartedTitle')}
               </h3>
               <p className="text-gray-300 text-xs font-bold leading-relaxed">
-                当前角色尚未办理出生登记，公民档案未入库。
+                {t('notStartedDesc')}
               </p>
               <p className="text-gray-400 text-[11px] leading-snug">
-                请先前往【功能】界面办理出生登记，开启属于你的人生历史篇章。
+                {t('notStartedHint')}
               </p>
             </div>
 
@@ -153,7 +155,7 @@ export const SimTab: React.FC<SimTabProps> = ({
                 className="w-full bg-[#fcd34d] hover:bg-[#fde047] text-black font-black text-xs py-3 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer flex items-center justify-center gap-1.5 transition-all mt-1"
               >
                 <Sparkles size={16} className="text-amber-700 fill-amber-700" />
-                <span>前往办理出生登记</span>
+                <span>{t('goRegister')}</span>
               </button>
             )}
           </div>
@@ -175,7 +177,7 @@ export const SimTab: React.FC<SimTabProps> = ({
             <div className="w-32 h-32 border-[6px] border-black rounded-full absolute -bottom-16 right-0" />
           </div>
           <span className="relative z-10 drop-shadow-[0_2px_0_#000] font-black tracking-widest text-2xl">
-            推演
+            {t('title')}
           </span>
         </div>
 
@@ -191,13 +193,13 @@ export const SimTab: React.FC<SimTabProps> = ({
                 — R . I . P —
               </div>
               <h3 className="text-gray-100 font-black text-lg tracking-wide">
-                【本世推演已谢幕】
+                {t('endedTitle')}
               </h3>
               <p className="text-gray-300 text-xs font-bold leading-relaxed">
-                {playerName} · 享年 {age} 岁
+                {t('endedAge', { name: playerName ?? t('defaultPlayerName'), age })}
               </p>
               <p className="text-gray-400 text-[11px] leading-relaxed">
-                生命体征已归零，所有时代风云与事件推演已封存。
+                {t('endedDesc')}
               </p>
             </div>
 
@@ -207,7 +209,7 @@ export const SimTab: React.FC<SimTabProps> = ({
                 onClick={onOpenSuccession}
                 className="w-full bg-amber-400 hover:bg-amber-300 text-black text-xs font-black py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
               >
-                🕯️ 传承家业（选择继承人）
+                {t('inherit')}
               </button>
             )}
 
@@ -217,7 +219,7 @@ export const SimTab: React.FC<SimTabProps> = ({
                 {confirmReset ? (
                   <div className="flex flex-col gap-2 bg-[#1b1c24] p-3 rounded-xl border-2 border-rose-500/60">
                     <span className="text-xs text-rose-300 font-black">
-                      确定重置人生开启新轮回？
+                      {t('resetConfirm')}
                     </span>
                     <div className="flex gap-2">
                       <button
@@ -228,14 +230,14 @@ export const SimTab: React.FC<SimTabProps> = ({
                         }}
                         className="flex-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-black py-2 rounded-lg border border-black cursor-pointer shadow-[0_2px_0_#000]"
                       >
-                        确认重置
+                        {t('resetConfirmButton')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setConfirmReset(false)}
                         className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-black py-2 rounded-lg border border-black cursor-pointer"
                       >
-                        取消
+                        {t('cancel')}
                       </button>
                     </div>
                   </div>
@@ -246,7 +248,7 @@ export const SimTab: React.FC<SimTabProps> = ({
                     className="w-full bg-[#fcd34d] hover:bg-[#fde047] text-black font-black text-xs py-3 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer flex items-center justify-center gap-1.5 transition-all"
                   >
                     <RotateCcw size={15} />
-                    <span>重置人生 · 开启新生</span>
+                    <span>{t('reset')}</span>
                   </button>
                 )}
               </div>
@@ -262,7 +264,7 @@ export const SimTab: React.FC<SimTabProps> = ({
   // 3. 详情事件弹窗（存活状态下）
   const activeInst = events.find((e) => e.uid === activeUid) || null;
   const activeDef = activeInst ? eventDef(activeInst) : undefined;
-  const dateOf = (e: SimEventInstance) => `${e.year}年${e.month}月`;
+  const dateOf = (e: SimEventInstance) => t('eventDate', { year: e.year, month: e.month });
 
   if (activeInst && activeDef) {
     const Icon = EVENT_ICONS[activeDef.icon] || Scroll;
@@ -281,7 +283,7 @@ export const SimTab: React.FC<SimTabProps> = ({
               className="font-serif text-3xl sm:text-4xl font-black text-black tracking-widest text-center"
               style={{ textShadow: '2px 2px 0px rgba(0,0,0,0.1)' }}
             >
-              人生快报
+              {t('newspaper')}
             </h1>
             <div className="flex justify-between w-full text-xs sm:text-sm font-bold border-t-[3px] border-b-[3px] border-black py-1 mt-2 sm:mt-3">
               <span>{dateOf(activeInst)}</span>
@@ -337,22 +339,22 @@ export const SimTab: React.FC<SimTabProps> = ({
           <div className="w-32 h-32 border-[6px] border-black rounded-full absolute -bottom-16 right-0" />
         </div>
         <span className="relative z-10 drop-shadow-[0_2px_0_#000] font-black tracking-widest text-2xl">
-          推演
+          {t('title')}
         </span>
       </div>
 
       <div className="flex items-center justify-between px-4 pt-3 z-10 text-xs font-black">
         <span className="flex items-center gap-1.5 bg-[#1b1c25] text-amber-300 px-3 py-1 rounded-full border-2 border-black">
-          <Trophy size={13} /> 推演积分 {simScore}
+          <Trophy size={13} /> {t('score', { score: simScore })}
         </span>
-        <span className="text-gray-400">待处理 {events.length} 件</span>
+        <span className="text-gray-400">{t('pending', { count: events.length })}</span>
       </div>
       {auctionOpen && onOpenAuction && (
         <button
           onClick={onOpenAuction}
           className="mx-4 mt-2 z-10 bg-amber-700 hover:bg-amber-600 border-2 border-black rounded-xl px-3 py-2 text-xs font-black text-amber-50 flex items-center justify-center gap-1.5 cursor-pointer"
         >
-          <Gavel size={14} /> 本月北城拍卖会开幕，前往竞拍
+          <Gavel size={14} /> {t('auctionOpen')}
         </button>
       )}
       {quietMessage && (
@@ -367,9 +369,9 @@ export const SimTab: React.FC<SimTabProps> = ({
             <CheckCircle size={48} className="text-[#a1a1aa]" />
           </div>
           <h2 className="text-white text-2xl font-black mb-2 tracking-widest" style={{ textShadow: '0 2px 0 #000' }}>
-            本期风平浪静
+            {t('quietTitle')}
           </h2>
-          <p className="text-[#a1a1aa] font-bold">暂无需要抉择的人生事件。每推进一个月，有一半机会遇到新的事件。</p>
+          <p className="text-[#a1a1aa] font-bold">{t('quietDesc')}</p>
         </div>
       ) : (
         <div className="flex-1 relative flex items-center justify-center p-6 mt-4 perspective-[1000px]">
@@ -400,7 +402,7 @@ export const SimTab: React.FC<SimTabProps> = ({
               >
                 <div className="border-b-[3px] border-black pb-2 sm:pb-3 mb-2 sm:mb-3 flex flex-col items-center">
                   <h1 className="font-serif text-2xl sm:text-3xl font-black text-black tracking-widest text-center" style={{ textShadow: '2px 2px 0px rgba(0,0,0,0.1)' }}>
-                    人生快报
+                    {t('newspaper')}
                   </h1>
                   <div className="flex justify-between w-full text-[10px] sm:text-xs font-bold border-t-[2px] border-b-[2px] border-black py-1 mt-1 sm:mt-2">
                     <span>{dateOf(inst)}</span>
@@ -420,7 +422,7 @@ export const SimTab: React.FC<SimTabProps> = ({
                   {isTop && (
                     <div className="mt-auto flex justify-center pb-1 sm:pb-2">
                       <span className="bg-black text-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold animate-pulse shadow-[2px_2px_0_#000] border-2 border-transparent">
-                        点击阅读详情 &gt;
+                        {t('readMore')}
                       </span>
                     </div>
                   )}
@@ -444,12 +446,12 @@ export const SimTab: React.FC<SimTabProps> = ({
               )}
               {lastResult.result.health !== 0 && (
                 <span className={lastResult.result.health > 0 ? 'text-emerald-700' : 'text-red-700'}>
-                  健康 {lastResult.result.health > 0 ? '+' : ''}{lastResult.result.health}
+                  {t('resultHealth', { delta: `${lastResult.result.health > 0 ? '+' : ''}${lastResult.result.health}` })}
                 </span>
               )}
-              <span className="text-amber-800">推演积分 +{lastResult.result.score}</span>
+              <span className="text-amber-800">{t('resultScore', { score: lastResult.result.score })}</span>
             </div>
-            <div className="text-[10px] text-black/50 font-bold text-center pt-1">点击任意处关闭</div>
+            <div className="text-[10px] text-black/50 font-bold text-center pt-1">{t('tapToClose')}</div>
           </div>
         </div>
       )}
