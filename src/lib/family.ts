@@ -201,7 +201,24 @@ export interface FamilyState {
   heirlooms?: OwnedHeirloom[];
   /** 成年家人的工作（第 73 题）：成员 id → 工作记录，每月由 kinJobs.ts 结算 */
   jobs?: Record<string, KinJob>;
+  /** 当前当家人接手时的起始健康（第 73 题），下一代据此叠加；旧存档缺失时按初代计算 */
+  startHealth?: number;
 }
+
+// ---------- 当家人的起始健康（第 73 题） ----------
+// 初代当家人出生登记时健康为 FOUNDER_START_HEALTH；每传一代，起始健康在上一代的基础上 +10（最高 100），
+// 继承人出生在历史大事件期间的，这一代只 +5；跳过子辈由孙辈继承时按相差的代数叠加；兄弟姐妹继承是同一代，不叠加。
+
+export const FOUNDER_START_HEALTH = 50;
+export const HEALTH_GAIN_PER_GENERATION = 10;
+export const HEALTH_GAIN_IN_EVENT = 5;
+
+export const heirStartHealth = (previousStart: number | undefined, generations: number, bornInEvent: boolean): number => {
+  const base = previousStart ?? FOUNDER_START_HEALTH;
+  if (generations <= 0) return base;
+  const gain = HEALTH_GAIN_PER_GENERATION * generations - (bornInEvent ? HEALTH_GAIN_PER_GENERATION - HEALTH_GAIN_IN_EVENT : 0);
+  return Math.min(100, base + gain);
+};
 
 /** 家人的工作记录。name 为记录时的姓名：配偶更换等导致同一 id 换了人时，旧记录不再适用 */
 export interface KinJob {

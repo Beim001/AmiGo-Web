@@ -20,6 +20,8 @@ import {
   ARRANGED_ESTRANGE_CHANCE,
   ESTRANGED_AFFINITY_DECAY,
   SPLIT_AFTER_MONTHS,
+  heirStartHealth,
+  FOUNDER_START_HEALTH,
 } from './family';
 
 const YEAR = 1950;
@@ -202,5 +204,22 @@ describe('强制相亲与包办婚姻', () => {
     const ids = view(r.state).map((m) => m.id);
     expect(ids).not.toContain('a1');
     expect(ids).not.toContain('a11');
+  });
+});
+
+describe('当家人的起始健康', () => {
+  it('初代 50，每传一代 +10，最高 100', () => {
+    expect(heirStartHealth(undefined, 1, false)).toBe(FOUNDER_START_HEALTH + 10);
+    expect(heirStartHealth(60, 1, false)).toBe(70);
+    expect(heirStartHealth(95, 1, false)).toBe(100);
+  });
+
+  it('继承人出生在历史大事件期间的这一代只 +5', () => {
+    expect(heirStartHealth(60, 1, true)).toBe(65);
+  });
+
+  it('跳过子辈由孙辈继承时按相差的代数叠加；兄弟姐妹继承不叠加', () => {
+    expect(heirStartHealth(60, 2, false)).toBe(80);
+    expect(heirStartHealth(60, 0, false)).toBe(60);
   });
 });

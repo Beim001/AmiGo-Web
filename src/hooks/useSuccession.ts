@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ageAt, buildFamilyMembers, succeed, findDescendant, Gender, FamilyMemberView } from '../lib/family';
+import { ageAt, buildFamilyMembers, succeed, findDescendant, findDescendantPath, heirStartHealth, Gender, FamilyMemberView } from '../lib/family';
 import { randomTraits } from '../lib/traits';
 import { REP, clampReputation } from '../lib/reputation';
 import { unlockAchievement } from '../lib/achievements';
@@ -7,7 +7,7 @@ import { randomAppearance } from '../lib/appearance';
 import { takeCustody, ORPHANAGE_NAME, ADULT_AGE as GUARDIAN_ADULT_AGE } from '../lib/guardianship';
 import { CHILD_JOB_KEY } from '../lib/lineage';
 import { addLifeLog, readLifeLog, clearLifeLog } from '../lib/lifeLog';
-import { loadAccounts, saveAccounts as persistBankAccounts } from '../lib/bank';
+import { loadAccounts, saveAccounts as persistBankAccounts, currentRateEvent } from '../lib/bank';
 import { CURRENT_JOB_KEY, JOB_HISTORY_KEY } from '../components/JobModal';
 import type { Game } from './useGameState';
 
@@ -48,6 +48,9 @@ export const useSuccession = ({ game, currentAge, playerOccupation, setShowSucce
     const newRegYear = gameYear - (heir.age - 8);
     // 第 53 题：子女、孙辈继承时带着自己的抗体；兄弟姐妹没有记录抗体
     const heirSource = findDescendant(family, heirId);
+    // 起始健康按代数叠加；继承人出生在历史大事件期间的这一代少加
+    const generations = heir.kind === 'sibling' ? 0 : findDescendantPath(family.children, heirId)?.length ?? 1;
+    const startHealth = heirStartHealth(family.startHealth, generations, currentRateEvent(heirSource?.birthYear ?? gameYear - heir.age) !== null);
     setAntibodies(heirSource?.antibodies ?? []);
     setAppearance(heirSource?.appearance ?? randomAppearance(heir.gender));
     // 第 17 题：玩家可选择把前任主角的人生大事写入族谱
@@ -56,12 +59,12 @@ export const useSuccession = ({ game, currentAge, playerOccupation, setShowSucce
           .filter((e) => e.category === '大事')
           .map((e) => ({ year: e.year, month: e.month, title: `${playerName}：${e.title}`, desc: e.desc }))
       : [];
-    setFamily({ ...nextFamily, events: [...nextFamily.events.slice(0, -1), ...records, ...nextFamily.events.slice(-1)] });
+    setFamily({ ...nextFamily, startHealth, events: [...nextFamily.events.slice(0, -1), ...records, ...nextFamily.events.slice(-1)] });
     setSimEvents([]);
     setPlayerName(heir.name);
     setGender(heir.gender);
     setBirthRegisteredYear(newRegYear);
-    setHealth(100);
+    setHealth(startHealth);
     setDisease(null);
     try {
       localStorage.setItem('amigo_player_name', heir.name);
@@ -112,7 +115,7 @@ export const useSuccession = ({ game, currentAge, playerOccupation, setShowSucce
       coup ? `联合族人逼宫，迫使 ${playerName} 退位，接过了家业。` : retire ? `${playerName} 退居幕后，作为${heir.relation}接过了家业。` : `${playerName} 辞世后，作为${heir.relation}继承了家业。`,
       { year: gameYear, month: gameMonth, age: heir.age },
     );
-    showToast(coup ? `⚔️ ${heir.relation} ${heir.name} 逼宫！${playerName} 被迫退位，由 ${heir.name}（${heir.age} 岁）当家` : retire ? `👑 ${playerName} 退居幕后，${heir.relation} ${heir.name}（${heir.age} 岁）接过家业` : `🕯️ ${heir.relation} ${heir.name}（${heir.age} 岁）继承了家业`);
+    showToast((coup ? `⚔️ ${heir.relation} ${heir.name} 逼宫！${playerName} 被迫退位，由 ${heir.name}（${heir.age} 岁）当家` : retire ? `👑 ${playerName} 退居幕后，${heir.relation} ${heir.name}（${heir.age} 岁）接过家业` : `🕯️ ${heir.relation} ${heir.name}（${heir.age} 岁）继承了家业`) + `（起始健康 ${startHealth}）`);
   };
   const [pendingCoup, setPendingCoup] = useState<string | null>(null);
   React.useEffect(() => {

@@ -13,7 +13,7 @@ import { SimTab } from './components/SimTab';
 import { LogTab } from './components/LogTab';
 import { FamilyTab } from './components/FamilyTab';
 import { MarriageModal } from './components/MarriageModal';
-import { INITIAL_FAMILY_STATE, getHeirlooms, addHeirloom, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs } from './lib/family';
+import { INITIAL_FAMILY_STATE, FOUNDER_START_HEALTH, getHeirlooms, addHeirloom, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs } from './lib/family';
 import { randomTraits, withBirthPrivilege, MAINTENANCE_COST, traitNames } from './lib/traits';
 import { clampReputation, CHARITY_UNIT, charityRemaining } from './lib/reputation';
 import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, unlockAllForTesting, clearAchievementsForTesting, readGiftsGiven, recordGiftsGiven } from './lib/achievements';
@@ -321,7 +321,9 @@ export default function App() {
     // 第 56 题：家族沿用玩家填写的姓，留空则随机；皇族只有纳海王朝
     const cls = rollClass();
     const origin = generateOrigin(cls, Math.random, gameYear, preferredSurname);
-    setFamily({ ...INITIAL_FAMILY_STATE, origin });
+    setFamily({ ...INITIAL_FAMILY_STATE, origin, startHealth: FOUNDER_START_HEALTH });
+    // 第 73 题：初代当家人起始健康 50，之后每传一代叠加
+    setHealth(FOUNDER_START_HEALTH);
     setCoins(cls.startCash);
     const bankTotals = persistBankAccounts(buildDefaultAccounts(cls.startDeposit, 0));
     setBankDeposit(bankTotals.deposit);
