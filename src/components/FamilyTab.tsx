@@ -20,7 +20,6 @@ import {
   FamilyState,
   FamilyMemberView,
   InteractionKind,
-  GENERATIONS,
   GIFT_COST,
   CONSULT_REWARD_MIN,
   CONSULT_REWARD_MAX,
@@ -134,8 +133,9 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   const selectedMember = members.find((m) => m.id === selectedId) || null;
 
   const livingCount = members.filter((m) => m.status !== '已故').length;
-  const generationCount = family.children.length > 0 ? 4 : 3;
-  const visibleGenerations = GENERATIONS.filter((g) => members.some((m) => m.generation === g));
+  const generationCount = new Set(members.map((m) => m.level)).size;
+  // 辈分由高到低排列；后代可以延续到任意代（曾孙辈、玄孙辈……）
+  const visibleGenerations = [...new Map(members.map((m) => [m.generation, m.level])).entries()].sort((a, b) => b[1] - a[1]).map(([g]) => g);
 
   const handleInteraction = (member: FamilyMemberView, kind: InteractionKind) => {
     const blocked = canInteract(family, member, gameYear, gameMonth) || canDoInteraction(member, kind, age);

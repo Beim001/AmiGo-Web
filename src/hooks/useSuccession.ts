@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ageAt, buildFamilyMembers, succeed, Gender, FamilyMemberView } from '../lib/family';
+import { ageAt, buildFamilyMembers, succeed, findDescendant, Gender, FamilyMemberView } from '../lib/family';
 import { randomTraits } from '../lib/traits';
 import { REP, clampReputation } from '../lib/reputation';
 import { unlockAchievement } from '../lib/achievements';
@@ -47,7 +47,7 @@ export const useSuccession = ({ game, currentAge, playerOccupation, setShowSucce
     );
     const newRegYear = gameYear - (heir.age - 8);
     // 第 53 题：子女、孙辈继承时带着自己的抗体；兄弟姐妹没有记录抗体
-    const heirSource = family.children.find((c) => c.id === heirId) ?? family.children.flatMap((c) => c.kids ?? []).find((k) => k.id === heirId);
+    const heirSource = findDescendant(family, heirId);
     setAntibodies(heirSource?.antibodies ?? []);
     setAppearance(heirSource?.appearance ?? randomAppearance(heir.gender));
     // 第 17 题：玩家可选择把前任主角的人生大事写入族谱

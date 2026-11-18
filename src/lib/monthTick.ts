@@ -324,7 +324,7 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
     }
 
     // 家人的生老病死与成家（第 52 题）：配偶寿终则丧偶；成年子女成家、生育孙辈
-    const life = monthlyFamilyLife(fam, nextY, nextM, rng, playerTraits);
+    const life = monthlyFamilyLife(fam, nextY, nextM, rng, playerTraits, gender);
     fam = life.state;
     life.notes.forEach((n) => {
       notes.push(`👪 ${n.title}`);
