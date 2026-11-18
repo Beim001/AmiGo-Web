@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { addLifeLog } from '../../lib/lifeLog';
 import { getBilibiliUserProfile } from '../../lib/bilibiliToy';
 import { validatePlayerName } from '../../utils/sensitiveWords';
+import i18n from '../../i18n';
 
 // 改名规则：每 30 天最多改名 2 次；名称含政治与合规敏感词时计违规，累计 3 次冻结改名 90 天，违规记录持久化。
 // 「同步 B 站资料」也会改名，同样受冻结与敏感词规则约束，因此一并放在这里。状态由 ProfileModal 持有，切换标签页不会丢失。
@@ -20,7 +21,7 @@ export const formatUnlockTime = (timestamp: number): string => {
   const hours = d.getHours() < 10 ? '0' + d.getHours() : d.getHours();
   const minutes = d.getMinutes() < 10 ? '0' + d.getMinutes() : d.getMinutes();
   const seconds = d.getSeconds() < 10 ? '0' + d.getSeconds() : d.getSeconds();
-  return `${year}年${month}月${date}日 ${hours}:${minutes}:${seconds}`;
+  return i18n.t('profile:nameChange.unlockTime', { year, month, date, hours, minutes, seconds });
 };
 
 // 获取过去30天内的改名时间戳
@@ -123,7 +124,7 @@ export const useNameChange = ({ playerName, setPlayerName, setBilibiliAvatar, se
         isFrozen: true,
         violationCount: politicalViolationCount,
       });
-      showToast('⚠️ 角色改名功能处于冻结状态，无法同步B站昵称');
+      showToast(i18n.t('profile:nameChange.frozenNoSync'));
       return;
     }
 
@@ -134,18 +135,18 @@ export const useNameChange = ({ playerName, setPlayerName, setBilibiliAvatar, se
     try {
       const { profile, isMock } = await getBilibiliUserProfile();
       if (profile && (profile.nickname || profile.avatar)) {
-        targetName = profile.nickname || 'B站玩家';
+        targetName = profile.nickname || i18n.t('profile:nameChange.bilibiliDefault');
         avatarUrl = profile.avatar || '';
         isMockEnv = isMock;
       }
     } catch (err: any) {
       console.warn('getBilibiliUserProfile error:', err);
-      showToast('获取B站资料未授权或使用默认昵称');
+      showToast(i18n.t('profile:nameChange.bilibiliUnauthorized'));
       return;
     }
 
     if (!targetName) {
-      targetName = '哔哩哔哩探险家_' + Math.floor(100 + Math.random() * 900);
+      targetName = i18n.t('profile:nameChange.bilibiliRandom', { n: Math.floor(100 + Math.random() * 900) });
       avatarUrl = 'https://i0.hdslb.com/bfs/face/member/noface.jpg';
     }
 
@@ -159,7 +160,7 @@ export const useNameChange = ({ playerName, setPlayerName, setBilibiliAvatar, se
             localStorage.setItem('amigo_political_violation_count', newCount.toString());
           } catch (e) {}
 
-          addViolationLog(targetName, validation.word || '违规词汇', validation.category || '政治与合规敏感');
+          addViolationLog(targetName, validation.word || i18n.t('profile:nameChange.violationWordFallback'), validation.category || '政治与合规敏感');
           setModalTab('info');
 
           if (newCount >= 3) {
@@ -184,7 +185,7 @@ export const useNameChange = ({ playerName, setPlayerName, setBilibiliAvatar, se
             });
           }
         }
-        showToast(`⚠️ B站昵称无法同步：${validation.reason}`);
+        showToast(i18n.t('profile:nameChange.bilibiliInvalid', { reason: validation.reason }));
         if (avatarUrl) setBilibiliAvatar(avatarUrl);
         return;
       }
@@ -194,7 +195,7 @@ export const useNameChange = ({ playerName, setPlayerName, setBilibiliAvatar, se
         setBilibiliAvatar(avatarUrl);
         setAvatarSource('social');
       }
-      showToast(`🎉 已成功同步B站资料: ${targetName} ${isMockEnv ? '(本地 Mock 模式)' : ''}`);
+      showToast(i18n.t('profile:nameChange.bilibiliSynced', { name: targetName, mock: isMockEnv ? i18n.t('profile:nameChange.mockMode') : '' }));
     }
   };
 
@@ -214,7 +215,7 @@ export const useNameChange = ({ playerName, setPlayerName, setBilibiliAvatar, se
         isFrozen: true,
         violationCount: politicalViolationCount,
       });
-      showToast(`🚨 改名功能已封禁冻结！解封时间：${formatUnlockTime(nameFreezeUntil)}`);
+      showToast(i18n.t('profile:nameChange.frozen', { time: formatUnlockTime(nameFreezeUntil) }));
       return;
     }
 
@@ -228,7 +229,7 @@ export const useNameChange = ({ playerName, setPlayerName, setBilibiliAvatar, se
           localStorage.setItem('amigo_political_violation_count', newCount.toString());
         } catch (e) {}
 
-        addViolationLog(nameInput, validation.word || '违规词汇', validation.category || '政治与合规敏感');
+        addViolationLog(nameInput, validation.word || i18n.t('profile:nameChange.violationWordFallback'), validation.category || '政治与合规敏感');
         setModalTab('info');
 
         if (newCount >= 3) {
@@ -245,7 +246,7 @@ export const useNameChange = ({ playerName, setPlayerName, setBilibiliAvatar, se
             violationCount: newCount,
             matchedWord: validation.word,
           });
-          showToast(`🚨 违规尝试已达 3 次！角色改名功能已被系统冻结 3 个月！`);
+          showToast(i18n.t('profile:nameChange.frozenNow'));
         } else {
           // 1次或2次尝试：显示弹窗预警
           setFreezeModalInfo({
@@ -254,10 +255,10 @@ export const useNameChange = ({ playerName, setPlayerName, setBilibiliAvatar, se
             violationCount: newCount,
             matchedWord: validation.word,
           });
-          showToast(`⚠️ 警告：检测到政治与合规敏感词！(已违规 ${newCount}/3 次)`);
+          showToast(i18n.t('profile:nameChange.warning', { count: newCount }));
         }
       } else {
-        showToast(`❌ 改名失败：${validation.reason}`);
+        showToast(i18n.t('profile:nameChange.failed', { reason: validation.reason }));
       }
       return;
     }
@@ -271,9 +272,9 @@ export const useNameChange = ({ playerName, setPlayerName, setBilibiliAvatar, se
       const dayStr = unlockTime.getDate();
       const hourStr = unlockTime.getHours();
       const minStr = unlockTime.getMinutes() < 10 ? '0' + unlockTime.getMinutes() : unlockTime.getMinutes();
-      const dateStr = `${monthStr}月${dayStr}日 ${hourStr}:${minStr}`;
+      const dateStr = i18n.t('profile:nameChange.quotaTime', { month: monthStr, day: dayStr, hour: hourStr, minute: minStr });
 
-      showToast(`❌ 改名失败：1个月内修改不能超过2次！解封时间：${dateStr}`);
+      showToast(i18n.t('profile:nameChange.quotaExceeded', { time: dateStr }));
       return;
     }
 
@@ -288,7 +289,7 @@ export const useNameChange = ({ playerName, setPlayerName, setBilibiliAvatar, se
     setIsEditingName(false);
     const remaining = 2 - updatedTimestamps.length;
     addLifeLog('成长', '改名', `改名为「${trimmed}」。`);
-    showToast(`🎉 昵称成功修改为 [${trimmed}]！(本月剩余改名次数: ${remaining}/2)`);
+    showToast(i18n.t('profile:nameChange.renamed', { name: trimmed, remaining }));
   };
 
   return {

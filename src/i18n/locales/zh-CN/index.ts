@@ -9,5 +9,7 @@ import sim from './sim.json';
 import family from './family.json';
 import app from './app.json';
 import game from './game.json';
+import profile from './profile.json';
+import season from './season.json';
 
-export const zhCN = { common, auth, nav, log, funct, role, simple, sim, family, app, game };
+export const zhCN = { common, auth, nav, log, funct, role, simple, sim, family, app, game, profile, season };

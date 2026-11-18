@@ -4,6 +4,7 @@ import { TOTAL_CLOTHING_COUNT } from '../ShopModal';
 import type { ProfileModalProps } from '../ProfileModal';
 import type { NameChange } from './useNameChange';
 import type { JobPosition } from './InfoTab';
+import { useTranslation } from 'react-i18next';
 
 // 个人中心顶部名片：头像、昵称与改名、身份标签、邮箱、UID，以及声望、推演积分、服装数
 
@@ -36,6 +37,7 @@ export const ProfileHeader = ({
   handleCopyUid,
   ownedClothingCount,
 }: ProfileHeaderProps) => {
+  const { t } = useTranslation('profile');
   const { isEditingName, setIsEditingName, nameInput, setNameInput, handleSaveName, remainingQuota, politicalViolationCount, nameFreezeUntil, setFreezeModalInfo } = nameChange;
   return (
     <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] relative">
@@ -45,14 +47,14 @@ export const ProfileHeader = ({
           <div
             onClick={() => setIsAvatarModalOpen(true)}
             className="relative w-20 h-20 rounded-2xl bg-[#181924] border-2 border-black p-1 shadow-[0_4px_0_#000] flex items-center justify-center overflow-hidden cursor-pointer hover:scale-105 active:scale-95 transition-all group shrink-0"
-            title="点击打开头像选择设置界面"
+            title={t('header.avatarHint')}
           >
             <div className="w-full h-full bg-[#1b1c25] rounded-xl flex items-center justify-center overflow-hidden relative">
               {renderAvatarContent()}
             </div>
             <div className="absolute inset-x-0 bottom-0 bg-black/80 text-yellow-400 text-[8px] font-black py-0.5 text-center border-t border-black backdrop-blur-xs flex items-center justify-center gap-0.5 group-hover:bg-amber-400 group-hover:text-black transition-colors">
               <Camera size={9} />
-              <span>更换</span>
+              <span>{t('header.changeAvatar')}</span>
             </div>
           </div>
         </div>
@@ -68,13 +70,13 @@ export const ProfileHeader = ({
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
                     maxLength={10}
-                    placeholder="2-10字非敏感名称"
+                    placeholder={t('header.namePlaceholder')}
                     className="bg-[#1b1c25] text-white font-black text-xs px-2 py-1 rounded border-2 border-yellow-400 focus:outline-none flex-1 min-w-0"
                   />
                   <button
                     onClick={handleSaveName}
                     className="bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black p-1.5 rounded border border-black shadow-[0_1px_0_#000] cursor-pointer flex-shrink-0"
-                    title="保存昵称"
+                    title={t('header.saveName')}
                   >
                     <Check size={14} />
                   </button>
@@ -84,7 +86,7 @@ export const ProfileHeader = ({
                       setNameInput(playerName);
                     }}
                     className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-black p-1.5 rounded border border-black cursor-pointer flex-shrink-0"
-                    title="取消"
+                    title={t('header.cancel')}
                   >
                     <X size={14} />
                   </button>
@@ -92,12 +94,12 @@ export const ProfileHeader = ({
                 <div className="flex items-center justify-between text-[9px] text-yellow-300 font-bold bg-[#1b1c25] px-2 py-0.5 rounded border border-yellow-500/40">
                   <div className="flex items-center gap-1">
                     <Info size={10} className="text-yellow-400" />
-                    <span>本月改名额度: <span className="font-mono text-white">{remainingQuota}/2</span></span>
+                    <span>{t('header.quota')}<span className="font-mono text-white">{remainingQuota}/2</span></span>
                   </div>
                   {politicalViolationCount > 0 ? (
-                    <span className="text-red-400 font-mono font-bold">敏感词警示: {politicalViolationCount}/3次</span>
+                    <span className="text-red-400 font-mono font-bold">{t('header.violations', { count: politicalViolationCount })}</span>
                   ) : (
-                    <span className="text-gray-400">禁敏感词/官方伪冒</span>
+                    <span className="text-gray-400">{t('header.nameRule')}</span>
                   )}
                 </div>
               </div>
@@ -114,10 +116,10 @@ export const ProfileHeader = ({
                       });
                     }}
                     className="text-red-400 hover:text-red-300 p-1 cursor-pointer flex items-center gap-1 text-[10px] font-bold bg-red-950/80 px-1.5 py-0.5 rounded border border-red-500/60"
-                    title="改名功能已冻结，点击查看解封时间"
+                    title={t('header.frozenHint')}
                   >
                     <Lock size={11} className="text-red-400" />
-                    <span>已冻结 (查看)</span>
+                    <span>{t('header.frozen')}</span>
                   </button>
                 ) : (
                   <button
@@ -136,7 +138,7 @@ export const ProfileHeader = ({
                     className="text-yellow-400 hover:text-yellow-300 p-1 cursor-pointer flex items-center gap-1 text-[10px] font-bold bg-[#1b1c25] px-1.5 py-0.5 rounded border border-yellow-500/40"
                   >
                     <Edit2 size={12} />
-                    <span>改名</span>
+                    <span>{t('header.rename')}</span>
                   </button>
                 )}
               </>
@@ -146,10 +148,10 @@ export const ProfileHeader = ({
           {/* Title & UID */}
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             <span className="bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded border border-black shadow-[0_1px_0_#000]">
-              {isRegistered ? `帝国公民 · ${age} 岁` : '未登记公民'}
+              {isRegistered ? t('header.citizen', { age }) : t('header.unregistered')}
             </span>
             <span className="bg-purple-900/80 text-purple-200 text-[10px] font-black px-2 py-0.5 rounded border border-purple-500">
-              {currentJob ? currentJob.title : '待业'}
+              {currentJob ? currentJob.title : t('header.unemployed')}
             </span>
           </div>
 
@@ -162,7 +164,7 @@ export const ProfileHeader = ({
                 }
               }}
               className="mt-1.5 text-[10px] text-amber-300 font-mono font-bold bg-[#1b1c25] hover:bg-[#232635] px-2 py-1 rounded-lg border border-yellow-500/30 flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-98 shadow-[0_1px_0_#000]"
-              title="点击打开 AmiGo 账户中心（管理账号 / 退出登录）"
+              title={t('header.accountHint')}
             >
               <div className="flex items-center gap-1 min-w-0">
                 <Mail size={11} className="text-yellow-400 shrink-0" />
@@ -170,7 +172,7 @@ export const ProfileHeader = ({
               </div>
               <div className="text-[9px] text-emerald-300 bg-emerald-950/80 hover:bg-emerald-900/90 border border-emerald-500/50 px-1.5 py-0.5 rounded shrink-0 font-sans font-bold flex items-center gap-0.5 transition-all">
                 <ShieldCheck size={10} className="text-emerald-400" />
-                <span>已验证 (账户中心)</span>
+                <span>{t('header.verified')}</span>
               </div>
             </div>
           )}
@@ -180,15 +182,15 @@ export const ProfileHeader = ({
             <div className="flex items-center gap-2">
               <span>
                 UID: <span className="text-yellow-300 font-bold">{displayUid}</span>
-                {authUser?.uid && <span className="text-[9px] text-gray-400 font-normal ml-1">(前8位)</span>}
+                {authUser?.uid && <span className="text-[9px] text-gray-400 font-normal ml-1">{t('header.uidPrefix')}</span>}
               </span>
               <button
                 onClick={handleCopyUid}
                 className="text-gray-200 hover:text-white flex items-center gap-1 bg-[#1b1c25] hover:bg-[#252838] px-2 py-0.5 rounded border border-black cursor-pointer text-[10px] active:scale-95 transition-all shadow-[0_1px_0_#000]"
-                title={`完整 UID: ${fullUid} (点击复制全称)`}
+                title={t('header.uidCopyHint', { uid: fullUid })}
               >
                 {copiedUid ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
-                <span>{copiedUid ? '已复制' : '复制完整UID'}</span>
+                <span>{copiedUid ? t('header.copied') : t('header.copyUid')}</span>
               </button>
             </div>
           </div>
@@ -198,16 +200,16 @@ export const ProfileHeader = ({
       {/* Quick Stat Bar */}
       <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-gray-700/80 text-center">
         <div className="bg-[#21232e] p-2 rounded-xl border border-black">
-          <div className="text-[10px] text-gray-400 font-bold">声望等级</div>
+          <div className="text-[10px] text-gray-400 font-bold">{t('header.reputation')}</div>
           <div className="text-yellow-400 font-black text-xs mt-0.5">{reputationLevel(reputation)} ({reputation})</div>
         </div>
         <div className="bg-[#21232e] p-2 rounded-xl border border-black">
-          <div className="text-[10px] text-gray-400 font-bold">推演积分</div>
-          <div className="text-white font-black text-xs mt-0.5">{simScore} 分</div>
+          <div className="text-[10px] text-gray-400 font-bold">{t('header.simScore')}</div>
+          <div className="text-white font-black text-xs mt-0.5">{t('header.simScoreValue', { score: simScore })}</div>
         </div>
         <div className="bg-[#21232e] p-2 rounded-xl border border-black">
-          <div className="text-[10px] text-gray-400 font-bold">拥有服装</div>
-          <div className="text-emerald-400 font-black text-xs mt-0.5">{ownedClothingCount} / {TOTAL_CLOTHING_COUNT} 套</div>
+          <div className="text-[10px] text-gray-400 font-bold">{t('header.clothing')}</div>
+          <div className="text-emerald-400 font-black text-xs mt-0.5">{t('header.clothingValue', { owned: ownedClothingCount, total: TOTAL_CLOTHING_COUNT })}</div>
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { CurrencyIcon } from '../CurrencyIcon';
 import { SeasonRankPanel } from '../SeasonRankPanel';
 import type { ProfileModalProps } from '../ProfileModal';
 import type { RankBoard } from './useRankBoard';
+import { useTranslation } from 'react-i18next';
 
 // 「排行榜」标签页：B 站 Toy SDK 财富榜与推演榜（周期切换、上报成绩、同步 B 站资料），以及本赛季 / 以往赛季排行
 
@@ -12,6 +13,7 @@ interface RankTabProps extends Pick<ProfileModalProps, 'playerName' | 'lazy' | '
 }
 
 export const RankTab = ({ rank, handleSyncBilibiliProfile, playerName, lazy, coins, simScore, bilibiliAvatar, seasonMine, canRankSeason }: RankTabProps) => {
+  const { t } = useTranslation('profile');
   const { board, setBoard, period, setPeriod, rankList, myRank, isSdkLoading, refreshRankData, handleSubmitScore } = rank;
   return (
     <div className="space-y-3">
@@ -20,9 +22,9 @@ export const RankTab = ({ rank, handleSyncBilibiliProfile, playerName, lazy, coi
         <div className="flex items-center justify-between border-b border-gray-700/80 pb-2">
           <div className="flex items-center gap-1.5">
             <Trophy size={18} className="text-yellow-400" />
-            <span className="text-white font-black text-xs">全服帝国荣耀榜</span>
+            <span className="text-white font-black text-xs">{t('rank.title')}</span>
             <span className="text-[9px] bg-pink-500/20 text-pink-300 border border-pink-500/50 px-1.5 py-0.2 rounded font-bold">
-              Toy SDK 连通
+              {t('rank.sdkConnected')}
             </span>
           </div>
           <button
@@ -31,7 +33,7 @@ export const RankTab = ({ rank, handleSyncBilibiliProfile, playerName, lazy, coi
             className="text-gray-300 hover:text-white flex items-center gap-1 bg-[#21232e] px-2 py-1 rounded-lg border border-black text-[10px] font-black cursor-pointer active:scale-95"
           >
             <RefreshCw size={12} className={isSdkLoading ? 'animate-spin text-yellow-400' : ''} />
-            <span>{isSdkLoading ? '同步中...' : '刷新榜单'}</span>
+            <span>{isSdkLoading ? t('rank.syncing') : t('rank.refresh')}</span>
           </button>
         </div>
 
@@ -42,14 +44,14 @@ export const RankTab = ({ rank, handleSyncBilibiliProfile, playerName, lazy, coi
             className="bg-[#fb7299] hover:bg-[#e05d83] text-white text-[11px] font-black py-2 px-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] flex items-center justify-center gap-1 cursor-pointer active:translate-y-0.5"
           >
             <UserCheck size={14} />
-            <span>同步B站资料</span>
+            <span>{t('rank.syncBilibili')}</span>
           </button>
           <button
             onClick={handleSubmitScore}
             className="bg-emerald-500 hover:bg-emerald-400 text-black text-[11px] font-black py-2 px-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] flex items-center justify-center gap-1 cursor-pointer active:translate-y-0.5"
           >
             <Upload size={14} />
-            <span>上报我的成绩</span>
+            <span>{t('rank.submit')}</span>
           </button>
         </div>
       </div>
@@ -65,7 +67,7 @@ export const RankTab = ({ rank, handleSyncBilibiliProfile, playerName, lazy, coi
           }`}
         >
           <CurrencyIcon size={13} />
-          <span>帝国财富榜</span>
+          <span>{t('rank.wealthBoard')}</span>
         </button>
         <button
           onClick={() => setBoard(3)}
@@ -76,11 +78,11 @@ export const RankTab = ({ rank, handleSyncBilibiliProfile, playerName, lazy, coi
           }`}
         >
           <Swords size={13} />
-          <span>推演战绩榜</span>
+          <span>{t('rank.simBoard')}</span>
         </button>
         {([
-          [10, '本赛季'],
-          [11, '以往赛季'],
+          [10, t('rank.currentSeason')],
+          [11, t('rank.pastSeasons')],
         ] as const).map(([id, label]) => (
           <button
             key={id}
@@ -102,14 +104,14 @@ export const RankTab = ({ rank, handleSyncBilibiliProfile, playerName, lazy, coi
 
       {/* Period Selector (week / month / all / day) */}
       <div className="flex items-center justify-between bg-[#21232e] px-2 py-1 rounded-xl border border-black text-xs font-bold">
-        <span className="text-gray-400 text-[10px]">统计周期:</span>
+        <span className="text-gray-400 text-[10px]">{t('rank.period')}</span>
         <div className="flex gap-1">
           {(
             [
-              { id: 'week', label: '本周' },
-              { id: 'month', label: '本月' },
-              { id: 'all', label: '总榜' },
-              { id: 'day', label: '今日' },
+              { id: 'week', label: t('rank.periods.week') },
+              { id: 'month', label: t('rank.periods.month') },
+              { id: 'all', label: t('rank.periods.all') },
+              { id: 'day', label: t('rank.periods.day') },
             ] as const
           ).map((p) => (
             <button
@@ -131,18 +133,18 @@ export const RankTab = ({ rank, handleSyncBilibiliProfile, playerName, lazy, coi
       <div className="bg-gradient-to-r from-[#2a3852] to-[#1f283d] border-2 border-yellow-500/80 rounded-2xl p-3 shadow-[0_3px_0_#000] flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-yellow-400 border-2 border-black flex items-center justify-center font-black text-black text-sm shadow-[0_2px_0_#000] flex-shrink-0">
-            {myRank.ranked ? `第${myRank.rank}名` : '未上榜'}
+            {myRank.ranked ? t('rank.myRank', { rank: myRank.rank }) : t('rank.unranked')}
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-white font-black text-xs">{playerName}</span>
-              {lazy && <span className="text-[9px] font-black px-1 rounded border border-black bg-gray-500 text-white" title="这一世用过简洁模式">偷懒</span>}
+              {lazy && <span className="text-[9px] font-black px-1 rounded border border-black bg-gray-500 text-white" title={t('rank.lazyHint')}>{t('rank.lazy')}</span>}
               <span className="bg-yellow-400 text-black text-[9px] font-black px-1.5 rounded border border-black">
-                我
+                {t('rank.me')}
               </span>
             </div>
             <div className="text-gray-300 text-[10px] font-mono mt-0.5">
-              当前积分: <span className="text-yellow-300 font-bold">{myRank.score > 0 ? myRank.score.toLocaleString() : (board === 1 ? coins : simScore).toLocaleString()}</span>
+              {t('rank.currentScore')}<span className="text-yellow-300 font-bold">{myRank.score > 0 ? myRank.score.toLocaleString() : (board === 1 ? coins : simScore).toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -150,7 +152,7 @@ export const RankTab = ({ rank, handleSyncBilibiliProfile, playerName, lazy, coi
           onClick={handleSubmitScore}
           className="bg-yellow-400 hover:bg-yellow-300 text-black text-[10px] font-black px-3 py-1.5 rounded-lg border border-black shadow-[0_1px_0_#000] cursor-pointer active:scale-95"
         >
-          刷新名次
+          {t('rank.refreshRank')}
         </button>
       </div>
 
@@ -204,12 +206,12 @@ export const RankTab = ({ rank, handleSyncBilibiliProfile, playerName, lazy, coi
                     </span>
                     {isMe && (
                       <span className="bg-yellow-400 text-black text-[8px] font-black px-1 rounded border border-black flex-shrink-0">
-                        你
+                        {t('rank.you')}
                       </span>
                     )}
                   </div>
                   <div className="text-[9px] text-gray-400 font-mono">
-                    {board === 1 ? '现金资产' : '推演胜分'}
+                    {board === 1 ? t('rank.cashAssets') : t('rank.simPoints')}
                   </div>
                 </div>
               </div>
@@ -220,7 +222,7 @@ export const RankTab = ({ rank, handleSyncBilibiliProfile, playerName, lazy, coi
                   {item.score.toLocaleString()}
                 </div>
                 <div className="text-[9px] text-gray-500 font-bold">
-                  {item.rank <= 3 ? '👑 殿堂级' : '排名有效'}
+                  {item.rank <= 3 ? t('rank.hall') : t('rank.valid')}
                 </div>
               </div>
             </div>

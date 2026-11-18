@@ -6,6 +6,7 @@
 import { currentSeason } from '../data/seasons';
 import { ACHIEVEMENTS, ACHIEVEMENTS_KEY, CREDITS_SEEN_KEY, GIFTS_GIVEN_KEY, AchievementRecord } from './achievements';
 import { classRank } from './lineage';
+import i18n from '../i18n';
 
 export const SEASON_ID_KEY = 'amigo_season_id';
 export const SEASON_JOINED_KEY = 'amigo_season_joined_at';
@@ -92,5 +93,5 @@ export const formatDuration = (ms: number): string => {
   const d = Math.floor(min / 1440);
   const h = Math.floor((min % 1440) / 60);
   const m = min % 60;
-  return [d ? `${d} 天` : '', h ? `${h} 小时` : '', `${m} 分`].filter(Boolean).join(' ');
+  return [d ? i18n.t('common:duration.day', { count: d }) : '', h ? i18n.t('common:duration.hour', { count: h }) : '', i18n.t('common:duration.minute', { count: m })].filter(Boolean).join(' ');
 };

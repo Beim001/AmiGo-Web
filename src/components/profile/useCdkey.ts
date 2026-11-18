@@ -3,6 +3,7 @@ import type React from 'react';
 import { TEST_CODE, isBetaVersion } from '../../lib/testCode';
 import { loadStored, saveStored } from '../../lib/storage';
 import { CURRENCY } from '../../data/seasons';
+import i18n from '../../i18n';
 import { CLOTHING_COUPON_CODE, CLOTHING_COUPON_USES, loadCouponLeft, saveCouponLeft } from '../../lib/clothingCoupon';
 
 // 礼包码兑换：已兑换列表持久化；测试兑换码只在测试版本可用，可无限次兑换（第 57 题）
@@ -27,17 +28,17 @@ export const useCdkey = ({ setCoins, showToast, onRedeemTestCode }: {
   const handleRedeemCdkey = () => {
     const code = cdkeyInput.trim().toUpperCase();
     if (!code) {
-      showToast('请输入有效的礼包兑换码！');
+      showToast(i18n.t('profile:cdkeyToast.empty'));
       return;
     }
     // 测试兑换码：只在测试版本可用，可无限次兑换（第 57 题）
     if (code === TEST_CODE) {
       setCdkeyInput('');
-      showToast(isBetaVersion() && onRedeemTestCode ? onRedeemTestCode() : '❌ 该兑换码只能在测试版本中使用');
+      showToast(isBetaVersion() && onRedeemTestCode ? onRedeemTestCode() : i18n.t('profile:cdkeyToast.betaOnly'));
       return;
     }
     if (redeemedCodes.includes(code)) {
-      showToast('该兑换码已被使用过！');
+      showToast(i18n.t('profile:cdkeyToast.used'));
       return;
     }
 
@@ -46,13 +47,13 @@ export const useCdkey = ({ setCoins, showToast, onRedeemTestCode }: {
       saveCouponLeft(left);
       setCouponLeft(left);
       markRedeemed(code);
-      showToast(`🎟️ 兑换成功！接下来 ${CLOTHING_COUPON_USES} 次购买服饰享 7 折`);
+      showToast(i18n.t('profile:cdkeyToast.coupon', { uses: CLOTHING_COUPON_USES }));
     } else if (code === 'VALENTINE' || code === '2026' || code === '666666' || code === 'GIFT2026') {
       setCoins(prev => prev + 50000);
       markRedeemed(code);
-      showToast(`🎉 兑换成功！获得 50,000 ${CURRENCY.name}！`);
+      showToast(i18n.t('profile:cdkeyToast.coins', { currency: CURRENCY.name }));
     } else {
-      showToast('❌ 无效的兑换码，请输入 GIFT2026 或 666666 试用');
+      showToast(i18n.t('profile:cdkeyToast.invalid'));
     }
   };
 

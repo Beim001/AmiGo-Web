@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { getBilibiliRankList, getBilibiliMyRank, submitBilibiliScore } from '../../lib/bilibiliToy';
+import i18n from '../../i18n';
 
 // 排行榜数据：board 1 财富榜、3 推演榜走 B 站 Toy SDK（失败时用本地兜底榜单），10 / 11 为赛季排行（由 SeasonRankPanel 自行读取）。
 // 状态由 ProfileModal 持有，切换标签页后仍保留所选榜单与周期；只在「排行榜」标签页打开时刷新。
@@ -79,10 +80,10 @@ export const useRankBoard = ({ subTab, coins, playerName, simScore, showToast }:
 
     try {
       const res = await submitBilibiliScore(board, scoreToSubmit);
-      showToast(`⚡ 成绩已成功上报并同步! 最高分: ${(res.score || scoreToSubmit).toLocaleString()} ${res.isMock ? '(Mock 模式)' : ''}`);
+      showToast(i18n.t('profile:rank.submitted', { score: (res.score || scoreToSubmit).toLocaleString(), mock: res.isMock ? i18n.t('profile:rank.mockMode') : '' }));
       refreshRankData(board, period);
     } catch (err) {
-      showToast(`⚡ 分数提交成功！获得最新战报分: ${scoreToSubmit.toLocaleString()}`);
+      showToast(i18n.t('profile:rank.submittedPlain', { score: scoreToSubmit.toLocaleString() }));
       refreshRankData(board, period);
     }
   };

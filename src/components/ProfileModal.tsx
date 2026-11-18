@@ -14,6 +14,7 @@ import { NameFreezeModal } from './profile/NameFreezeModal';
 import { useNameChange } from './profile/useNameChange';
 import { useRankBoard } from './profile/useRankBoard';
 import { useCdkey } from './profile/useCdkey';
+import { useTranslation } from 'react-i18next';
 
 // 个人中心：名片资料、帝国排行榜与赛季排行、成就与致谢名单、系统设置、礼包兑换、关于我们。
 // 各标签页的界面在 profile/ 目录下；需要跨标签页保留的状态由这里持有（改名、排行榜、礼包兑换的状态逻辑见 profile/use*.ts）。
@@ -97,6 +98,7 @@ export const ProfileModal = ({
   canRankSeason = false,
   onRedeemTestCode,
 }: ProfileModalProps) => {
+  const { t } = useTranslation('profile');
   // 名片资料：读取真实游戏状态（岗位、房产、服装）
   const currentJob = (() => {
     const id = readCurrentJobId();
@@ -107,10 +109,10 @@ export const ProfileModal = ({
       const props = JSON.parse(localStorage.getItem('amigo_owned_properties') || '[]');
       if (Array.isArray(props) && props.length > 0) {
         const primary = props.find((p: any) => p.isPrimaryResidence) || props[0];
-        return props.length > 1 ? `${primary.title} 等 ${props.length} 套` : primary.title;
+        return props.length > 1 ? t('propertyMany', { title: primary.title, count: props.length }) : primary.title;
       }
       const rental = JSON.parse(localStorage.getItem('amigo_current_rental') || 'null');
-      if (rental?.title) return `租住：${rental.title}`;
+      if (rental?.title) return t('renting', { title: rental.title });
     } catch (e) {}
     return null;
   })();
@@ -160,7 +162,7 @@ export const ProfileModal = ({
   const handleCopyUid = () => {
     navigator.clipboard?.writeText(fullUid);
     setCopiedUid(true);
-    showToast(`已复制真实完整 UID: ${fullUid}`);
+    showToast(t('uidCopied', { uid: fullUid }));
     setTimeout(() => setCopiedUid(false), 2000);
   };
 
@@ -188,7 +190,7 @@ export const ProfileModal = ({
           </button>
           <div className="flex-1 flex justify-center items-center -ml-10 pointer-events-none">
              <span className="text-white text-3xl font-black tracking-widest" style={{ textShadow: '-2px -2px 0 #072a66, 2px -2px 0 #072a66, -2px 2px 0 #072a66, 2px 2px 0 #072a66, 0 4px 6px rgba(0,0,0,0.6)' }}>
-               个人中心
+               {t('title')}
              </span>
           </div>
         </div>
@@ -226,7 +228,7 @@ export const ProfileModal = ({
                 : 'text-gray-400 border-transparent hover:text-white'
             }`}
           >
-            名片资料
+            {t('tabs.info')}
           </button>
           <button
             onClick={() => setSubTab('rank')}
@@ -237,7 +239,7 @@ export const ProfileModal = ({
             }`}
           >
             <Trophy size={11} className={subTab === 'rank' ? 'text-black' : 'text-yellow-400'} />
-            <span>排行榜</span>
+            <span>{t('tabs.rank')}</span>
           </button>
           <button
             onClick={() => setSubTab('achievement')}
@@ -247,7 +249,7 @@ export const ProfileModal = ({
                 : 'text-gray-400 border-transparent hover:text-white'
             }`}
           >
-            成就勋章
+            {t('tabs.achievement')}
           </button>
           <button
             onClick={() => setSubTab('settings')}
@@ -257,7 +259,7 @@ export const ProfileModal = ({
                 : 'text-gray-400 border-transparent hover:text-white'
             }`}
           >
-            系统设置
+            {t('tabs.settings')}
           </button>
           <button
             onClick={() => setSubTab('cdkey')}
@@ -267,7 +269,7 @@ export const ProfileModal = ({
                 : 'text-gray-400 border-transparent hover:text-white'
             }`}
           >
-            礼包兑换
+            {t('tabs.cdkey')}
           </button>
           <button
             onClick={() => setSubTab('about')}
@@ -277,7 +279,7 @@ export const ProfileModal = ({
                 : 'text-gray-400 border-transparent hover:text-white'
             }`}
           >
-            关于我们
+            {t('tabs.about')}
           </button>
         </div>
 
@@ -346,7 +348,7 @@ export const ProfileModal = ({
 
         {/* Footer info */}
         <div className="text-center text-gray-500 text-[10px] font-bold pt-2">
-          AmiGO Lite v1.2.0 · 玩家 UID: {displayUid}
+          {t('footer', { uid: displayUid })}
         </div>
       </div>
 
@@ -361,7 +363,7 @@ export const ProfileModal = ({
         onSelectAvatar={(src) => {
           setAvatarSource(src);
           try { localStorage.setItem('amigo_avatar_source', src); } catch (e) {}
-          showToast('头像设置已修改！');
+          showToast(t('avatarChanged'));
         }}
         authUser={authUser ?? null}
         bilibiliAvatar={bilibiliAvatar}

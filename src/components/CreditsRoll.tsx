@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { X, RotateCcw } from 'lucide-react';
 import { CREDIT_SECTIONS, CREDITS_INTRO, creditsHeadline } from '../data/credits';
 import { APP_VERSION } from '../version';
+import { useTranslation } from 'react-i18next';
 
 export interface CreditsRollProps {
   /** 全成就名次；null 表示未知（显示不带名次的祝贺语） */
@@ -16,6 +17,7 @@ const SPEED = 40;
 
 /** 致谢名单：片尾式从下往上滚动；可跳过，播完后可重播 */
 export const CreditsRoll: React.FC<CreditsRollProps> = ({ rank, loading, onClose }) => {
+  const { t } = useTranslation('profile');
   const viewportRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [finished, setFinished] = useState(false);
@@ -64,20 +66,20 @@ export const CreditsRoll: React.FC<CreditsRollProps> = ({ rank, loading, onClose
             onClick={() => setRound((r) => r + 1)}
             className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white text-xs font-black px-3 py-1.5 rounded-xl border border-white/30 cursor-pointer"
           >
-            <RotateCcw size={14} /> 重播
+            <RotateCcw size={14} /> {t('credits.replay')}
           </button>
         )}
         <button
           onClick={onClose}
           className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white text-xs font-black px-3 py-1.5 rounded-xl border border-white/30 cursor-pointer"
         >
-          <X size={14} /> {finished ? '关闭' : '跳过'}
+          <X size={14} /> {finished ? t('credits.close') : t('credits.skip')}
         </button>
       </div>
 
       <div ref={viewportRef} className={`flex-1 ${finished ? 'overflow-y-auto' : 'overflow-hidden'}`}>
         {loading ? (
-          <div className="h-full flex items-center justify-center text-gray-400 text-sm font-bold">正在查询你的名次……</div>
+          <div className="h-full flex items-center justify-center text-gray-400 text-sm font-bold">{t('credits.loadingRank')}</div>
         ) : (
           <div
             key={round}
