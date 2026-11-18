@@ -6,6 +6,7 @@
 // - 失业补贴：阿米诺斯维基中卡罗尼亚帝国时期没有失业救济的设定（失业救济是联邦时代工党的主张），暂不发放
 
 import type { ClassId } from './lineage';
+import { buildFamilyMembers, FamilyState, FamilyViewParams } from './family';
 
 /** 父母好感度需高于此值才会给零花 */
 export const ALLOWANCE_MIN_AFFINITY = 30;
@@ -95,4 +96,12 @@ export const computeAllowance = (
       return { name: p.name, relation: p.relation, amount };
     });
   return { total: parts.reduce((s, p) => s + p.amount, 0), parts };
+};
+
+/** 按族谱中的父母（职业收入、好感度、是否在世）计算本月零花 */
+export const familyAllowance = (family: FamilyState, view: FamilyViewParams, age: number, classId: string) => {
+  const parents = buildFamilyMembers(family, view)
+    .filter((m) => m.kin === 'parent' && !m.isPlayer)
+    .map((m) => ({ name: m.name, relation: m.relation, occupation: m.occupation, affinity: m.affinity, status: m.status }));
+  return computeAllowance(parents, age, classId, !!family.playerIllegitimate);
 };

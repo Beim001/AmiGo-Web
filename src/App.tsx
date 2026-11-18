@@ -13,9 +13,9 @@ import { SimTab } from './components/SimTab';
 import { LogTab } from './components/LogTab';
 import { FamilyTab } from './components/FamilyTab';
 import { MarriageModal } from './components/MarriageModal';
-import { FamilyState, INITIAL_FAMILY_STATE, demoteFamily, monthlyFamilyLife, childLifespan, ageAt, checkCoup, INTIMACY_MULTIPLIER, generateSpouseCandidates, marry, MARRIAGE_FEE, MARRIAGE_MIN_AGE, SPOUSE_MEMBER_ID, canInteract, applyInteraction, GIFT_COST, promoteFamily, getHeirlooms, addHeirloom, tryHaveChild, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, tryIllegitimateChild, monthlyFamilyDrift, LOVER_UPKEEP, SPLIT_CASH_SHARE, FamilyMemberView } from './lib/family';
-import { randomTraits, affinityBonus, withBirthPrivilege, rollMaintenance, fertileMaxAge, MAINTENANCE_COST, FERTILITY_TRAITS, SIMPLE_MAINTENANCE_CHANCE, SIMPLE_MAINTENANCE_RESERVE, PLAYER_TRAITS_KEY, diseaseTraitMultiplier, decayReduction, salaryMultiplier, depositInterestMultiplier, traitNames, traitById } from './lib/traits';
-import { REPUTATION_KEY, REP, HIGH_SALARY, clampReputation, CHARITY_KEY, CHARITY_UNIT, charityRemaining } from './lib/reputation';
+import { FamilyState, INITIAL_FAMILY_STATE, childLifespan, ageAt, generateSpouseCandidates, marry, MARRIAGE_FEE, MARRIAGE_MIN_AGE, SPOUSE_MEMBER_ID, canInteract, applyInteraction, GIFT_COST, getHeirlooms, addHeirloom, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, FamilyMemberView } from './lib/family';
+import { randomTraits, affinityBonus, withBirthPrivilege, rollMaintenance, fertileMaxAge, MAINTENANCE_COST, FERTILITY_TRAITS, SIMPLE_MAINTENANCE_CHANCE, SIMPLE_MAINTENANCE_RESERVE, PLAYER_TRAITS_KEY, traitNames, traitById } from './lib/traits';
+import { REPUTATION_KEY, REP, clampReputation, CHARITY_KEY, CHARITY_UNIT, charityRemaining } from './lib/reputation';
 import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, unlockAllForTesting, clearAchievementsForTesting, hasAllAchievements, CREDITS_SEEN_KEY, CREDITS_RANK_KEY, readGiftsGiven, recordGiftsGiven } from './lib/achievements';
 import { CreditsRoll } from './components/CreditsRoll';
 import { Appearance, APPEARANCE_KEY, randomAppearance, rollBeauty, applyBeauty, BEAUTY_TRAIT } from './lib/appearance';
@@ -25,29 +25,28 @@ import { GOD_MODE_KEY, GOD_COINS } from './lib/testCode';
 import { ANTIBODY_KEY, VACCINE_SUCCESS, vaccinesAvailable, immunityAfterRecovery, antibodyNames, diseaseById, DISEASES } from './lib/disease';
 import { SimpleModeView, SimpleCard } from './components/SimpleModeView';
 import { SIMPLE_MODE_KEY, autoOptionIndex, recommendJobs, recommendHome, shouldSuggestHome, buyRecommended, sellAll } from './lib/simpleMode';
-import { GiftInventory, GIFT_INVENTORY_KEY, GIFT_TASTE_LABEL, CHILD_AGE as GIFT_CHILD_AGE, addGifts, driftGiftTastes, giftCount, giftById, giftAffinityGain, removeGift } from './lib/gifts';
+import { GiftInventory, GIFT_INVENTORY_KEY, addGifts, giftCount, giftById, giftAffinityGain, removeGift } from './lib/gifts';
 import { claimCompletionRank, submitSeasonScore } from './lib/authClient';
-import { GUARDIANSHIP_KEY, Guardianship, takeCustody, monthlyGuardianship, ORPHANAGE_NAME, ADULT_AGE as GUARDIAN_ADULT_AGE } from './lib/guardianship';
+import { GUARDIANSHIP_KEY, Guardianship, takeCustody, ORPHANAGE_NAME, ADULT_AGE as GUARDIAN_ADULT_AGE } from './lib/guardianship';
 import { rankFamilies, familyNetWorth } from './lib/familyRank';
-import { rollClass, generateOrigin, classById, readChildJob, CHILD_JOB_KEY, CHILD_LABOR_MAX_AGE, CHILD_JOBS, checkPromotion, checkDemotion, PLAYER_LIFESPAN_KEY, rollPlayerLifespan } from './lib/lineage';
+import { rollClass, generateOrigin, classById, readChildJob, CHILD_JOB_KEY, CHILD_LABOR_MAX_AGE, CHILD_JOBS, PLAYER_LIFESPAN_KEY, rollPlayerLifespan } from './lib/lineage';
 import { applySurname } from './lib/names';
-import { Auction, AUCTION_KEY, AUCTION_CHANCE, TICKET_PRICE, generateAuction, raiseBid, buyoutLot, passLot, normalizeLot, isInvited, heirloomById, heirloomsValue } from './lib/heirlooms';
+import { Auction, AUCTION_KEY, TICKET_PRICE, generateAuction, raiseBid, buyoutLot, passLot, normalizeLot, isInvited, heirloomById, heirloomsValue } from './lib/heirlooms';
 import { AuctionModal } from './components/AuctionModal';
-import { progressDisease, diseaseInfo, DISEASE_KEY, ActiveDisease } from './lib/disease';
+import { diseaseInfo, DISEASE_KEY, ActiveDisease } from './lib/disease';
 import { SuccessionModal } from './components/SuccessionModal';
-import { SimEventInstance, rollMonthlyEvent, eventDef, resolveOption, optionBlocked, SIM_EVENTS_KEY, SIM_SCORE_KEY, SIM_QUIET_KEY, readSimRecent, recordSimRecent } from './lib/simEvents';
+import { SimEventInstance, eventDef, resolveOption, optionBlocked, SIM_EVENTS_KEY, SIM_SCORE_KEY, SIM_QUIET_KEY, readSimRecent, recordSimRecent } from './lib/simEvents';
 import { addLifeLog, readLifeLog, clearLifeLog } from './lib/lifeLog';
-import { BASE_STIPEND, monthlySalary, nextHealth, effectiveComfort, isMinor } from './lib/monthly';
-import { computeAllowance } from './lib/allowance';
+import { isMinor } from './lib/monthly';
+import { familyAllowance } from './lib/allowance';
+import { advanceMonth, OwnedProperty } from './lib/monthTick';
 import {
   buildDefaultAccounts,
   loadAccounts,
   saveAccounts as persistBankAccounts,
-  settleMonthlyInterest,
-  currentRateEvent,
   formatRate,
 } from './lib/bank';
-import { advanceMarket, loadMarket, saveMarket, TRADING_DAYS_PER_MONTH, findFinanceBackground, STOCK_KEYS, StockHolding, StockTradeLog } from './lib/stockMarket';
+import { loadMarket, saveMarket, findFinanceBackground, STOCK_KEYS, StockHolding, StockTradeLog } from './lib/stockMarket';
 import { HospitalModal } from './components/HospitalModal';
 import { JobModal, JOB_POSITIONS, readCurrentJobId, readJobHistoryIds, CURRENT_JOB_KEY, JOB_HISTORY_KEY } from './components/JobModal';
 import { BirthModal } from './components/BirthModal';
@@ -296,324 +295,90 @@ export default function App() {
       localStorage.setItem('amigo_game_month', nextM.toString());
     } catch (e) {}
 
-    const ageNextMonth = isRegistered ? Math.max(0, 8 + nextY - birthRegisteredYear) : 8;
-    const notes: string[] = [];
-
-    // 1. 名下出租房产租金收益与自住舒适度
-    let propertyRentIncome = 0;
-    let comfortBonusTotal = 0;
-    try {
-      const savedProps = localStorage.getItem('amigo_owned_properties');
-      if (savedProps) {
-        const props = JSON.parse(savedProps);
-        if (Array.isArray(props)) {
-          let updated = false;
-          props.forEach((p: any) => {
-            if (p.isRentedOut && p.rentPerMonth > 0) {
-              propertyRentIncome += p.rentPerMonth;
-              p.totalRentCollected = (p.totalRentCollected || 0) + p.rentPerMonth;
-              updated = true;
-            }
-            if (p.isPrimaryResidence && !p.isRentedOut) {
-              comfortBonusTotal += (p.comfortBonus || 5);
-            }
-          });
-          if (updated) {
-            localStorage.setItem('amigo_owned_properties', JSON.stringify(props));
-          }
-        }
-      }
-    } catch (e) {}
-
-    // 2. 租住支出
-    let rentExpense = 0;
-    try {
-      const savedRental = localStorage.getItem('amigo_current_rental');
-      if (savedRental) {
-        const rental = JSON.parse(savedRental);
-        if (rental && rental.monthlyRent) {
-          rentExpense = rental.monthlyRent;
-          comfortBonusTotal += (rental.comfortBonus || 2);
-        }
-      }
-    } catch (e) {}
-    if (propertyRentIncome > 0) notes.push(`房租 +${propertyRentIncome.toLocaleString()}`);
-    if (rentExpense > 0) notes.push(`租金 -${rentExpense.toLocaleString()}`);
-
-    // 3. 在职月薪（第 2、3 题：日薪 × 22，年满 16 岁才发）
+    // 结算本身是纯函数（lib/monthTick.ts）；这里读取存档中的输入，再把结果写回状态与存档
+    const savedProps = loadStored<unknown>('amigo_owned_properties', null);
     const currentJobId = readCurrentJobId();
-    const job = currentJobId ? JOB_POSITIONS.find((j) => j.id === currentJobId) : null;
-    // 「勤勉」特质月薪 +10%
-    let salary = isRegistered ? Math.round(monthlySalary(job?.dailySalary, ageNextMonth) * salaryMultiplier(playerTraits)) : 0;
+    const r = advanceMonth({
+      year: gameYear,
+      month: gameMonth,
+      nextYear: nextY,
+      nextMonth: nextM,
+      isRegistered,
+      birthRegisteredYear,
+      currentAge,
+      playerName,
+      gender,
+      playerOccupation,
+      playerTraits,
+      appearance,
+      godMode,
+      playerLifespan,
+      coins,
+      health,
+      reputation,
+      family,
+      disease,
+      antibodies,
+      guardianship,
+      hasAuction: !!auction,
+      pendingSimEventIds: simEvents.map((e) => e.defId),
+      simRecent: readSimRecent(),
+      bankAccounts: loadAccounts(bankDeposit, bankLoan),
+      market: loadMarket(),
+      properties: Array.isArray(savedProps) ? (savedProps as OwnedProperty[]) : null,
+      rental: loadStored<{ monthlyRent?: number; comfortBonus?: number } | null>('amigo_current_rental', null),
+      job: (currentJobId ? JOB_POSITIONS.find((j) => j.id === currentJobId) : null) ?? null,
+      childJob: readChildJob(),
+    });
 
-    // 3b. 童工（第 19 题：乞丐、平民家庭 8–15 岁）；年满 16 岁自动结束
-    let childLaborDamage = 0;
-    const childJob = isRegistered ? readChildJob() : null;
-    if (childJob) {
-      if (ageNextMonth > CHILD_LABOR_MAX_AGE || !familyClass.childLabor) {
-        try {
-          localStorage.removeItem(CHILD_JOB_KEY);
-        } catch (e) {}
-        notes.push(`童工「${childJob.title}」结束，可正式求职`);
-        addLifeLog('事业', `结束童工生涯`, `不再做「${childJob.title}」，可以正式求职了。`, { year: nextY, month: nextM, age: ageNextMonth });
-      } else {
-        salary += childJob.salary;
-        childLaborDamage = childJob.healthCost;
-        notes.push(`童工 +${childJob.salary.toLocaleString()}`);
-      }
-    }
-    if (salary > 0) {
-      notes.push(`月薪 +${salary.toLocaleString()}`);
+    r.logs.forEach((entry) => addLifeLog(...entry));
+    if (r.properties) {
       try {
-        const earned = Number(localStorage.getItem('amigo_job_earned_coins') || 0) + salary;
+        localStorage.setItem('amigo_owned_properties', JSON.stringify(r.properties));
+      } catch (e) {}
+    }
+    if (r.childJobEnded) {
+      try {
+        localStorage.removeItem(CHILD_JOB_KEY);
+      } catch (e) {}
+    }
+    if (r.salary > 0) {
+      try {
+        const earned = Number(localStorage.getItem('amigo_job_earned_coins') || 0) + r.salary;
         const months = Number(localStorage.getItem('amigo_job_months_worked') || 0) + 1;
         localStorage.setItem('amigo_job_earned_coins', String(earned));
         localStorage.setItem('amigo_job_months_worked', String(months));
       } catch (e) {}
     }
-
-    // 3c. 俸禄与零花（第 36 题）：在职（正式工作或童工）的月份发俸禄，否则由父母按收入、年龄与好感度给零花
-    let baseIncome = 0;
-    if (isRegistered && salary > 0) {
-      baseIncome = BASE_STIPEND;
-      notes.unshift(`俸禄 +${BASE_STIPEND.toLocaleString()}`);
-    } else if (isRegistered) {
-      const allowance = allowanceFor(ageNextMonth);
-      baseIncome = allowance.total;
-      notes.unshift(allowance.total > 0 ? `零花 +${allowance.total.toLocaleString()}` : '没有零花（父母已故或好感度不足 30%）');
-    }
-
-    // 4. 银行存贷款利息（第 5 题：贷款利率随历史大事件上浮）
-    const cashBeforeInterest = Math.max(0, coins + baseIncome + propertyRentIncome - rentExpense + salary);
-    const interest = settleMonthlyInterest(loadAccounts(bankDeposit, bankLoan), cashBeforeInterest, nextY, nextM, Math.random, depositInterestMultiplier(playerTraits));
-    const bankTotals = persistBankAccounts(interest.accounts);
+    const bankTotals = persistBankAccounts(r.bankAccounts);
     setBankDeposit(bankTotals.deposit);
     setBankLoan(bankTotals.loan);
-    if (interest.depositInterest > 0) notes.push(`存款利息 +${interest.depositInterest.toLocaleString()}`);
-    if (interest.loanInterest > 0) notes.push(`贷款利息 -${interest.loanInterest.toLocaleString()}`);
-    if (interest.capitalized > 0) notes.push(`⚠️ ${interest.capitalized.toLocaleString()} ₽ 利息计入本金`);
-
-    const netChange = baseIncome + propertyRentIncome - rentExpense + salary - interest.cashPaid;
-    setCoins((prev) => Math.max(0, prev + netChange));
-
-    // 5. 股市推进（第 4 题：每月 20 个交易日）
-    try {
-      saveMarket(advanceMarket(loadMarket(), TRADING_DAYS_PER_MONTH));
-    } catch (e) {}
-
-    // 6. 健康：住房舒适度恢复 − 年龄自然衰减（第 1 题：A）
-    //    未满 18 岁没有自己的住处时住在父母家；老年住房加成打折
-    //    父母家的条件由家族阶层决定（乞丐家庭没有家）；疾病与童工额外损耗健康
-    const comfort = isRegistered ? effectiveComfort(comfortBonusTotal, ageNextMonth, familyClass.parentHomeComfort) : comfortBonusTotal;
-    let diseaseDamage = 0;
-    if (isRegistered) {
-      const sick = progressDisease(disease, ageNextMonth, familyClass.diseaseMultiplier * diseaseTraitMultiplier(playerTraits), Math.random, antibodies);
-      setDisease(sick.active);
-      diseaseDamage = sick.damage;
-      const when = { year: nextY, month: nextM, age: ageNextMonth };
-      if (sick.contracted) {
-        notes.push(`🤒 患上${sick.contracted.name}`);
-        addLifeLog('健康', `患上${sick.contracted.name}`, sick.contracted.selfHealMonths === null ? '这种病不会自愈，须尽快就医。' : `约 ${sick.contracted.selfHealMonths} 个月可自愈。`, when);
-      }
-      if (sick.recovered) {
-        notes.push(`${sick.recovered.name}已痊愈`);
-        addLifeLog('健康', `${sick.recovered.name}痊愈`, '熬过病痛，身体逐渐康复。', when);
-        if (gainRecoveryImmunity(sick.recovered.id)) notes.push(`🛡️ 获得${sick.recovered.name}抗体`);
-      }
-      else if (sick.damage > 0 && currentDisease) notes.push(`${currentDisease.name} -${sick.damage}`);
+    setCoins((prev) => Math.max(0, prev + r.netChange));
+    saveMarket(r.market);
+    if (isRegistered) setDisease(r.disease);
+    const newAntibody = r.newAntibody;
+    if (newAntibody) setAntibodies((prev) => (prev.includes(newAntibody) ? prev : [...prev, newAntibody]));
+    setHealth(r.health);
+    if (r.pendingCoup) setPendingCoup(r.pendingCoup);
+    if (r.guardianship !== undefined) setGuardianship(r.guardianship);
+    if (r.family !== family) setFamily(r.family);
+    if (r.familyCash !== 0) setCoins((prev) => Math.max(0, prev + r.familyCash));
+    if (r.repDelta !== 0) changeReputation(r.repDelta);
+    r.achievements.forEach((id) => unlockAchievement(id));
+    const simEvent = r.simEvent;
+    if (simEvent) {
+      recordSimRecent(simEvent.defId, nextY, nextM);
+      setSimEvents((prev) => [...prev, simEvent]);
+      setSimQuiet(null);
+    } else if (r.simQuiet) {
+      setSimQuiet(r.simQuiet);
     }
-    // 第 51 题：到达寿命即寿终正寝，医疗只能延缓衰减
-    const reachedLifespan = !godMode && isRegistered && playerLifespan !== null && ageNextMonth >= playerLifespan;
-    if (reachedLifespan) notes.push('🕯️ 寿终正寝');
-    const newHealth = godMode && isRegistered
-      ? 100
-      : reachedLifespan
-      ? 0
-      : isRegistered
-        ? nextHealth(health, comfort, ageNextMonth, diseaseDamage + childLaborDamage - decayReduction(playerTraits, ageNextMonth))
-        : Math.min(100, health + comfort);
-    setHealth(newHealth);
-    if (isRegistered) {
-      const delta = newHealth - health;
-      if (delta !== 0) notes.push(`健康 ${delta > 0 ? '+' : ''}${delta}`);
-    }
-
-    // 7. 家族：生育（含特质）、情人、好感衰减与分家、监护托管
-    const logWhenFamily = { year: nextY, month: nextM, age: ageNextMonth };
-    let fam = family;
-    let familyCash = 0; // 本月家族相关的现金变动
-    let repDelta = 0;
-    if (isRegistered && newHealth > 0) {
-      // 第 60 题：本月同房时生育概率提高
-      const birth = tryHaveChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits, gender, antibodies, fam.intimacyMonth === gameYear * 12 + gameMonth ? INTIMACY_MULTIPLIER : 1, appearance ?? undefined);
-      if (birth.child) {
-        fam = birth.state;
-        repDelta += REP.child * birth.children.length;
-        notes.push(
-          birth.children.length === 2
-            ? `👶👶 双胞胎 ${birth.children.map((c) => c.name).join('、')} 降生（可在家族页取名）`
-            : `👶 ${birth.child.name} 降生（可在家族页取名）`,
-        );
-        addLifeLog(
-          '大事',
-          birth.children.length === 2 ? '喜得双胞胎' : `喜得${birth.child.gender === '女' ? '千金' : '麟儿'}`,
-          `${birth.children.map((c) => c.name).join('、')} 降生。`,
-          logWhenFamily,
-        );
-        if (birth.children.length === 2) unlockAchievement('twins');
-      }
-
-      // 贵族情人：每月供养；3% 概率生下私生子女
-      if (fam.lover) {
-        const upkeep = LOVER_UPKEEP[familyClass.id] ?? LOVER_UPKEEP.noble;
-        if (coins + netChange < upkeep) {
-          notes.push(`无力供养，与 ${fam.lover.name} 断绝往来`);
-          fam = { ...fam, lover: null };
-        } else {
-          familyCash -= upkeep;
-          notes.push(`供养情人 -${upkeep.toLocaleString()}`);
-          const secret = tryIllegitimateChild(fam, ageNextMonth, nextY, nextM, Math.random, playerTraits, gender, antibodies, appearance ?? undefined);
-          if (secret.child) {
-            fam = secret.state;
-            notes.push(`🤫 私生${secret.child.gender === '女' ? '女' : '子'} ${secret.child.name} 降生`);
-            addLifeLog('大事', `私生${secret.child.gender === '女' ? '女' : '子'}降生`, `与 ${secret.child.otherParentName} 所生的 ${secret.child.name} 降生。`, logWhenFamily);
-          }
-        }
-      }
-
-      // 家人的生老病死与成家（第 52 题）：配偶寿终则丧偶；成年子女成家、生育孙辈
-      const life = monthlyFamilyLife(fam, nextY, nextM, Math.random, playerTraits);
-      fam = life.state;
-      life.notes.forEach((n) => {
-        notes.push(`👪 ${n.title}`);
-        addLifeLog('大事', n.title, n.desc, logWhenFamily);
-      });
-
-      // 好感度衰减与分家（按推进前的月份判断本月是否互动过）
-      const membersNow = buildFamilyMembers(fam, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth });
-      const drift = monthlyFamilyDrift(fam, membersNow, gameYear, gameMonth);
-      fam = drift.state;
-
-      // 逼宫（第 59 题）：富商、贵族家族中野心高且不满的成年子嗣
-      const coup = checkCoup(fam, membersNow, getOrigin(fam).classId);
-      fam = coup.state;
-      coup.warnings.forEach((w) => notes.push(w));
-      if (coup.coupBy) setPendingCoup(coup.coupBy);
-
-      // 礼物喜好：成年家人每月有小概率改变喜好（第 35 题）
-      const tasteDrift = driftGiftTastes(
-        fam.giftTastes ?? {},
-        membersNow.filter((m) => !m.isPlayer && m.status !== '已故' && m.age >= GIFT_CHILD_AGE),
-      );
-      if (tasteDrift.changed.length > 0) {
-        fam = { ...fam, giftTastes: tasteDrift.tastes };
-        tasteDrift.changed.forEach((c) => {
-          const m = membersNow.find((x) => x.id === c.id);
-          if (m) notes.push(`💝 ${m.relation} ${m.name} 的喜好从${GIFT_TASTE_LABEL[c.from]}变成了${GIFT_TASTE_LABEL[c.to]}`);
-        });
-      }
-      drift.splits.forEach((b) => {
-        const share = Math.round(Math.max(0, coins + netChange + familyCash) * SPLIT_CASH_SHARE);
-        familyCash -= share;
-        notes.push(`⚠️ ${b.relation} ${b.name} 分家，分走 ${share.toLocaleString()} ₽`);
-        addLifeLog('大事', `${b.relation} ${b.name} 分家`, `长期对当家人不满，携一支族人分家出走，分走 ${share.toLocaleString()} ₽。`, logWhenFamily);
-      });
-
-      // 未成年继承的监护：成年返还托管资产，之后赡养监护人
-      if (guardianship) {
-        const guardianAlive =
-          guardianship.guardianName === ORPHANAGE_NAME ||
-          membersNow.some((m) => m.name === guardianship.guardianName && m.status !== '已故');
-        const step = monthlyGuardianship(guardianship, ageNextMonth, guardianAlive, coins + netChange + familyCash);
-        setGuardianship(step.guardianship);
-        familyCash += step.returned - step.support;
-        if (step.note) {
-          notes.push(step.note);
-          addLifeLog('财富', step.returned > 0 ? '领回托管资产' : '赡养义务结束', step.note, logWhenFamily);
-        }
-        if (step.support > 0) notes.push(`赡养${guardianship.guardianName} -${step.support.toLocaleString()}`);
-      }
-
-      // 声望：高薪岗位每年 +1
-      if (nextM === 1 && salary >= HIGH_SALARY) repDelta += REP.highSalaryYearly;
-    }
-    // 阶层提升（第 32 题）：家族资产净值与声望达到门槛时晋升一级
-    if (isRegistered && newHealth > 0) {
-      const netWorthNow = familyNetWorth(
-        Math.max(0, coins + netChange + familyCash),
-        bankTotals.deposit,
-        bankTotals.loan,
-        guardianship?.held ?? 0,
-        heirloomsValue(getHeirlooms(fam)),
-      );
-      const promo = checkPromotion(getOrigin(fam).classId, netWorthNow, clampReputation(reputation + repDelta));
-      if (promo) {
-        const toCls = classById(promo.to);
-        fam = promoteFamily(fam, toCls.id, toCls.label, nextY, nextM, promo.reason);
-        notes.push(`🎖️ 家族晋升为${toCls.label}`);
-        addLifeLog('大事', `家族跻身${toCls.label}`, promo.reason, logWhenFamily);
-      } else {
-        // 阶层降级（第 46 题）：晋升上来的阶层，资产连续 12 个月低于门槛一半则降一级
-        const dem = checkDemotion(getOrigin(fam).classId, netWorthNow, fam.demotionStreak ?? 0, fam.baseClassId);
-        if (dem.demote) {
-          const toCls = classById(dem.demote.to);
-          fam = demoteFamily(fam, toCls.id, toCls.label, nextY, nextM);
-          notes.push(`📉 家道中落，家族跌回${toCls.label}`);
-          addLifeLog('大事', `家道中落，跌回${toCls.label}`, '家族资产长期缩水。', logWhenFamily);
-        } else if ((fam.demotionStreak ?? 0) !== dem.streak) {
-          fam = { ...fam, demotionStreak: dem.streak };
-        }
-      }
-    }
-    if (fam !== family) setFamily(fam);
-    if (familyCash !== 0) setCoins((prev) => Math.max(0, prev + familyCash));
-    if (repDelta !== 0) changeReputation(repDelta);
-    if (salary > 0) unlockAchievement('first_salary');
-    if (interest.event) unlockAchievement('witness');
+    if (r.auction.action === 'open') setAuction(r.auction.next);
+    else if (r.auction.action === 'close') setAuction(null);
 
     const mStr = nextM < 10 ? `0${nextM}` : `${nextM}`;
-    const enteredEvent = interest.event && interest.event !== currentRateEvent(gameYear) ? interest.event : null;
-    const logWhen = { year: nextY, month: nextM, age: ageNextMonth };
-
-    // 8. 推演事件：每月 50% 概率出现一张（第 8 题 A）
-    if (isRegistered && newHealth > 0) {
-      const inst = rollMonthlyEvent(
-        { age: ageNextMonth, classId: familyClass.id, employed: !!job, coins, hasChildren: fam.children.length > 0, ownedHeirlooms: getHeirlooms(fam).map((h) => h.id) },
-        nextY,
-        nextM,
-        Math.random,
-        readSimRecent(),
-        simEvents.map((e) => e.defId),
-      );
-      if (inst) {
-        recordSimRecent(inst.defId, nextY, nextM);
-        setSimEvents((prev) => [...prev, inst]);
-        setSimQuiet(null);
-        notes.push('📰 新的人生事件');
-      } else {
-        setSimQuiet(`${nextY}.${mStr} 本月无事发生`);
-        notes.push('本月无事发生');
-      }
-    }
-
-    // 8b. 拍卖会：每月随机开办（第 33 题）；上个月的拍卖会到期结束
-    if (isRegistered && newHealth > 0 && Math.random() < AUCTION_CHANCE) {
-      const invited = isInvited(getOrigin(fam).classId, reputation);
-      const next = generateAuction(nextY, nextM, getHeirlooms(fam).map((h) => h.id), invited);
-      setAuction(next);
-      if (next) notes.push(invited ? '📜 收到拍卖会邀请函' : '📜 北城拍卖会开幕（需购票入场）');
-    } else if (auction) {
-      setAuction(null);
-    }
-
-    // 9. 人生日志：整十岁生日、健康告急、时局剧变、辞世
-    if (isRegistered) {
-      if (nextM === 1 && ageNextMonth > 0 && ageNextMonth % 10 === 0) addLifeLog('成长', `${ageNextMonth} 岁`, `迎来 ${ageNextMonth} 岁生日。`, logWhen);
-      if (health >= 30 && newHealth > 0 && newHealth < 30) addLifeLog('健康', '健康告急', `健康跌至 ${newHealth}，需要尽快休养或就医。`, logWhen);
-      if (enteredEvent) addLifeLog('大事', `时局：${enteredEvent.title}`, enteredEvent.desc, logWhen);
-      if (newHealth <= 0) addLifeLog('大事', '辞世', `${playerName} 离开了人世，享年 ${ageNextMonth} 岁。`, logWhen);
-    }
-    if (isRegistered && newHealth <= 0) {
+    const { notes, enteredEvent, ageNextMonth } = r;
+    if (r.died) {
       setShowSuccession(true);
       showToast(`💀 ${nextY}.${mStr}：${playerName} 因健康耗尽离世，享年 ${ageNextMonth} 岁`);
     } else if (enteredEvent) {
@@ -1036,12 +801,8 @@ export default function App() {
   })();
 
   // 父母给的零花（第 36 题）：按当前族谱中在世父母的职业收入、好感度计算
-  const allowanceFor = (age: number) => {
-    const parents = buildFamilyMembers(family, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth })
-      .filter((m) => m.kin === 'parent' && !m.isPlayer)
-      .map((m) => ({ name: m.name, relation: m.relation, occupation: m.occupation, affinity: m.affinity, status: m.status }));
-    return computeAllowance(parents, age, familyClass.id, !!family.playerIllegitimate);
-  };
+  const allowanceFor = (age: number) =>
+    familyAllowance(family, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth }, age, familyClass.id);
 
   // 外貌（第 61 题）：出生登记时捏脸；旧存档没有外貌时随机生成
   const [appearance, setAppearance] = useState<Appearance | null>(() => loadStored<Appearance | null>(APPEARANCE_KEY, null));
