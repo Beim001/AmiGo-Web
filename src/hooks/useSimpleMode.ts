@@ -448,7 +448,7 @@ export const useSimpleMode = ({
     const timer = setTimeout(() => {
       const card = simpleCard;
       if (card && card.kind !== 'heir') {
-        let choice = card.choices[0]?.id;
+        let choice: string | undefined = card.choices[0]?.id;
         if (card.kind === 'marriage') {
           const idx = simpleSpouseCandidates.findIndex((c) => !(c.traits ?? []).includes('infertile'));
           choice = idx >= 0 ? String(idx) : undefined;

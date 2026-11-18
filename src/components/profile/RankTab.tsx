@@ -96,7 +96,7 @@ export const RankTab = ({ rank, handleSyncBilibiliProfile, playerName, lazy, coi
       </div>
 
       {board >= 10 ? (
-        <SeasonRankPanel key={board} mode={board === 10 ? 'current' : 'past'} mine={seasonMine} canRank={canRankSeason} />
+        <SeasonRankPanel key={board} mode={board === 10 ? 'current' : 'past'} mine={seasonMine} canRank={!!canRankSeason} />
       ) : (
       <>
 

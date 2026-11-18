@@ -363,7 +363,7 @@ export const ProfileModal = ({
           try { localStorage.setItem('amigo_avatar_source', src); } catch (e) {}
           showToast('头像设置已修改！');
         }}
-        authUser={authUser}
+        authUser={authUser ?? null}
         bilibiliAvatar={bilibiliAvatar}
         equippedClothing={equippedClothing}
       />

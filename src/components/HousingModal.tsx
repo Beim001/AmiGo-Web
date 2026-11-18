@@ -1320,7 +1320,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleSignRentalLease(item)}
-                      disabled={!isRegistered || (currentRental && currentRental.propertyId === item.id)}
+                      disabled={!isRegistered || currentRental?.propertyId === item.id}
                       className={`px-3.5 py-1.5 rounded-xl border-2 border-black text-xs font-bold shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer ${
                         currentRental && currentRental.propertyId === item.id
                           ? 'bg-gray-700 text-gray-400 border-gray-600 cursor-not-allowed opacity-60'
