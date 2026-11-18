@@ -30,6 +30,7 @@ import {
 } from '../lib/family';
 import { CURRENCY } from '../data/seasons';
 import { isInPrison, PRISON_BLOCK_TEXT, candidateCount, hasActiveRecord } from '../lib/prison';
+import { useTranslation } from 'react-i18next';
 
 export interface MarriageModalProps {
   onClose: () => void;
@@ -87,6 +88,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
   onReputationChange,
   playerGender = null,
 }) => {
+  const { t } = useTranslation('marriage');
   const opposite = playerGender === '男' || playerGender === '女' ? (playerGender as '男' | '女') : null;
   const [loverCandidates, setLoverCandidates] = useState<SpouseCandidate[]>(() => generateSpouseCandidates(age).slice(0, 5));
   const [confirmLover, setConfirmLover] = useState<SpouseCandidate | null>(null);
@@ -110,7 +112,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
       return;
     }
     if (coins < MARRIAGE_FEE) {
-      showToast(`现金不足！结婚登记规费需 ${MARRIAGE_FEE.toLocaleString()} ${CURRENCY.symbol}`);
+      showToast(t('toast.marryNoMoney', { fee: MARRIAGE_FEE.toLocaleString(), symbol: CURRENCY.symbol }));
       setConfirming(null);
       return;
     }
@@ -119,13 +121,13 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
     onReputationChange?.(REP.marriage);
     setConfirming(null);
     addLifeLog('大事', `与 ${c.name} 结婚`, `${c.gender} · ${c.age} 岁 · ${c.occupation}，在帝国民政署登记结婚。`);
-    showToast(`💍 恭喜！你与 ${c.name} 正式结为夫妻`);
+    showToast(t('toast.married', { name: c.name }));
   };
 
   const handleDivorce = () => {
     const formerName = family.spouse?.name;
     if (coins < DIVORCE_FEE) {
-      showToast(`现金不足！离婚手续费需 ${DIVORCE_FEE.toLocaleString()} ${CURRENCY.symbol}`);
+      showToast(t('toast.divorceNoMoney', { fee: DIVORCE_FEE.toLocaleString(), symbol: CURRENCY.symbol }));
       setConfirmDivorce(false);
       return;
     }
@@ -135,7 +137,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
     setConfirmDivorce(false);
     setCandidates(generateSpouseCandidates(age, Math.random, spouseCount, opposite));
     addLifeLog('大事', `与 ${formerName} 离婚`, '在帝国民政署办理了离婚手续。');
-    showToast(`已与 ${formerName} 解除婚姻关系`);
+    showToast(t('toast.divorced', { name: formerName }));
   };
 
   const spouse = family.spouse;
@@ -149,40 +151,40 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
   if (!isRegistered) {
     body = (
       <div className={`${card} text-center space-y-3`}>
-        <p className="text-gray-300 text-sm font-bold">你尚未办理出生登记，无法在民政署登记婚姻。</p>
-        <button onClick={onOpenBirth} className={primaryBtn}>前往出生登记</button>
+        <p className="text-gray-300 text-sm font-bold">{t('notRegistered')}</p>
+        <button onClick={onOpenBirth} className={primaryBtn}>{t('goRegister')}</button>
       </div>
     );
   } else if (isDeceased) {
-    body = <div className={`${card} text-center text-gray-400 text-sm font-bold`}>角色已故，无法办理婚姻登记。</div>;
+    body = <div className={`${card} text-center text-gray-400 text-sm font-bold`}>{t('deceased')}</div>;
   } else if (spouse) {
     body = (
       <div className="space-y-3">
         <div className="bg-gradient-to-b from-[#f7e7c6] to-[#e9d3a4] border-4 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] text-[#3b2a14]">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Scroll size={18} />
-            <span className="font-black tracking-widest">婚 姻 证 书</span>
+            <span className="font-black tracking-widest">{t('certificate')}</span>
           </div>
           <div className="text-center font-black text-lg">{playerName} <Heart size={16} className="inline text-rose-600 fill-rose-600 mx-1" /> {spouse.name}</div>
           <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-bold">
-            <div className="bg-white/50 rounded-lg p-2 border border-black/30">配偶性别：{spouse.gender}</div>
-            <div className="bg-white/50 rounded-lg p-2 border border-black/30">配偶年龄：{gameYear - spouse.birthYear} 岁</div>
+            <div className="bg-white/50 rounded-lg p-2 border border-black/30">{t('spouseGender', { gender: spouse.gender })}</div>
+            <div className="bg-white/50 rounded-lg p-2 border border-black/30">{t('spouseAge', { age: gameYear - spouse.birthYear })}</div>
             <div className="bg-white/50 rounded-lg p-2 border border-black/30 col-span-2">
-              配偶职业：{spouse.occupation}
+              {t('spouseJob', { job: spouse.occupation })}
               <TraitTags ids={spouse.traits} dark />
             </div>
             <div className="bg-white/50 rounded-lg p-2 border border-black/30 col-span-2">
-              登记日期：{spouse.marriedYear} 年 {spouse.marriedMonth} 月 · 帝国民政署
+              {t('marriedAt', { year: spouse.marriedYear, month: spouse.marriedMonth })}
             </div>
           </div>
         </div>
 
         <div className={`${card} space-y-2`}>
           <div className="flex items-center gap-2 text-white font-black text-sm">
-            <Baby size={16} className="text-yellow-400" /> 子嗣 {family.children.length} / {MAX_CHILDREN} 人
+            <Baby size={16} className="text-yellow-400" /> {t('children', { count: family.children.length, max: MAX_CHILDREN })}
           </div>
           <p className="text-gray-400 text-[11px] font-bold leading-relaxed">
-            婚后每推进一个月，有 {Math.round(BIRTH_CHANCE * 100)}% 的概率迎来新的家庭成员（女性 42 岁、男性 55 岁后不能生育；有「精力旺盛」或「富养」特质可延长到 50 / 65 岁，可在医院保养获得；同性伴侣不能生育）。
+            {t('birthRule', { pct: Math.round(BIRTH_CHANCE * 100) })}
           </p>
           {(() => {
             const monthKey = gameYear * 12 + gameMonth;
@@ -193,16 +195,16 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
                 <button
                   onClick={() => {
                     if (intimateNow) {
-                      showToast('这个月已经同房过了');
+                      showToast(t('toast.alreadyIntimate'));
                       return;
                     }
                     setFamily((prev) => ({ ...prev, intimacyMonth: monthKey }));
-                    showToast(`💞 你与 ${spouse.name} 同房，本月生育概率 ×${INTIMACY_MULTIPLIER}`);
+                    showToast(t('toast.intimate', { name: spouse.name, multiplier: INTIMACY_MULTIPLIER }));
                   }}
                   disabled={intimateNow}
                   className="bg-rose-400 hover:bg-rose-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer disabled:opacity-50"
                 >
-                  {intimateNow ? '本月已同房' : `💞 同房（概率 ×${INTIMACY_MULTIPLIER}）`}
+                  {intimateNow ? t('intimateDone') : t('intimate', { multiplier: INTIMACY_MULTIPLIER })}
                 </button>
                 <button
                   onClick={() => {
@@ -211,54 +213,54 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
                       return;
                     }
                     if (coins < ADOPTION_FEE) {
-                      showToast(`现金不足！领养手续费 ${ADOPTION_FEE.toLocaleString()} ${CURRENCY.symbol}`);
+                      showToast(t('toast.adoptNoMoney', { fee: ADOPTION_FEE.toLocaleString(), symbol: CURRENCY.symbol }));
                       return;
                     }
                     const r = adoptChild(family, gameYear, gameMonth);
                     setCoins((prev) => prev - ADOPTION_FEE);
                     setFamily(r.state);
                     addLifeLog('大事', `领养 ${r.child.name}`, `与 ${spouse.name} 婚后多年无子，领养了 ${gameYear - r.child.birthYear} 岁的${r.child.gender === '女' ? '女孩' : '男孩'}。`);
-                    showToast(`🏠 领养了 ${r.child.name}（${gameYear - r.child.birthYear} 岁）`);
+                    showToast(t('toast.adopted', { name: r.child.name, age: gameYear - r.child.birthYear }));
                   }}
-                  title={adoptReason ?? `手续费 ${ADOPTION_FEE.toLocaleString()} ${CURRENCY.symbol}`}
+                  title={adoptReason ?? t('adoptFee', { fee: ADOPTION_FEE.toLocaleString(), symbol: CURRENCY.symbol })}
                   className={`${adoptReason ? 'bg-gray-600 text-gray-300' : 'bg-sky-400 hover:bg-sky-300 text-black'} text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer`}
                 >
-                  🏠 领养（{ADOPTION_FEE.toLocaleString()} {CURRENCY.symbol}）
+                  {t('adopt', { fee: ADOPTION_FEE.toLocaleString(), symbol: CURRENCY.symbol })}
                 </button>
                 <p className="col-span-2 text-[10px] text-gray-400 font-bold">
-                  {adoptReason ? `领养：${adoptReason}` : `你们婚后 ${ADOPTION_MARRIED_YEARS} 年仍没有孩子，可以领养。`}
+                  {adoptReason ? t('adoptBlocked', { reason: adoptReason }) : t('adoptHint', { years: ADOPTION_MARRIED_YEARS })}
                 </p>
               </div>
             );
           })()}
           <button onClick={onOpenFamily} className={`${primaryBtn} w-full flex items-center justify-center gap-1`}>
-            <Users size={14} /> 查看家族世系
+            <Users size={14} /> {t('viewFamily')}
           </button>
         </div>
 
         {canTakeLover(classId, true, age) && (
           <div className={`${card} space-y-2`}>
-            <div className="text-white font-black text-sm">🌹 {family.lover ? (family.lover.gender === '女' ? '情妇' : '情夫') : '结识情人'}</div>
+            <div className="text-white font-black text-sm">🌹 {family.lover ? (family.lover.gender === '女' ? t('lover.mistress') : t('lover.lover')) : t('lover.meet')}</div>
             <p className="text-gray-400 text-[11px] font-bold leading-relaxed">
-              贵族圈的隐秘往来：每月供养 {(LOVER_UPKEEP[classId] ?? LOVER_UPKEEP.noble).toLocaleString()} {CURRENCY.symbol}，有 {Math.round(ILLEGITIMATE_CHANCE * 100)}% 概率生下私生子女。同时最多 1 位，现金不足时关系自动结束。
+              {t('lover.rules', { upkeep: (LOVER_UPKEEP[classId] ?? LOVER_UPKEEP.noble).toLocaleString(), pct: Math.round(ILLEGITIMATE_CHANCE * 100), symbol: CURRENCY.symbol })}
             </p>
             {family.lover ? (
               <div className="bg-[#21232e] border border-black rounded-xl p-2.5 flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <div className="text-white font-black text-xs">{family.lover.name}</div>
                   <div className="text-gray-400 text-[10px] font-bold">
-                    {family.lover.gender} · {gameYear - family.lover.birthYear} 岁 · {family.lover.occupation} · 自 {family.lover.sinceYear}.{family.lover.sinceMonth}
+                    {t('lover.meta', { gender: family.lover.gender, age: gameYear - family.lover.birthYear, job: family.lover.occupation, since: `${family.lover.sinceYear}.${family.lover.sinceMonth}` })}
                   </div>
                   <TraitTags ids={family.lover.traits} />
                 </div>
                 <button
                   onClick={() => {
                     setFamily((prev) => endLover(prev));
-                    showToast(`已与 ${family.lover!.name} 断绝往来`);
+                    showToast(t('toast.loverEnded', { name: family.lover!.name }));
                   }}
                   className="bg-gray-600 hover:bg-gray-500 text-white text-[10px] font-black px-2 py-1 rounded-lg border border-black cursor-pointer shrink-0"
                 >
-                  断绝往来
+                  {t('lover.end')}
                 </button>
               </div>
             ) : (
@@ -267,11 +269,11 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
                   <div key={`${c.name}_${i}`} className="bg-[#21232e] border border-black rounded-xl p-2.5 flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <div className="text-white font-black text-xs">{c.name}</div>
-                      <div className="text-gray-400 text-[10px] font-bold">{c.gender} · {c.age} 岁 · {c.occupation}</div>
+                      <div className="text-gray-400 text-[10px] font-bold">{t('candidateMeta', { gender: c.gender, age: c.age, job: c.occupation })}</div>
                       <TraitTags ids={c.traits} />
                     </div>
                     <button onClick={() => setConfirmLover(c)} className="bg-rose-400 text-black text-[10px] font-black px-2 py-1 rounded-lg border border-black cursor-pointer shrink-0">
-                      结识
+                      {t('lover.meetButton')}
                     </button>
                   </div>
                 ))}
@@ -279,7 +281,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
                   onClick={() => setLoverCandidates(generateSpouseCandidates(age).slice(0, 5))}
                   className="w-full text-gray-300 text-[11px] font-black bg-[#21232e] py-1.5 rounded-lg border border-black cursor-pointer"
                 >
-                  换一批
+                  {t('refresh')}
                 </button>
               </>
             )}
@@ -290,15 +292,15 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
           onClick={() => setConfirmDivorce(true)}
           className="w-full bg-[#21232e] hover:bg-[#2b2e3c] text-gray-300 text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer"
         >
-          办理离婚（手续费 {DIVORCE_FEE.toLocaleString()} {CURRENCY.symbol}）
+          {t('divorce', { fee: DIVORCE_FEE.toLocaleString(), symbol: CURRENCY.symbol })}
         </button>
       </div>
     );
   } else if (yearsToWait > 0) {
     body = (
       <div className={`${card} text-center space-y-1`}>
-        <p className="text-white font-black text-sm">未达法定婚龄</p>
-        <p className="text-gray-400 text-xs font-bold">帝国法定婚龄为 {MARRIAGE_MIN_AGE} 岁，你现在 {age} 岁，还需等待 {yearsToWait} 年。</p>
+        <p className="text-white font-black text-sm">{t('tooYoung')}</p>
+        <p className="text-gray-400 text-xs font-bold">{t('tooYoungDesc', { min: MARRIAGE_MIN_AGE, age, years: yearsToWait })}</p>
       </div>
     );
   } else {
@@ -306,14 +308,14 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
       <div className="space-y-3">
         <div className={`${card} flex items-center justify-between`}>
           <div>
-            <div className="text-white font-black text-sm">适婚对象</div>
-            <div className="text-gray-400 text-[11px] font-bold">登记规费 {MARRIAGE_FEE.toLocaleString()} {CURRENCY.symbol} · 当前现金 {coins.toLocaleString()} {CURRENCY.symbol}</div>
+            <div className="text-white font-black text-sm">{t('candidates')}</div>
+            <div className="text-gray-400 text-[11px] font-bold">{t('candidatesFee', { fee: MARRIAGE_FEE.toLocaleString(), coins: coins.toLocaleString(), symbol: CURRENCY.symbol })}</div>
           </div>
           <button
             onClick={() => setCandidates(generateSpouseCandidates(age, Math.random, spouseCount, opposite))}
             className="text-gray-200 hover:text-white flex items-center gap-1 bg-[#21232e] px-2 py-1 rounded-lg border border-black text-[11px] font-black cursor-pointer active:scale-95"
           >
-            <RefreshCw size={12} /> 换一批
+            <RefreshCw size={12} /> {t('refresh')}
           </button>
         </div>
 
@@ -325,11 +327,11 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
               </div>
               <div className="min-w-0">
                 <div className="text-white font-black text-sm truncate">{c.name}</div>
-                <div className="text-gray-400 text-[11px] font-bold">{c.gender} · {c.age} 岁 · {c.occupation}</div>
+                <div className="text-gray-400 text-[11px] font-bold">{t('candidateMeta', { gender: c.gender, age: c.age, job: c.occupation })}</div>
                 <TraitTags ids={c.traits} />
               </div>
             </div>
-            <button onClick={() => setConfirming(c)} className={`${primaryBtn} shrink-0`}>求婚</button>
+            <button onClick={() => setConfirming(c)} className={`${primaryBtn} shrink-0`}>{t('propose')}</button>
           </div>
         ))}
       </div>
@@ -342,13 +344,13 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
     isRegistered && formerSpouses.length > 0 ? (
       <div className={`${card} mt-3 space-y-2`}>
         <div className="flex items-center justify-between">
-          <span className="text-white font-black text-sm">前任配偶</span>
-          <span className="text-gray-400 text-[11px] font-bold">共 {formerSpouses.length} 位</span>
+          <span className="text-white font-black text-sm">{t('former.title')}</span>
+          <span className="text-gray-400 text-[11px] font-bold">{t('former.count', { count: formerSpouses.length })}</span>
         </div>
         {formerSpouses.map((f, i) => {
           const months = (f.divorcedYear - f.marriedYear) * 12 + (f.divorcedMonth - f.marriedMonth);
           const childCount = family.children.filter((c) => c.otherParentName === f.name).length;
-          const duration = months >= 12 ? `${Math.floor(months / 12)} 年${months % 12 ? ` ${months % 12} 个月` : ''}` : `${Math.max(months, 0)} 个月`;
+          const duration = months >= 12 ? (months % 12 ? t('former.yearsMonths', { years: Math.floor(months / 12), months: months % 12 }) : t('former.years', { years: Math.floor(months / 12) })) : t('former.months', { months: Math.max(months, 0) });
           return (
             <div key={`${f.name}_${f.divorcedYear}_${i}`} className="bg-[#21232e] border border-black rounded-xl p-2.5 flex items-center gap-3">
               <div className={`w-9 h-9 rounded-full border-2 border-black flex items-center justify-center text-white font-black text-xs shrink-0 opacity-80 ${f.gender === '女' ? 'bg-[#c06a8a]' : 'bg-[#4a7aa8]'}`}>
@@ -358,13 +360,13 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
                 <div className="flex items-center gap-1.5">
                   <span className="text-white font-black text-xs truncate">{f.name}</span>
                   <span className="text-[9px] font-black px-1 rounded border border-black bg-gray-700 text-gray-200 shrink-0">
-                    {f.widowed ? (f.gender === '女' ? '亡妻' : '亡夫') : f.gender === '女' ? '前妻' : '前夫'}
+                    {f.widowed ? (f.gender === '女' ? t('former.lateWife') : t('former.lateHusband')) : f.gender === '女' ? t('former.exWife') : t('former.exHusband')}
                   </span>
                 </div>
                 <div className="text-gray-400 text-[10px] font-bold mt-0.5">
-                  {f.occupation} · {f.marriedYear}.{f.marriedMonth} 结婚 → {f.divorcedYear}.{f.divorcedMonth} {f.widowed ? '丧偶' : '离婚'}（{duration}）
+                  {t(f.widowed ? 'former.periodWidowed' : 'former.periodDivorced', { job: f.occupation, from: `${f.marriedYear}.${f.marriedMonth}`, to: `${f.divorcedYear}.${f.divorcedMonth}`, duration })}
                 </div>
-                {childCount > 0 && <div className="text-amber-300 text-[10px] font-bold mt-0.5">共育有 {childCount} 个孩子</div>}
+                {childCount > 0 && <div className="text-amber-300 text-[10px] font-bold mt-0.5">{t('former.children', { count: childCount })}</div>}
               </div>
             </div>
           );
@@ -386,7 +388,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
         </button>
         <div className="flex items-center gap-2 text-white">
           <Heart size={20} className="fill-white" />
-          <span className="font-black text-xl tracking-widest">结婚登记</span>
+          <span className="font-black text-xl tracking-widest">{t('title')}</span>
         </div>
       </div>
 
@@ -399,14 +401,14 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[60]">
           <div className={`${card} max-w-sm w-full space-y-3`}>
             <p className="text-white font-black text-sm text-center">
-              确定与 {confirming.name} 登记结婚吗？
+              {t('confirmMarry', { name: confirming.name })}
             </p>
-            <p className="text-gray-400 text-xs font-bold text-center">将支付登记规费 {MARRIAGE_FEE.toLocaleString()} {CURRENCY.symbol}。</p>
+            <p className="text-gray-400 text-xs font-bold text-center">{t('confirmMarryFee', { fee: MARRIAGE_FEE.toLocaleString(), symbol: CURRENCY.symbol })}</p>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setConfirming(null)} className="bg-gray-600 hover:bg-gray-500 text-white text-xs font-black py-2 rounded-xl border-2 border-black cursor-pointer">
-                再想想
+                {t('cancel')}
               </button>
-              <button onClick={() => handleMarry(confirming)} className={primaryBtn}>确定登记</button>
+              <button onClick={() => handleMarry(confirming)} className={primaryBtn}>{t('confirmMarryButton')}</button>
             </div>
           </div>
         </div>
@@ -415,21 +417,21 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
       {confirmLover && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[60]">
           <div className={`${card} max-w-sm w-full space-y-3`}>
-            <p className="text-white font-black text-sm text-center">确定与 {confirmLover.name} 发展秘密关系吗？</p>
-            <p className="text-gray-400 text-xs font-bold text-center">每月供养 {(LOVER_UPKEEP[classId] ?? LOVER_UPKEEP.noble).toLocaleString()} {CURRENCY.symbol}。</p>
+            <p className="text-white font-black text-sm text-center">{t('lover.confirm', { name: confirmLover.name })}</p>
+            <p className="text-gray-400 text-xs font-bold text-center">{t('lover.confirmUpkeep', { upkeep: (LOVER_UPKEEP[classId] ?? LOVER_UPKEEP.noble).toLocaleString(), symbol: CURRENCY.symbol })}</p>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setConfirmLover(null)} className="bg-gray-600 hover:bg-gray-500 text-white text-xs font-black py-2 rounded-xl border-2 border-black cursor-pointer">
-                再想想
+                {t('cancel')}
               </button>
               <button
                 onClick={() => {
                   setFamily((prev) => takeLover(prev, confirmLover, gameYear, gameMonth));
-                  showToast(`🌹 你与 ${confirmLover.name} 开始了秘密往来`);
+                  showToast(t('toast.loverStarted', { name: confirmLover.name }));
                   setConfirmLover(null);
                 }}
                 className={primaryBtn}
               >
-                确定
+                {t('confirm')}
               </button>
             </div>
           </div>
@@ -439,16 +441,16 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
       {confirmDivorce && spouse && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[60]">
           <div className={`${card} max-w-sm w-full space-y-3`}>
-            <p className="text-white font-black text-sm text-center">确定与 {spouse.name} 离婚吗？</p>
+            <p className="text-white font-black text-sm text-center">{t('confirmDivorce', { name: spouse.name })}</p>
             <p className="text-gray-400 text-xs font-bold text-center leading-relaxed">
-              将支付手续费 {DIVORCE_FEE.toLocaleString()} {CURRENCY.symbol}。{spouse.name} 将移出家族族谱，子嗣留在瓦伦丁家族；之后可以重新登记结婚。
+              {t('confirmDivorceDesc', { fee: DIVORCE_FEE.toLocaleString(), name: spouse.name, symbol: CURRENCY.symbol })}
             </p>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setConfirmDivorce(false)} className="bg-gray-600 hover:bg-gray-500 text-white text-xs font-black py-2 rounded-xl border-2 border-black cursor-pointer">
-                再想想
+                {t('cancel')}
               </button>
               <button onClick={handleDivorce} className="bg-gray-300 hover:bg-white text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer">
-                确定离婚
+                {t('confirmDivorceButton')}
               </button>
             </div>
           </div>

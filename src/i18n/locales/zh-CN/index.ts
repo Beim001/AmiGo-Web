@@ -21,5 +21,15 @@ import license from './license.json';
 import immigration from './immigration.json';
 import job from './job.json';
 import visa from './visa.json';
+import succession from './succession.json';
+import welfare from './welfare.json';
+import court from './court.json';
+import prison from './prison.json';
+import leisure from './leisure.json';
+import gender from './gender.json';
+import calendar from './calendar.json';
+import marriage from './marriage.json';
+import birth from './birth.json';
+import hospital from './hospital.json';
 
-export const zhCN = { common, auth, nav, log, funct, role, simple, sim, family, app, game, profile, season, auction, shop, bank, wealth, stock, housing, license, immigration, job, visa };
+export const zhCN = { common, auth, nav, log, funct, role, simple, sim, family, app, game, profile, season, auction, shop, bank, wealth, stock, housing, license, immigration, job, visa, succession, welfare, court, prison, leisure, gender, calendar, marriage, birth, hospital };

@@ -1,0 +1,28 @@
+{
+  "taste": {
+    "elegant": "上流雅事 · 声望 +1（每月合计最多 +1）",
+    "vulgar": "市井消遣 · 声望 -1",
+    "neutral": "上场获胜可得声望"
+  },
+  "compete": {
+    "horse_race": "报名费 {{fee}}，牵自家最好的马下场（名驹胜率远高于骑乘马）",
+    "cockfight": "报名费 {{fee}}，输了斗鸡会死",
+    "bullfight": "胜率看健康，输了重伤",
+    "wrestling": "胜率看年龄与健康（20–30 岁最强），输了受伤"
+  },
+  "competeLabel": "亲自上场：",
+  "toast": {
+    "notRegistered": "请先完成出生登记",
+    "noMoney": "现金不足：需要 {{cost}}",
+    "boughtCock": "🐓 买下一只斗鸡"
+  },
+  "title": "文娱休闲",
+  "rules": "每项活动每月只能去一次。下注由庄家抽一成水（长期必亏），每注 {{min}} 起、最多为现金的一半；年满 {{age}} 岁才能下注。",
+  "stake": "每注金额",
+  "max": "最多",
+  "visited": "本月已去过",
+  "theater": "看戏（{{cost}}，健康 +{{health}}）",
+  "bet": "押「{{name}}」",
+  "competeButton": "上场",
+  "buyCock": "买斗鸡（{{cost}}）"
+}

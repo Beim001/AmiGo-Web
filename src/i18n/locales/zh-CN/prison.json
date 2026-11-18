@@ -1,0 +1,24 @@
+{
+  "date": "{{year}} 年 {{month}} 月",
+  "toast": {
+    "noMoney": "现金不足：需要 {{cost}}",
+    "released": "🔓 打点 {{cost}}，提前出狱",
+    "reduced": "打点 {{cost}}，减刑 {{months}} 个月"
+  },
+  "title": "监狱服刑",
+  "serving": "⛓️ 正在服刑",
+  "sentence": "罪名：{{crime}} · 刑期 {{sentence}} 个月 · 还剩 <r>{{left}}</r> 个月",
+  "restrictions": "狱中不能求职、处理推演事件、去文娱场所、结婚、出国旅行，也没有零花；每月健康 -{{health}}、在世家人好感 -{{affinity}}。",
+  "bribeRule": "打点狱卒：每 {{cost}} 减刑 1 个月",
+  "reduceOne": "减刑 1 个月（{{cost}}）",
+  "releaseNow": "立即出狱（{{cost}}）",
+  "unregistered": "尚未出生登记",
+  "hasRecord": "⚠️ 有前科在身",
+  "clean": "✅ 清白之身",
+  "recordUntil": "罪名：{{crime}} · 前科记录到 {{until}} 为止",
+  "lawTitle": "帝国刑律",
+  "law1": "走私、偷窃、斗殴、伪造票据等冒险失败会入狱 3–12 个月；平民、乞丐冲撞贵族也会被押进大牢。",
+  "law2": "私藏失物、地下赌局被抓，或在赌场、斗鸡场遇上巡捕查抄，会被拘留 1 个月。",
+  "law3": "入狱时丢掉工作，声望 {{rep}}。",
+  "law4": "出狱后留前科 {{years}} 年：{{category}}类岗位不录用，结婚候选人减半。服刑与前科只跟着本人，传承后继承人不受影响。"
+}

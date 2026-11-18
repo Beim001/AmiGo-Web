@@ -30,6 +30,7 @@ import {
 import { loadVehicles } from '../lib/vehicles';
 import { addLifeLog } from '../lib/lifeLog';
 import { isInPrison, PRISON_BLOCK_TEXT, RAID_CHANCE } from '../lib/prison';
+import { useTranslation } from 'react-i18next';
 
 // 文娱休闲（第 67.10 题）：剧院、赌场、赛马、斗鸡、斗牛、摔跤，每项每月一次；观赛下注或亲自上场
 
@@ -49,21 +50,24 @@ export interface LeisureModalProps {
   onJail: (crime: string, months: number) => string;
 }
 
-const TASTE_LABEL: Record<LeisureDef['taste'], [string, string]> = {
-  elegant: ['上流雅事 · 声望 +1（每月合计最多 +1）', 'text-emerald-300'],
-  vulgar: ['市井消遣 · 声望 -1', 'text-rose-300'],
-  neutral: ['上场获胜可得声望', 'text-gray-400'],
-};
+// 活动格调：[翻译键, 文字颜色]
+const TASTE_LABEL = {
+  elegant: ['taste.elegant', 'text-emerald-300'],
+  vulgar: ['taste.vulgar', 'text-rose-300'],
+  neutral: ['taste.neutral', 'text-gray-400'],
+} as const satisfies Record<LeisureDef['taste'], readonly [string, string]>;
 
 /** 下注项目可亲自上场的说明 */
-const COMPETE_HINT: Partial<Record<LeisureId, string>> = {
-  horse_race: `报名费 ${RACE_ENTRY_FEE.toLocaleString()}，牵自家最好的马下场（名驹胜率远高于骑乘马）`,
-  cockfight: `报名费 ${COCKFIGHT_ENTRY_FEE.toLocaleString()}，输了斗鸡会死`,
-  bullfight: '胜率看健康，输了重伤',
-  wrestling: '胜率看年龄与健康（20–30 岁最强），输了受伤',
-};
+const COMPETE_HINT = {
+  horse_race: 'compete.horse_race',
+  cockfight: 'compete.cockfight',
+  bullfight: 'compete.bullfight',
+  wrestling: 'compete.wrestling',
+} as const satisfies Partial<Record<LeisureId, string>>;
+const COMPETE_FEE: Partial<Record<LeisureId, number>> = { horse_race: RACE_ENTRY_FEE, cockfight: COCKFIGHT_ENTRY_FEE };
 
 export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setCoins, health, setHealth, changeReputation, isRegistered, age, gameYear, gameMonth, onJail }) => {
+  const { t } = useTranslation('leisure');
   const [record, setRecord] = useState<LeisureRecord>(loadLeisureRecord);
   const [hasCock, setHasCock] = useState(loadFightingCock);
   const [betInput, setBetInput] = useState(String(MIN_BET * 10));
@@ -111,8 +115,8 @@ export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setC
 
   const watchTheater = (def: LeisureDef) => {
     if (jailed()) return;
-    if (!isRegistered) return showToast('请先完成出生登记');
-    if (coins < THEATER_COST) return showToast(`现金不足：需要 ${money(THEATER_COST)}`);
+    if (!isRegistered) return showToast(t('toast.notRegistered'));
+    if (coins < THEATER_COST) return showToast(t('toast.noMoney', { cost: money(THEATER_COST) }));
     setCoins((prev) => prev - THEATER_COST);
     setHealth((h) => Math.min(100, h + THEATER_HEALTH));
     finish(def, `在${def.venue}看了一场戏，健康 +${THEATER_HEALTH}${markVisit(def.id)}`, false);
@@ -151,12 +155,12 @@ export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setC
   };
 
   const buyCock = () => {
-    if (!isRegistered) return showToast('请先完成出生登记');
-    if (coins < FIGHTING_COCK_PRICE) return showToast(`现金不足：需要 ${money(FIGHTING_COCK_PRICE)}`);
+    if (!isRegistered) return showToast(t('toast.notRegistered'));
+    if (coins < FIGHTING_COCK_PRICE) return showToast(t('toast.noMoney', { cost: money(FIGHTING_COCK_PRICE) }));
     setCoins((prev) => prev - FIGHTING_COCK_PRICE);
     setHasCock(true);
     saveFightingCock(true);
-    showToast('🐓 买下一只斗鸡');
+    showToast(t('toast.boughtCock'));
   };
 
   const btn =
@@ -182,7 +186,7 @@ export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setC
         <div className="flex-1 flex items-center justify-center pointer-events-none px-2">
           <div className="bg-[#2a2d3e] border-2 border-purple-400/80 px-5 py-1.5 rounded-xl shadow-[0_3px_0_#000] flex items-center gap-2">
             <Gamepad2 size={18} className="text-purple-200 flex-shrink-0" />
-            <span className="text-purple-100 text-sm font-black tracking-widest">文娱休闲</span>
+            <span className="text-purple-100 text-sm font-black tracking-widest">{t('title')}</span>
           </div>
         </div>
         <div className="flex items-center bg-[#151722] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black">
@@ -194,10 +198,10 @@ export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setC
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3 shadow-[0_3px_0_#000] space-y-2">
           <p className="text-[11px] text-gray-300 font-bold">
-            每项活动每月只能去一次。下注由庄家抽一成水（长期必亏），每注 {MIN_BET.toLocaleString()} 起、最多为现金的一半；年满 {BET_MIN_AGE} 岁才能下注。
+            {t('rules', { min: MIN_BET.toLocaleString(), age: BET_MIN_AGE })}
           </p>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-gray-400 font-bold shrink-0">每注金额</span>
+            <span className="text-[11px] text-gray-400 font-bold shrink-0">{t('stake')}</span>
             <input
               value={betInput}
               onChange={(e) => setBetInput(e.target.value.replace(/[^0-9]/g, ''))}
@@ -205,7 +209,7 @@ export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setC
               className="flex-1 min-w-0 bg-[#21232e] text-white font-black text-xs px-3 py-1.5 rounded-xl border-2 border-black focus:border-yellow-400 focus:outline-none"
             />
             <button onClick={() => setBetInput(String(maxBet(coins)))} className={grayBtn}>
-              最多
+              {t('max')}
             </button>
           </div>
           {result && <div className="text-[11px] font-black text-amber-300">{result}</div>}
@@ -213,7 +217,9 @@ export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setC
 
         {LEISURES.map((def) => {
           const visited = visitedThisMonth(record, def.id, gameYear, gameMonth);
-          const [tasteText, tasteColor] = TASTE_LABEL[def.taste];
+          const [tasteKey, tasteColor] = TASTE_LABEL[def.taste];
+          const tasteText = t(tasteKey);
+          const competeHint = def.id in COMPETE_HINT ? t(COMPETE_HINT[def.id as keyof typeof COMPETE_HINT], { fee: COMPETE_FEE[def.id]?.toLocaleString() }) : '';
           const contenders = def.id === 'theater' ? [] : contendersFor(def.id, gameYear, gameMonth);
           const canCompete = def.id !== 'theater' && def.id !== 'casino';
           const competeReason = canCompete ? competeBlocked(def.id, { isRegistered, age, health, coins, vehicles, hasCock }) : null;
@@ -224,7 +230,7 @@ export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setC
                   <div className="text-white font-black text-sm">
                     {def.name} <span className="text-[10px] text-gray-400 font-bold">· {def.venue}</span>
                   </div>
-                  {visited && <span className="text-[10px] text-gray-300 font-black shrink-0">本月已去过</span>}
+                  {visited && <span className="text-[10px] text-gray-300 font-black shrink-0">{t('visited')}</span>}
                 </div>
                 <div className="text-[10px] text-gray-400 font-bold mt-0.5">{def.desc}</div>
                 <div className={`text-[10px] font-black mt-0.5 ${tasteColor}`}>{tasteText}</div>
@@ -232,13 +238,13 @@ export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setC
 
               {def.id === 'theater' ? (
                 <button onClick={() => watchTheater(def)} disabled={visited} className={btn}>
-                  看戏（{money(THEATER_COST)}，健康 +{THEATER_HEALTH}）
+                  {t('theater', { cost: money(THEATER_COST), health: THEATER_HEALTH })}
                 </button>
               ) : (
                 <div className="grid grid-cols-2 gap-1.5">
                   {contenders.map((c, i) => (
                     <button key={c.name} onClick={() => bet(def, i)} disabled={visited} className={`${grayBtn} text-left`}>
-                      押「{c.name}」<span className="text-amber-300 ml-1">×{c.odds.toFixed(2)}</span>
+                      {t('bet', { name: c.name })}<span className="text-amber-300 ml-1">×{c.odds.toFixed(2)}</span>
                     </button>
                   ))}
                 </div>
@@ -246,15 +252,15 @@ export const LeisureModal: React.FC<LeisureModalProps> = ({ onClose, coins, setC
 
               {canCompete && (
                 <div className="border-t border-black/40 pt-2 space-y-1">
-                  <div className="text-[10px] text-gray-400 font-bold">亲自上场：{COMPETE_HINT[def.id]}</div>
+                  <div className="text-[10px] text-gray-400 font-bold">{t('competeLabel')}{competeHint}</div>
                   {competeReason && <div className="text-[10px] text-rose-300 font-bold">{competeReason}</div>}
                   <div className="flex gap-1.5">
                     <button onClick={() => enter(def)} disabled={visited || !!competeReason} className={btn}>
-                      上场
+                      {t('competeButton')}
                     </button>
                     {def.id === 'cockfight' && !hasCock && (
                       <button onClick={buyCock} className={grayBtn}>
-                        买斗鸡（{money(FIGHTING_COCK_PRICE)}）
+                        {t('buyCock', { cost: money(FIGHTING_COCK_PRICE) })}
                       </button>
                     )}
                   </div>

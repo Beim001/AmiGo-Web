@@ -20,6 +20,7 @@ import { loadStored, saveStored } from '../lib/storage';
 import { addLifeLog } from '../lib/lifeLog';
 import { LAST_WORK_MONTH_KEY } from '../lib/monthly';
 import { unlockAchievement } from '../lib/achievements';
+import { useTranslation } from 'react-i18next';
 
 // 社会福利（第 67.5 题）：帝国时期只有教会救济，每季度可领一次；失业救济、养老金标注联邦时代开放
 
@@ -36,6 +37,7 @@ export interface WelfareModalProps {
 }
 
 export const WelfareModal: React.FC<WelfareModalProps> = ({ onClose, coins, setCoins, health, setHealth, bankDeposit, isRegistered, gameYear, gameMonth }) => {
+  const { t } = useTranslation('welfare');
   const [record, setRecord] = useState<ReliefRecord | null>(() => parseReliefRecord(loadStored<unknown>(RELIEF_KEY, null)));
   const [toast, setToast] = useState<string | null>(null);
   const showToast = (msg: string) => {
@@ -60,7 +62,7 @@ export const WelfareModal: React.FC<WelfareModalProps> = ({ onClose, coins, setC
     if (earnsBeggarKing(next, loadStored<number | null>(LAST_WORK_MONTH_KEY, null))) unlockAchievement('beggar_king');
     const gain = r.coins ? `+${r.coins.toLocaleString()} ${CURRENCY.symbol}` : `健康 +${r.health - health}`;
     addLifeLog('财富', `领取${relief.name}`, `家境困难，领到${relief.name}（${gain}）。`);
-    showToast(`🙏 领到${relief.name}（${gain}）`);
+    showToast(t('toast.received', { name: relief.name, gain: r.coins ? `+${r.coins.toLocaleString()} ${CURRENCY.symbol}` : t('healthGain', { amount: r.health - health }) }));
   };
 
   return (
@@ -81,7 +83,7 @@ export const WelfareModal: React.FC<WelfareModalProps> = ({ onClose, coins, setC
         <div className="flex-1 flex items-center justify-center pointer-events-none px-2">
           <div className="bg-[#2a2d3e] border-2 border-pink-500/80 px-5 py-1.5 rounded-xl shadow-[0_3px_0_#000] flex items-center gap-2">
             <HeartHandshake size={18} className="text-pink-300 flex-shrink-0" />
-            <span className="text-pink-200 text-sm font-black tracking-widest">社会福利</span>
+            <span className="text-pink-200 text-sm font-black tracking-widest">{t('title')}</span>
           </div>
         </div>
         <div className="flex items-center bg-[#151722] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black">
@@ -92,16 +94,15 @@ export const WelfareModal: React.FC<WelfareModalProps> = ({ onClose, coins, setC
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3 shadow-[0_3px_0_#000] space-y-1.5">
-          <div className="text-white font-black text-sm">教会救济</div>
+          <div className="text-white font-black text-sm">{t('church')}</div>
           <p className="text-[11px] text-gray-300 font-bold">
-            帝国时期没有官方的社会福利，贫苦人家只能求助于宗教机构。家里现金加存款不足 {RELIEF_WEALTH_LIMIT.toLocaleString()} {CURRENCY.symbol}，或健康低于{' '}
-            {RELIEF_HEALTH_LIMIT} 时，每个季度可以领一次救济（两种任选其一）。
+            {t('churchDesc', { wealth: RELIEF_WEALTH_LIMIT.toLocaleString(), health: RELIEF_HEALTH_LIMIT, symbol: CURRENCY.symbol })}
           </p>
           <div className="text-[11px] font-bold text-gray-400">
-            现在：现金 + 存款 {wealth.toLocaleString()} {CURRENCY.symbol} · 健康 {health}
+            {t('current', { wealth: wealth.toLocaleString(), health, symbol: CURRENCY.symbol })}
           </div>
-          <div className={`text-[11px] font-black ${blocked ? 'text-rose-300' : 'text-emerald-300'}`}>{blocked ?? '✅ 本季度可以领取'}</div>
-          {record && record.streak > 1 && <div className="text-[10px] text-gray-400 font-bold">已连续 {record.streak} 个季度领取救济</div>}
+          <div className={`text-[11px] font-black ${blocked ? 'text-rose-300' : 'text-emerald-300'}`}>{blocked ?? t('available')}</div>
+          {record && record.streak > 1 && <div className="text-[10px] text-gray-400 font-bold">{t('streak', { count: record.streak })}</div>}
         </div>
 
         {RELIEFS.map((r) => (
@@ -110,7 +111,7 @@ export const WelfareModal: React.FC<WelfareModalProps> = ({ onClose, coins, setC
               <div className="text-white font-black text-xs">{r.name}</div>
               <div className="text-[10px] text-gray-400 font-bold mt-0.5">{r.desc}</div>
               <div className="text-[11px] text-amber-300 font-black mt-1">
-                {r.coins ? `+${r.coins.toLocaleString()} ${CURRENCY.symbol}` : `健康 +${r.health}`}
+                {r.coins ? `+${r.coins.toLocaleString()} ${CURRENCY.symbol}` : t('healthGain', { amount: r.health })}
               </div>
             </div>
             <button
@@ -118,19 +119,19 @@ export const WelfareModal: React.FC<WelfareModalProps> = ({ onClose, coins, setC
               disabled={!!blocked}
               className="bg-gradient-to-b from-[#ffe56c] to-[#f5b822] text-black text-xs font-black px-4 py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              领取
+              {t('receive')}
             </button>
           </div>
         ))}
 
         <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3 shadow-[0_3px_0_#000] space-y-2">
-          <div className="text-white font-black text-sm">其他福利</div>
+          <div className="text-white font-black text-sm">{t('others')}</div>
           {FUTURE_WELFARE.map((w) => (
             <div key={w.name} className="flex items-start gap-2 text-[11px] font-bold">
               <Lock size={13} className="text-gray-500 mt-0.5 shrink-0" />
               <div>
                 <span className="text-gray-300">{w.name}</span>
-                <span className="text-gray-500">：联邦时代开放（{w.note}）</span>
+                <span className="text-gray-500">{t('federalOnly', { note: w.note })}</span>
               </div>
             </div>
           ))}

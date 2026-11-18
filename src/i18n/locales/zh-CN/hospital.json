@@ -1,0 +1,66 @@
+{
+  "toast": {
+    "noMoney": "❌ 金钱不足！需要 {{cost}} {{symbol}}，拥有 {{coins}} {{symbol}}",
+    "full": "💖 你的健康度已达 100% 满值，无需额外治疗！",
+    "treated": "🩺 在【{{hospital}}】成功进行【{{title}}】！健康度 +{{recover}}%，{{payment}}",
+    "cureNoMoney": "❌ 金钱不足！治疗{{disease}}需要 {{cost}} {{symbol}}",
+    "cured": "🩺 在【{{hospital}}】治愈了{{disease}}！{{payment}}",
+    "switched": "🏥 已切换就诊医院至【{{name}}】"
+  },
+  "parentsPay": "费用由父母承担",
+  "spent": "花费 {{cost}} {{symbol}}",
+  "status": {
+    "excellent": "体魄强健 · 状态极佳",
+    "good": "精力充沛 · 稍需养护",
+    "fair": "身体抱恙 · 亚健康",
+    "poor": "重度疲劳 · 紧急治疗"
+  },
+  "chooseHospital": "选择诊治医院",
+  "title": "健康",
+  "minorNotice": "👪 未满 18 岁：所有诊疗与药品费用由父母承担",
+  "disease": {
+    "current": "🤒 当前疾病：{{name}}",
+    "damage": "每月健康 -{{damage}}，",
+    "noSelfHeal": "不会自愈，必须就医",
+    "selfHeal": "约 {{months}} 个月可自愈",
+    "cure": "治疗 {{cost}} {{symbol}}"
+  },
+  "vaccine": {
+    "title": "💉 疫苗接种",
+    "rules": "接种成功率 {{success}}%，获得抗体后不会再患这种病；传染病痊愈后也有 {{recovery}}% 概率获得抗体。抗体会按 {{inherit}}% 的概率遗传给孩子。你的抗体：{{antibodies}}",
+    "none": "暂无",
+    "notYet": "这个年代还没有疫苗问世。",
+    "name": "{{name}}疫苗",
+    "price": "{{cost}} {{symbol}} / 人",
+    "owned": "已有抗体",
+    "self": "自己接种",
+    "children": "孩子们接种"
+  },
+  "maintenance": {
+    "title": "💆 保养调理（{{cost}} {{symbol}} / 次）",
+    "rules": "每次有 {{pct}}% 的概率获得「精力旺盛」或「富养」，生育年龄上限延长到女 50 岁、男 65 岁。",
+    "self": "为自己保养",
+    "spouse": "为配偶保养"
+  },
+  "healthIndex": "当前健康指数",
+  "hospitalList": "各大诊治医院与专科机构 (共 {{count}} 所)",
+  "visiting": "就诊中",
+  "go": "前往",
+  "discount": "诊费折扣: {{pct}}%",
+  "bonus": "疗效加成: +{{pct}}% 健康",
+  "regular": "常规诊疗",
+  "currentHospital": "当前就诊医院",
+  "switchHospital": "更换医院",
+  "tabs": {
+    "treatments": "诊疗项目",
+    "pharmacy": "处方药房",
+    "logs": "就诊记录"
+  },
+  "recover": "健康度 +{{pct}}%",
+  "treat": "接受诊疗",
+  "effect": "效果：健康度 +{{pct}}%",
+  "logsTitle": "医院门诊与处方记录",
+  "logsCount": "共 {{count}} 条",
+  "noLogs": "暂无诊疗记录",
+  "logHealth": "+{{pct}}% 健康"
+}
