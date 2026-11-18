@@ -494,7 +494,7 @@ export const BankModal = ({
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs text-gray-300 font-bold">
-                    <span>办理金币金额：</span>
+                    <span>办理金额：</span>
                     <span className="text-amber-300">身上现金: {coins.toLocaleString()} ₽</span>
                   </div>
                   <div className="flex gap-2">

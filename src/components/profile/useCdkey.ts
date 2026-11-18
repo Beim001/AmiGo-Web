@@ -36,7 +36,7 @@ export const useCdkey = ({ setCoins, showToast, onRedeemTestCode }: {
       setRedeemedCodes(updatedCodes);
       saveStored('amigo_redeemed_codes', updatedCodes);
       setCdkeyInput('');
-      showToast('🎉 兑换成功！获得 50,000金币！');
+      showToast('🎉 兑换成功！获得 50,000 卢布！');
     } else {
       showToast('❌ 无效的兑换码，请输入 GIFT2026 或 666666 试用');
     }

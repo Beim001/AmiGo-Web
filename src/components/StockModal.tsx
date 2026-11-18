@@ -15,7 +15,7 @@ import {
   ArrowDownRight,
   Sparkles,
   Award,
-  CircleDollarSign,
+  RussianRuble,
   Search,
   CheckCircle2,
   AlertCircle,
@@ -217,7 +217,7 @@ export const StockModal: React.FC<{
     }
     const cost = Math.round(shares * stock.price);
     if (coins < cost) {
-      showToast(`❌ 金币不足！购买 ${shares} 股需 ${cost.toLocaleString()} ₽，当前拥有 ${coins.toLocaleString()} ₽`);
+      showToast(`❌ 现金不足！购买 ${shares} 股需 ${cost.toLocaleString()} ₽，当前拥有 ${coins.toLocaleString()} ₽`);
       return;
     }
 

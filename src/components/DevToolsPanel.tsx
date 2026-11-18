@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wrench, X, CircleDollarSign, FastForward, Baby, Cake, Square, Trophy, Gift } from 'lucide-react';
+import { Wrench, X, RussianRuble, FastForward, Baby, Cake, Square, Trophy, Gift } from 'lucide-react';
 import { GIFTS, GIFT_QUALITY_STYLE } from '../lib/gifts';
 import { formatDuration } from '../lib/season';
 
@@ -166,7 +166,7 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
 
       <div className="grid grid-cols-6 gap-1 mb-2">
         {([
-          ['money', '金钱', CircleDollarSign],
+          ['money', '金钱', RussianRuble],
           ['time', '快进', FastForward],
           ['age', '年龄', Cake],
           ['child', '家人', Baby],
@@ -194,7 +194,7 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
           {gameYear}.{gameMonth < 10 ? `0${gameMonth}` : gameMonth} · {isRegistered ? `${age} 岁` : '未登记'}
         </span>
         <span className="flex items-center gap-1 text-yellow-300 font-black font-mono">
-          <CircleDollarSign size={11} />
+          <RussianRuble size={11} />
           {coins.toLocaleString()}
         </span>
       </div>

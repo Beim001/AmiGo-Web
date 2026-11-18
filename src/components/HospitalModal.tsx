@@ -11,7 +11,7 @@ import {
   Stethoscope,
   Zap,
   CheckCircle2,
-  CircleDollarSign,
+  RussianRuble,
   History,
   Building2,
   RefreshCw,
@@ -316,7 +316,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
         </div>
 
         <div className="flex items-center bg-[#151722] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black z-10">
-          <CircleDollarSign size={14} className="text-yellow-400 mr-1" />
+          <RussianRuble size={14} className="text-yellow-400 mr-1" />
           <span>{coins.toLocaleString()} ₽</span>
         </div>
       </div>

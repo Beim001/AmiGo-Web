@@ -1,5 +1,5 @@
 import React from 'react';
-import { CircleDollarSign, Heart, LogOut, TrendingUp, TrendingDown } from 'lucide-react';
+import { RussianRuble, Heart, LogOut, TrendingUp, TrendingDown } from 'lucide-react';
 
 // 简洁模式：把用户当成 7 岁儿童来设计的一屏界面。
 // 只保留影响人生模拟的事：一个「过一个月」大按钮（自动治病、处理推演、给家人送礼），
@@ -111,7 +111,7 @@ export const SimpleModeView: React.FC<SimpleModeViewProps> = (p) => {
                 <span className="w-10 text-right">{p.health}</span>
               </div>
               <div className="flex items-center gap-2 text-lg font-black">
-                <CircleDollarSign size={22} className="text-amber-500" /> 钱
+                <RussianRuble size={22} className="text-amber-500" /> 钱
                 <span className="ml-auto">{p.coins.toLocaleString()} ₽</span>
               </div>
               {p.deposit > 0 && (

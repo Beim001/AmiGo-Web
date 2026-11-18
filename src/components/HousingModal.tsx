@@ -5,7 +5,7 @@ import {
   Home,
   Building2,
   Key,
-  CircleDollarSign,
+  RussianRuble,
   CheckCircle2,
   AlertCircle,
   Sparkles,
@@ -534,7 +534,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
         </div>
 
         <div className="flex items-center bg-[#141622] rounded-xl px-3.5 py-1.5 border-2 border-black text-xs font-mono font-black z-10 shadow-[0_2px_0_#000] gap-1.5">
-          <CircleDollarSign size={15} className="text-yellow-400" />
+          <RussianRuble size={15} className="text-yellow-400" />
           <span className="text-amber-300">{coins.toLocaleString()} ₽</span>
         </div>
       </div>

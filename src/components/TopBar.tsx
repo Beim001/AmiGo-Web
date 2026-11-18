@@ -1,8 +1,8 @@
 import React from 'react';
-import { User, CircleDollarSign } from 'lucide-react';
+import { User, RussianRuble } from 'lucide-react';
 import { AppUser } from '../lib/bilibiliToy';
 
-// 顶部栏：玩家头像、昵称、金币余额与个人中心入口
+// 顶部栏：玩家头像、昵称、现金（卢布）余额与个人中心入口
 
 export const TopBar = ({
   coins,
@@ -44,7 +44,7 @@ export const TopBar = ({
         className={`flex items-center bg-[#1b1c25] rounded-full pl-1 pr-2.5 py-1 border-2 border-black ${(onOpenWealthChart || onOpenBank) ? 'cursor-pointer hover:border-yellow-400 active:scale-95 transition-all' : ''}`}
       >
         <div className="w-5 h-5 bg-yellow-400 rounded-full border border-yellow-700 flex justify-center items-center mr-1">
-          <CircleDollarSign size={13} className="text-yellow-700" strokeWidth={3} />
+          <RussianRuble size={13} className="text-yellow-700" strokeWidth={3} />
         </div>
         <span className="font-black text-white text-xs font-mono">{coins.toLocaleString()}</span>
       </div>

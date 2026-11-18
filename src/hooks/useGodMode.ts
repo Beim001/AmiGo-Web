@@ -42,7 +42,7 @@ export const useGodMode = ({ godMode, setGodMode, coins, setCoins, health, setHe
     }
     const added = unlockAllForTesting();
     autoPlayCreditsIfComplete();
-    return `🛠️ 测试兑换码生效：无限金币、无限体力、无限寿命，已解锁全部成就（新增 ${added} 项）。本赛季成绩不计入排行。`;
+    return `🛠️ 测试兑换码生效：无限现金、无限体力、无限寿命，已解锁全部成就（新增 ${added} 项）。本赛季成绩不计入排行。`;
   };
 
   return { activateGodMode };

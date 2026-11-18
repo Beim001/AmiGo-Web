@@ -7,7 +7,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
-  CircleDollarSign,
+  RussianRuble,
   User,
   RefreshCw,
   Edit3,
@@ -181,7 +181,7 @@ export const BirthModal: React.FC<BirthModalProps> = ({
         </div>
 
         <div className="flex items-center bg-[#151722] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black z-10 shadow-[0_2px_0_#000]">
-          <CircleDollarSign size={14} className="text-yellow-400 mr-1" />
+          <RussianRuble size={14} className="text-yellow-400 mr-1" />
           <span className="text-amber-300">{coins.toLocaleString()} ₽</span>
         </div>
       </div>

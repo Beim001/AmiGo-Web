@@ -106,7 +106,7 @@ export const drawGacha = (
     }
 
     if (!tier) {
-      rewards.push({ type: 'coin', amount: COIN_REWARD, name: `${COIN_REWARD} 金币`, isPity: false });
+      rewards.push({ type: 'coin', amount: COIN_REWARD, name: `${COIN_REWARD} 卢布`, isPity: false });
       continue;
     }
 
@@ -120,9 +120,9 @@ export const drawGacha = (
     } else if (tierItems.length > 0) {
       const dup = tierItems[Math.floor(rng() * tierItems.length)];
       const refund = Math.round(dup.price * DUPLICATE_REFUND_RATIO);
-      rewards.push({ type: 'coin', amount: refund, name: `重复「${dup.name}」返还 ${refund.toLocaleString()} 金币`, rarity: tier, isPity });
+      rewards.push({ type: 'coin', amount: refund, name: `重复「${dup.name}」返还 ${refund.toLocaleString()} 卢布`, rarity: tier, isPity });
     } else {
-      rewards.push({ type: 'coin', amount: COIN_REWARD, name: `${COIN_REWARD} 金币`, isPity: false });
+      rewards.push({ type: 'coin', amount: COIN_REWARD, name: `${COIN_REWARD} 卢布`, isPity: false });
     }
   }
 

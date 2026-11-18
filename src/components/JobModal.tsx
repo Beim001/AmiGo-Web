@@ -7,7 +7,7 @@ import {
   Briefcase,
   Search,
   CheckCircle2,
-  CircleDollarSign,
+  RussianRuble,
   Building2,
   Zap,
   Award,
@@ -634,7 +634,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
         </div>
 
         <div className="bg-[#12141c] border-2 border-black px-2.5 py-1 rounded-xl flex items-center gap-1 shadow-[0_2px_0_#000] flex-shrink-0">
-          <CircleDollarSign size={14} className="text-amber-400" />
+          <RussianRuble size={14} className="text-amber-400" />
           <span className="text-amber-300 font-mono font-black text-xs">
             {coins.toLocaleString()} ₽
           </span>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { SimEventInstance, SimEventDef, eventDef, optionBlocked, Resolution } from '../lib/simEvents';
 import {
   Briefcase,
-  CircleDollarSign,
+  RussianRuble,
   BookOpen,
   ChevronLeft,
   CheckCircle,

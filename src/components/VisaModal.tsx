@@ -8,7 +8,7 @@ import {
   BookOpen,
   Stamp,
   ShieldCheck,
-  CircleDollarSign,
+  RussianRuble,
   Sparkles,
   CheckCircle2,
   AlertCircle,
@@ -549,7 +549,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
     }
     const PASSPORT_FEE = 300;
     if (coins < PASSPORT_FEE) {
-      showToast(`金币不足！办理帝国出入境护照需 ${PASSPORT_FEE} ₽ 工本费`, 'error');
+      showToast(`现金不足！办理帝国出入境护照需 ${PASSPORT_FEE} ₽ 工本费`, 'error');
       return;
     }
 
@@ -890,7 +890,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         </div>
 
         <div className="flex items-center bg-[#11131c] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black z-10 shadow-[0_2px_0_#000]">
-          <CircleDollarSign size={14} className="text-yellow-400 mr-1" />
+          <RussianRuble size={14} className="text-yellow-400 mr-1" />
           <span className="text-amber-300">{coins.toLocaleString()} ₽</span>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { User, Swords, CircleDollarSign, Crown, Trophy, RefreshCw, Upload, UserCheck } from 'lucide-react';
+import { User, Swords, RussianRuble, Crown, Trophy, RefreshCw, Upload, UserCheck } from 'lucide-react';
 import { SeasonRankPanel } from '../SeasonRankPanel';
 import type { ProfileModalProps } from '../ProfileModal';
 import type { RankBoard } from './useRankBoard';
@@ -63,7 +63,7 @@ export const RankTab = ({ rank, handleSyncBilibiliProfile, playerName, lazy, coi
               : 'text-gray-400 border-transparent hover:text-white'
           }`}
         >
-          <CircleDollarSign size={13} />
+          <RussianRuble size={13} />
           <span>帝国财富榜</span>
         </button>
         <button
@@ -208,7 +208,7 @@ export const RankTab = ({ rank, handleSyncBilibiliProfile, playerName, lazy, coi
                     )}
                   </div>
                   <div className="text-[9px] text-gray-400 font-mono">
-                    {board === 1 ? '金币资产' : '推演胜分'}
+                    {board === 1 ? '现金资产' : '推演胜分'}
                   </div>
                 </div>
               </div>

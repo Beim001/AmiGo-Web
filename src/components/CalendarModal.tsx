@@ -3,7 +3,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  CircleDollarSign,
+  RussianRuble,
   Clock,
   Bookmark,
 } from 'lucide-react';
@@ -149,7 +149,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
             </div>
 
             <div className="flex items-center bg-[#1c1d25] rounded-xl px-2.5 py-1 border-2 border-black text-xs font-mono font-black shadow-[0_2px_0_#000] z-10">
-              <CircleDollarSign size={14} className="text-yellow-400 mr-1" />
+              <RussianRuble size={14} className="text-yellow-400 mr-1" />
               <span>{coins.toLocaleString()} ₽</span>
             </div>
           </div>
@@ -296,7 +296,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
           <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3.5 flex flex-col gap-2.5 shadow-[0_4px_0_#000]">
             <div className="flex items-center justify-between text-xs px-1">
               <span className="text-gray-300 font-bold flex items-center gap-1.5">
-                <CircleDollarSign size={14} className="text-amber-400" />
+                <RussianRuble size={14} className="text-amber-400" />
                 月度薪水与利息收益: <span className="font-mono text-emerald-400 font-bold">+1,500 ₽</span>
               </span>
               <span className="text-[11px] text-gray-400 font-mono">

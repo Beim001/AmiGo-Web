@@ -1,5 +1,5 @@
 import React from 'react';
-import { CircleDollarSign, ChevronLeft, Shirt, Crown, Gift } from 'lucide-react';
+import { RussianRuble, ChevronLeft, Shirt, Crown, Gift } from 'lucide-react';
 import { CharacterAvatar } from './CharacterAvatar';
 import { CLOTHING } from '../data/clothing';
 import { Appearance, BARBER_PARTS, BARBER_COST, APPEARANCE_PARTS } from '../lib/appearance';
@@ -8,7 +8,7 @@ import { drawGacha, hitLimitedPity, GACHA_PITY_KEY, INITIAL_PITY, PITY_RARE, PIT
 import { unlockAchievement } from '../lib/achievements';
 import { loadStored, saveStored } from '../lib/storage';
 
-// 商城：抽卡（含保底与开箱动画，奖品为金币、家族礼物与服饰）、服饰购买与穿戴、理发店
+// 商城：抽卡（含保底与开箱动画，奖品为卢布、家族礼物与服饰）、服饰购买与穿戴、理发店
 
 /** 单抽与十连抽价格（首次单抽免费） */
 const SINGLE_DRAW_COST = 8000;
@@ -82,7 +82,7 @@ const ChestAnimation = ({ isDrawing, result, onComplete, onDrawAgain, drawCost, 
                   <div key={idx} className="flex flex-col items-center animate-in slide-in-from-bottom-8 fade-in" style={{ animationDelay: `${idx * 100}ms`, animationFillMode: 'both' }}>
                      <div className={`${result.length > 1 ? 'w-14 h-14 border-2' : 'w-24 h-24 border-4'} bg-gradient-to-b from-yellow-100 to-yellow-400 rounded-xl flex items-center justify-center border-white shadow-[0_0_15px_#fde047] relative overflow-hidden`}>
                         {item.type === 'coin' ? (
-                          <CircleDollarSign size={result.length > 1 ? 32 : 50} className="text-yellow-600 drop-shadow-md" strokeWidth={2.5} />
+                          <RussianRuble size={result.length > 1 ? 32 : 50} className="text-yellow-600 drop-shadow-md" strokeWidth={2.5} />
                         ) : item.type === 'gift' ? (
                           <Gift size={result.length > 1 ? 32 : 50} className="text-rose-600 drop-shadow-md" strokeWidth={2.5} />
                         ) : (
@@ -132,7 +132,7 @@ const ChestAnimation = ({ isDrawing, result, onComplete, onDrawAgain, drawCost, 
                      {label}
                      {cost > 0 && (
                        <span className="text-[11px] flex items-center gap-0.5">
-                         <CircleDollarSign size={12} />
+                         <RussianRuble size={12} />
                          {cost.toLocaleString()}
                        </span>
                      )}
@@ -218,7 +218,7 @@ export const ShopModal = ({
     const cost = drawCost(times);
 
     if (coins < cost) {
-      showShopToast(`金币不足！需要 ${cost.toLocaleString()} ₽`);
+      showShopToast(`现金不足！需要 ${cost.toLocaleString()} ₽`);
       return;
     }
 
@@ -283,7 +283,7 @@ export const ShopModal = ({
             title="当前现金余额"
           >
             <div className="w-5 h-5 bg-yellow-400 rounded-full border border-yellow-700 flex justify-center items-center mr-1">
-              <CircleDollarSign size={13} className="text-yellow-700" strokeWidth={3} />
+              <RussianRuble size={13} className="text-yellow-700" strokeWidth={3} />
             </div>
             <span className="font-black text-white text-xs font-mono">{coins.toLocaleString()}</span>
           </div>
@@ -309,7 +309,7 @@ export const ShopModal = ({
                <div className="flex-1 pt-1 z-10">
                  <h3 className="text-white text-3xl font-black drop-shadow-[0_2px_0_#000] leading-none mb-2 text-right tracking-wider">限定宝箱</h3>
                  <p className="text-white text-[10px] text-right font-extrabold drop-shadow-[0_1px_0_#000] leading-tight mt-1">
-                   每抽获得 1,000 金币、<span className="text-rose-200">家族礼物</span>，或<br/><span className="text-blue-300">高级</span>、<span className="text-purple-300">稀有</span>、<span className="text-orange-300">限定</span>服饰
+                   每抽获得 1,000 卢布、<span className="text-rose-200">家族礼物</span>，或<br/><span className="text-blue-300">高级</span>、<span className="text-purple-300">稀有</span>、<span className="text-orange-300">限定</span>服饰
                  </p>
                  <div className="flex flex-col items-end mt-2 gap-1.5">
                    <div className="bg-[#c85ce6] border-2 border-[#9438ad] text-white text-[10px] px-3 py-0.5 rounded-full font-bold shadow-sm">
@@ -328,13 +328,13 @@ export const ShopModal = ({
               <button onClick={() => handleDraw(1)} className="flex-1 bg-gradient-to-b from-[#ffe56c] to-[#f5b822] border-2 border-black rounded-xl py-1.5 flex flex-col items-center shadow-[0_4px_0_#000] active:translate-y-1 active:shadow-none transition-all">
                  <span className="text-black font-black text-sm">抽1次</span>
                  <span className="text-[#a46914] font-bold text-[10px] flex items-center gap-1">
-                    {!freeDrawUsed ? '首次免费' : <><CircleDollarSign size={10} className="text-[#a46914]"/> x{SINGLE_DRAW_COST}</>}
+                    {!freeDrawUsed ? '首次免费' : <><RussianRuble size={10} className="text-[#a46914]"/> x{SINGLE_DRAW_COST}</>}
                  </span>
               </button>
               <button onClick={() => handleDraw(10)} className="flex-1 bg-gradient-to-b from-[#ffe56c] to-[#f5b822] border-2 border-black rounded-xl py-1.5 flex flex-col items-center shadow-[0_4px_0_#000] active:translate-y-1 active:shadow-none transition-all">
                  <span className="text-black font-black text-sm">抽10次</span>
                  <span className="text-[#a46914] font-bold text-[10px] flex items-center gap-1">
-                    <CircleDollarSign size={10} className="text-[#a46914]"/> x{TEN_DRAW_COST}
+                    <RussianRuble size={10} className="text-[#a46914]"/> x{TEN_DRAW_COST}
                  </span>
               </button>
             </div>
@@ -383,7 +383,7 @@ export const ShopModal = ({
                   >
                      {isEquipped ? '已穿戴' : isOwned ? '穿戴' : (
                        <>
-                         <CircleDollarSign size={12} className="text-yellow-700 mr-0.5 stroke-[3]"/>
+                         <RussianRuble size={12} className="text-yellow-700 mr-0.5 stroke-[3]"/>
                          {item.price}
                        </>
                      )}

@@ -15,7 +15,7 @@ export const CdkeyTab = ({ cdkey }: { cdkey: Cdkey }) => {
         </div>
         <div>
           <h3 className="text-white font-black text-sm">兑换官方礼包码</h3>
-          <p className="text-gray-300 text-xs font-bold mt-0.5">输入兑换码领取限量金币与道具！</p>
+          <p className="text-gray-300 text-xs font-bold mt-0.5">输入兑换码领取限量卢布与道具！</p>
         </div>
       </div>
 
@@ -37,8 +37,8 @@ export const CdkeyTab = ({ cdkey }: { cdkey: Cdkey }) => {
 
       <div className="bg-[#21232e] p-3 rounded-xl border border-black space-y-1.5">
         <div className="text-yellow-400 font-black text-xs">💡 可测试的公测礼包码：</div>
-        <div className="text-gray-300 text-xs font-mono font-bold">· GIFT2026 : 50,000 金币</div>
-        <div className="text-gray-300 text-xs font-mono font-bold">· 666666 : 50,000 金币</div>
+        <div className="text-gray-300 text-xs font-mono font-bold">· GIFT2026 : 50,000 卢布</div>
+        <div className="text-gray-300 text-xs font-mono font-bold">· 666666 : 50,000 卢布</div>
         <div className="text-gray-300 text-xs font-mono font-bold">· VALENTINE : 瓦伦丁家族专属好礼</div>
       </div>
     </div>
