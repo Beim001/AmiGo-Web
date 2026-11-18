@@ -13,6 +13,6 @@ CLAUDE.md
 .dev.vars
 .wrangler/
 
+*.xlsx
 wiki-contributors.md
-
 list.md
