@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Newspaper, CheckCircle, Store, MonitorPlay, Zap, Car, Scale, Receipt, Building2, TrendingDown, HeartHandshake, GraduationCap, Megaphone, UserCog, Gamepad2, RefreshCw, Medal, ShieldAlert, BarChart2, ArrowUpRight, ArrowDownRight, Percent } from 'lucide-react';
+import { Newspaper, CheckCircle, Store, MonitorPlay, Zap, Car, Scale, Receipt, Building2, TrendingDown, HeartHandshake, GraduationCap, Megaphone, UserCog, Gamepad2, Medal, ShieldAlert, BarChart2, ArrowUpRight, ArrowDownRight, Percent } from 'lucide-react';
 import { RoleTab, CartoonCharacter } from './components/RoleTab';
 import { PRESET_AVATARS } from './components/AvatarSelectModal';
 import { FunctTab as FuncTab } from './components/FunctTab';
@@ -43,6 +43,8 @@ import { useGameState, registeredName } from './hooks/useGameState';
 import { useSuccession } from './hooks/useSuccession';
 import { useSimpleMode } from './hooks/useSimpleMode';
 import { useOverlays } from './hooks/useOverlays';
+import { useAuth } from './hooks/useAuth';
+import { AuthGate } from './components/AuthGate';
 import { OverlayHost } from './components/OverlayHost';
 import {
   buildDefaultAccounts,
@@ -56,35 +58,18 @@ import { addCase, appealCase, loadCases, saveCases, suitCase } from './lib/court
 import { JAIL_REPUTATION, loadPrison, savePrison, saveCriminalRecord, sentenceTo, isInPrison } from './lib/prison';
 import { loadLicenses, loadVehicles, loadCoachman, saveCoachman } from './lib/vehicles';
 import { JOB_POSITIONS, readCurrentJobId, CURRENT_JOB_KEY } from './components/JobModal';
-import { AuthScreen } from './components/AuthScreen';
-import { EmailVerificationScreen } from './components/EmailVerificationScreen';
 import { DevToolsPanel } from './components/DevToolsPanel';
 import { TopBar } from './components/TopBar';
 import { BottomNav } from './components/BottomNav';
 import { loadStored, saveStored } from './lib/storage';
 import { CLOTHING } from './data/clothing';
 import { GACHA_PITY_KEY, PITY_LIMITED } from './lib/gacha';
-import { getMe, logout as logoutRequest, cacheUser, readCachedUser, isPasswordUser } from './lib/authClient';
-import { useCloudSave, clearLocalGameData } from './lib/cloudSave';
+import { useCloudSave } from './lib/cloudSave';
 import {
   isRealToySdkAvailable,
-  AppUser,
 } from './lib/bilibiliToy';
 import { SENSITIVE_WORDS_CONFIG } from './utils/sensitiveWords';
 import { useTranslation } from 'react-i18next';
-
-// 本地测试开关：仅在 `npm run dev` 且 .env.local 设置 VITE_SKIP_AUTH=true 时生效，
-// 跳过 Firebase 登录门禁，使用本地测试账号。生产构建 (npm run build) 中永远为 false。
-const DEV_SKIP_AUTH = import.meta.env.DEV && import.meta.env.VITE_SKIP_AUTH === 'true';
-const DEV_MOCK_USER: AppUser = {
-  uid: 'dev-local-user',
-  displayName: '本地测试玩家',
-  photoURL: null,
-  email: null,
-  emailVerified: true,
-  providerData: [{ providerId: 'dev' }],
-  isMock: true,
-};
 
 // 重置人生时保留的存档键（账号级数据，不属于某一段人生）
 // 赛季进度与成就一样跨人生保留（第 55 题）；服饰与服饰 7 折券属于账号，重置人生不清空
@@ -108,61 +93,15 @@ export default function App() {
 
 
 
-  const [authUser, setAuthUser] = useState<AppUser | null>(() => (DEV_SKIP_AUTH ? DEV_MOCK_USER : readCachedUser()));
-  const [authLoading, setAuthLoading] = useState(!DEV_SKIP_AUTH);
-
-  const applySignedInUser = (user: AppUser) => {
-    setAuthUser(user);
-    cacheUser(user);
+  const { authUser, setAuthUser, authLoading, applySignedInUser, logout } = useAuth((user) => {
     // 已办理出生登记的角色名以存档为准，不被账号昵称覆盖
     if (!registeredName() && (user.displayName || user.email)) {
       setPlayerName(user.displayName || user.email?.split('@')[0] || t('defaultPlayerName'));
     }
-  };
-
-  // 启动时向账号服务确认登录状态
-  React.useEffect(() => {
-    if (DEV_SKIP_AUTH) {
-      console.info('[DEV] VITE_SKIP_AUTH=true，已跳过登录，使用本地测试账号');
-      return;
-    }
-    getMe()
-      .then((user) => {
-        if (user) {
-          applySignedInUser(user);
-        } else if (isPasswordUser(readCachedUser())) {
-          // 邮箱账号的登录已失效；B 站账号不经过账号服务，保留本地登录状态
-          setAuthUser(null);
-          cacheUser(null);
-        }
-      })
-      .catch(() => {
-        // 网络不可用：保留本地缓存的登录用户，允许离线游玩
-      })
-      .finally(() => setAuthLoading(false));
-  }, []);
+  });
 
   /** 退出登录。邮箱账号会先把进度同步到云端，失败则不退出并返回 false */
-  const handleLogout = async (): Promise<boolean> => {
-    if (isPasswordUser(authUser)) {
-      if (cloud.enabled && !(await cloud.saveNow())) return false;
-      try {
-        await logoutRequest();
-      } catch (e) {
-        console.error(e);
-      }
-      // 清除本地进度，避免同一浏览器切换账号时共用存档
-      clearLocalGameData();
-      window.location.reload();
-      return true;
-    }
-    setAuthUser(null);
-    cacheUser(null);
-    return true;
-  };
-
-
-
+  const handleLogout = (): Promise<boolean> => logout(cloud.enabled ? cloud.saveNow : undefined);
 
   const [toast, setToast] = useState<string | null>(null);
 
@@ -710,41 +649,8 @@ export default function App() {
     influence: reputation,
   }, gameYear);
 
-  if (authLoading) {
-    return (
-      <div className="h-[100dvh] w-full bg-[#0d0e15] flex justify-center items-center text-white font-sans">
-        <div className="flex flex-col items-center gap-3">
-          <RefreshCw size={28} className="animate-spin text-amber-400" />
-          <span className="text-xs font-black text-gray-300">{t('connecting')}</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Mandatory Authentication Gate: Must log in or register before accessing game
-  if (!authUser) {
-    return (
-      <AuthScreen
-        onLoginSuccess={applySignedInUser}
-      />
-    );
-  }
-
-  // Email Verification Gate: Block unverified password-registered email accounts
-  const isPasswordAccount = Array.isArray(authUser.providerData)
-    ? authUser.providerData.some((p) => p?.providerId === 'password')
-    : false;
-  if (authUser.email && !authUser.emailVerified && isPasswordAccount) {
-    return (
-      <EmailVerificationScreen
-        user={authUser}
-        onVerified={applySignedInUser}
-        onLogout={() => void handleLogout()}
-      />
-    );
-  }
-
   return (
+    <AuthGate authUser={authUser} authLoading={authLoading} onSignedIn={applySignedInUser} onLogout={() => void handleLogout()}>
     <div className="h-[100dvh] w-full bg-[#1c1d25] flex justify-center font-sans overflow-hidden">
       <div className="w-full h-full flex flex-col relative shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
         {toast && (
@@ -1117,5 +1023,6 @@ export default function App() {
 
       </div>
     </div>
+    </AuthGate>
   );
 }
