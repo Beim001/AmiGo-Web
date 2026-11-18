@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { CurrencyIcon } from './CurrencyIcon';
 import { CURRENCY } from '../data/seasons';
+import { useTranslation } from 'react-i18next';
 import { LicenseId, loadLicenses, meetsLicense, licenseById } from '../lib/vehicles';
 import { isInPrison, PRISON_BLOCK_TEXT, barredByRecord, hasActiveRecord, BARRED_JOB_CATEGORY } from '../lib/prison';
 
@@ -540,7 +541,11 @@ export const readJobHistoryIds = (): string[] => {
   }
 };
 
+// 岗位分类筛选中“全部”的取值；其余取值是岗位数据里的分类名（保持原文）
+const CATEGORY_ALL = 'all';
+
 export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, age, childLaborAllowed = false, gameYear, gameMonth }) => {
+  const { t } = useTranslation('job');
   const [childJobId, setChildJobId] = useState<string | null>(() => readChildJob()?.id ?? null);
   const setChildJob = (id: string | null) => {
     setChildJobId(id);
@@ -551,7 +556,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
   };
   const [activeTab, setActiveTab] = useState<'hall' | 'resume'>('hall');
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('全部');
+  const [selectedCategory, setSelectedCategory] = useState(CATEGORY_ALL);
   const [sortBy, setSortBy] = useState<'default' | 'salary_desc' | 'salary_asc'>('default');
   const [toast, setToast] = useState<string | null>(null);
 
@@ -585,11 +590,11 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
 
   const currentJob = JOB_POSITIONS.find((j) => j.id === currentJobId) || null;
 
-  const categories = ['全部', '政法治安', '工程采掘', '金融文职', '教育医疗', '交通海事', '工业制造', '体育文娱'];
+  const categories = [CATEGORY_ALL, '政法治安', '工程采掘', '金融文职', '教育医疗', '交通海事', '工业制造', '体育文娱'];
 
   const filteredJobs = useMemo(() => {
     return JOB_POSITIONS.filter((job) => {
-      const matchCat = selectedCategory === '全部' || job.category === selectedCategory;
+      const matchCat = selectedCategory === CATEGORY_ALL || job.category === selectedCategory;
       const matchSearch =
         search.trim() === '' ||
         job.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -623,11 +628,11 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
 
   const handleApply = (job: JobPosition) => {
     if (age < MIN_WORK_AGE) {
-      showToast(`未满 ${MIN_WORK_AGE} 岁，暂不能应聘（当前 ${age} 岁）`);
+      showToast(t('toast.tooYoung', { min: MIN_WORK_AGE, age }));
       return;
     }
     if (currentJobId === job.id) {
-      showToast(`当前已在「${job.title}」岗位任职中`);
+      showToast(t('toast.alreadyIn', { job: job.title }));
       return;
     }
     // 狱中不能应聘；有前科时政法治安类岗位不录用（第 67.7 题）
@@ -636,11 +641,11 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
       return;
     }
     if (barredByRecord(job, hasActiveRecord(gameYear, gameMonth))) {
-      showToast(`有前科在身，${BARRED_JOB_CATEGORY}类岗位不予录用`);
+      showToast(t('toast.barred', { category: BARRED_JOB_CATEGORY }));
       return;
     }
     if (!meetsLicense(job, loadLicenses())) {
-      showToast(`应聘「${job.title}」需要先在驾照管理考取${licenseById(job.requiresLicense!)?.name ?? '执照'}`);
+      showToast(t('toast.needLicense', { job: job.title, license: licenseById(job.requiresLicense!)?.name ?? t('license') }));
       return;
     }
     setCurrentJobId(job.id);
@@ -659,7 +664,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
 
     setSelectedJobDetail(null);
     addLifeLog('事业', `入职「${job.title}」`, `进入${job.department}任职，日薪 ${job.dailySalary} ${CURRENCY.symbol}。`);
-    showToast(`恭喜！顺利签署用工合同，入职「${job.department}」的【${job.title}】！`);
+    showToast(t('toast.hired', { department: job.department, job: job.title }));
   };
 
   const handleResign = () => {
@@ -670,7 +675,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
       localStorage.setItem(CURRENT_JOB_KEY, '');
     } catch (e) {}
     addLifeLog('事业', `辞去「${currentJob.title}」`, `离开${currentJob.department}，暂时待业。`);
-    showToast('已办理离职手续，目前处于自由待业状态');
+    showToast(t('toast.resigned'));
   };
 
 
@@ -698,7 +703,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
           className="bg-[#2a2e3f] hover:bg-[#353a4e] text-white p-1.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer active:translate-y-0.5 transition-all flex items-center gap-1 text-xs font-bold"
         >
           <ChevronLeft size={20} />
-          {(selectedJobDetail || selectedCompanyDetail) && <span className="hidden sm:inline">返回</span>}
+          {(selectedJobDetail || selectedCompanyDetail) && <span className="hidden sm:inline">{t('back')}</span>}
         </button>
 
         <div className="flex items-center gap-2 min-w-0 px-2">
@@ -713,10 +718,10 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
           </div>
           <span className="text-white font-black text-sm sm:text-base tracking-wider drop-shadow-[0_1px_0_#000] truncate">
             {selectedCompanyDetail
-              ? `${selectedCompanyDetail.name} · 企业详情`
+              ? t('companyTitle', { name: selectedCompanyDetail.name })
               : selectedJobDetail
-              ? `${selectedJobDetail.title} · 岗位详解`
-              : '就业招聘'}
+              ? t('jobTitle', { title: selectedJobDetail.title })
+              : t('title')}
           </span>
         </div>
 
@@ -740,7 +745,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
             }`}
           >
             <Briefcase size={14} />
-            <span>招募岗位大厅</span>
+            <span>{t('hall')}</span>
           </button>
           <button
             onClick={() => setActiveTab('resume')}
@@ -751,7 +756,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
             }`}
           >
             <Medal size={14} />
-            <span>我的职场履历</span>
+            <span>{t('history')}</span>
           </button>
         </div>
       )}
@@ -770,7 +775,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                 }}
                 className="hover:text-blue-300 underline cursor-pointer"
               >
-                招募岗位大厅
+                {t('hall')}
               </button>
               <span>/</span>
               <span className="text-white font-bold">{selectedCompanyDetail.name}</span>
@@ -781,7 +786,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
               {/* Background Watermark Seal */}
               <div className="absolute -right-4 -bottom-4 w-32 h-32 rounded-full border-4 border-blue-500/10 bg-blue-500/5 flex flex-col items-center justify-center text-blue-400/20 rotate-[-12deg] pointer-events-none select-none">
                 <Building2 size={48} />
-                <span className="text-[9px] font-black tracking-widest mt-1">官方备案</span>
+                <span className="text-[9px] font-black tracking-widest mt-1">{t('company.registered')}</span>
               </div>
 
               <div className="flex items-start justify-between gap-3 border-b border-black/60 pb-4 relative z-10">
@@ -801,7 +806,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                     </div>
                     <div className="text-gray-400 text-xs font-mono mt-1 flex items-center gap-1">
                       <Compass size={13} className="text-blue-400 flex-shrink-0" />
-                      <span>驻地地址：{selectedCompanyDetail.location}</span>
+                      <span>{t('company.address', { location: selectedCompanyDetail.location })}</span>
                     </div>
                   </div>
                 </div>
@@ -810,15 +815,15 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
               {/* 3-Column Metric Dashboard */}
               <div className="grid grid-cols-3 gap-2 bg-[#131520] p-3 rounded-2xl border-2 border-black font-mono text-center relative z-10 shadow-inner">
                 <div className="p-1">
-                  <div className="text-[10px] text-gray-400 font-sans font-bold">创办年份</div>
+                  <div className="text-[10px] text-gray-400 font-sans font-bold">{t('company.established')}</div>
                   <div className="text-white font-black text-sm sm:text-base mt-0.5">{selectedCompanyDetail.established}</div>
                 </div>
                 <div className="p-1 border-x border-black/80">
-                  <div className="text-[10px] text-gray-400 font-sans font-bold">人员规模</div>
+                  <div className="text-[10px] text-gray-400 font-sans font-bold">{t('company.scale')}</div>
                   <div className="text-sky-300 font-black text-sm sm:text-base mt-0.5">{selectedCompanyDetail.scale}</div>
                 </div>
                 <div className="p-1">
-                  <div className="text-[10px] text-gray-400 font-sans font-bold">划拨 / 注册资本</div>
+                  <div className="text-[10px] text-gray-400 font-sans font-bold">{t('company.capital')}</div>
                   <div className="text-amber-400 font-black text-sm sm:text-base mt-0.5">{selectedCompanyDetail.registeredCapital}</div>
                 </div>
               </div>
@@ -828,7 +833,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
             <div className="bg-[#232635] border-2 border-black rounded-2xl p-4 shadow-[0_3px_0_#000] space-y-2.5">
               <div className="text-amber-400 font-black text-xs flex items-center gap-1.5">
                 <FileText size={16} />
-                <span>企事业单位背景与职能概况：</span>
+                <span>{t('company.background')}</span>
               </div>
               <p className="text-gray-200 text-xs sm:text-sm leading-relaxed font-sans bg-[#181a24] p-3.5 rounded-xl border border-black/60 shadow-inner">
                 {selectedCompanyDetail.desc}
@@ -839,7 +844,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
             <div className="bg-[#232635] border-2 border-black rounded-2xl p-4 shadow-[0_3px_0_#000] space-y-2.5">
               <div className="text-emerald-400 font-black text-xs flex items-center gap-1.5">
                 <Crown size={16} />
-                <span>雇员福利待遇与公署保障：</span>
+                <span>{t('company.benefits')}</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {selectedCompanyDetail.benefits.map((b, i) => (
@@ -859,10 +864,10 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
               <div className="flex items-center justify-between text-xs font-black text-gray-300 px-1">
                 <span className="flex items-center gap-1.5">
                   <Briefcase size={16} className="text-blue-400" />
-                  <span>【{selectedCompanyDetail.name}】在招岗位列表</span>
+                  <span>{t('company.openings', { name: selectedCompanyDetail.name })}</span>
                 </span>
                 <span className="text-[11px] font-mono text-blue-300 font-bold bg-blue-950/60 px-2 py-0.5 rounded-lg border border-blue-500/40">
-                  {JOB_POSITIONS.filter((j) => j.department === selectedCompanyDetail.name).length} 项公开招募
+                  {t('company.openingCount', { count: JOB_POSITIONS.filter((j) => j.department === selectedCompanyDetail.name).length })}
                 </span>
               </div>
 
@@ -890,7 +895,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                             </span>
                           </div>
                           <div className="text-gray-400 text-[10px] font-mono mt-0.5">
-                            门槛: <span className="text-blue-300 font-bold">{job.reqSkill}</span>
+                            {t('threshold')}<span className="text-blue-300 font-bold">{job.reqSkill}</span>
                           </div>
                         </div>
                       </div>
@@ -898,7 +903,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                       <div className="flex items-center gap-3 flex-shrink-0">
                         <div className="text-right">
                           <div className="text-amber-400 font-mono font-black text-base">{job.dailySalary} {CURRENCY.symbol}</div>
-                          <div className="text-gray-400 text-[9px] font-mono">×22 天 = 月薪</div>
+                          <div className="text-gray-400 text-[9px] font-mono">{t('monthlyFormula')}</div>
                         </div>
                         <button
                           onClick={(e) => {
@@ -912,7 +917,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                               : 'bg-blue-600 hover:bg-blue-500 text-white'
                           }`}
                         >
-                          {isCurrent ? '履职中' : '应聘此岗'}
+                          {isCurrent ? t('working') : t('apply')}
                         </button>
                       </div>
                     </div>
@@ -927,10 +932,10 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
             {/* Breadcrumb */}
             <div className="flex items-center gap-2 text-xs text-gray-400 font-mono">
               <button onClick={() => setSelectedJobDetail(null)} className="hover:text-blue-300 underline cursor-pointer">
-                招募岗位大厅
+                {t('hall')}
               </button>
               <span>/</span>
-              <span className="text-white font-bold">{selectedJobDetail.title} 详解</span>
+              <span className="text-white font-bold">{t('detail.title', { title: selectedJobDetail.title })}</span>
             </div>
 
             {/* Job Header Hero Card */}
@@ -948,7 +953,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                       </span>
                     </div>
                     <div className="text-gray-400 text-xs font-mono mt-0.5">
-                      分类：{selectedJobDetail.category} · 门槛：{selectedJobDetail.reqSkill}
+                      {t('detail.meta', { category: selectedJobDetail.category, skill: selectedJobDetail.reqSkill })}
                     </div>
                   </div>
                 </div>
@@ -957,13 +962,13 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                   <div className="text-amber-400 font-mono font-black text-lg">
                     {selectedJobDetail.dailySalary.toLocaleString()} {CURRENCY.symbol}
                   </div>
-                  <div className="text-gray-400 text-[10px] font-mono">基础日薪（每月按 22 个工作日自动发放）</div>
+                  <div className="text-gray-400 text-[10px] font-mono">{t('detail.dailySalary')}</div>
                 </div>
               </div>
 
               {/* Action Bar */}
               <div className="pt-1 border-t border-black/60 flex items-center justify-between gap-3">
-                <span className="text-gray-400 text-xs">状态：{currentJobId === selectedJobDetail.id ? '当前正在此岗位履职' : '开放招聘中'}</span>
+                <span className="text-gray-400 text-xs">{currentJobId === selectedJobDetail.id ? t('detail.statusWorking') : t('detail.statusOpen')}</span>
                 <button
                   onClick={() => handleApply(selectedJobDetail)}
                   disabled={currentJobId === selectedJobDetail.id}
@@ -973,7 +978,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                       : 'bg-blue-600 hover:bg-blue-500 text-white'
                   }`}
                 >
-                  {currentJobId === selectedJobDetail.id ? '正式履职中' : '签署合同应聘入职'}
+                  {currentJobId === selectedJobDetail.id ? t('detail.working') : t('detail.sign')}
                 </button>
               </div>
             </div>
@@ -988,18 +993,18 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                   <Building2 size={20} />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-gray-400 text-[10px] font-mono">招聘单位 / 聘用企业 (点击查看企业详情)</div>
+                  <div className="text-gray-400 text-[10px] font-mono">{t('detail.employer')}</div>
                   <div className="text-white font-black text-sm sm:text-base group-hover:text-blue-300 transition-colors flex items-center gap-1.5">
                     <span>{selectedJobDetail.department}</span>
                     <span className="text-xs bg-blue-500/20 text-blue-300 border border-blue-500/40 px-1.5 py-0.2 rounded font-normal">
-                      官方认证
+                      {t('detail.certified')}
                     </span>
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-1 text-blue-400 font-bold text-xs flex-shrink-0 group-hover:translate-x-1 transition-transform">
-                <span>企业详情</span>
+                <span>{t('detail.company')}</span>
                 <ChevronLeft size={16} className="rotate-180" />
               </div>
             </div>
@@ -1008,7 +1013,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
             <div className="bg-[#232635] border-2 border-black rounded-2xl p-4 shadow-[0_3px_0_#000] space-y-3">
               <div className="text-amber-400 font-bold text-xs flex items-center gap-1.5">
                 <FileText size={15} />
-                <span>岗位职责与日常工作要求：</span>
+                <span>{t('detail.duties')}</span>
               </div>
 
               <p className="text-gray-200 text-xs leading-relaxed font-sans bg-[#181a24] p-3 rounded-xl border border-black/60">
@@ -1016,7 +1021,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
               </p>
 
               <div className="space-y-1.5 pt-1">
-                <div className="text-gray-400 font-bold text-xs">核心履行职责清单：</div>
+                <div className="text-gray-400 font-bold text-xs">{t('detail.dutyList')}</div>
                 <div className="space-y-1 text-xs text-gray-200">
                   {selectedJobDetail.responsibilities.map((resp, i) => (
                     <div key={i} className="flex items-center gap-2 bg-[#181a24] p-2 rounded-xl border border-black/60">
@@ -1031,19 +1036,19 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
             {/* Official Employment Contract Certification (聘用公证书) */}
             <div className="bg-[#191c28] border-2 border-black rounded-2xl p-4 space-y-3 relative overflow-hidden shadow-[0_3px_0_#000]">
               <div className="absolute right-3 bottom-2 w-20 h-20 rounded-full border-4 border-red-500/30 bg-red-950/20 flex flex-col items-center justify-center text-red-400/50 rotate-[-15deg] pointer-events-none select-none">
-                <div className="text-[8px] font-black">人力资源公署</div>
+                <div className="text-[8px] font-black">{t('detail.stampOffice')}</div>
                 <Stamp size={18} className="my-0.5" />
-                <div className="text-[8px] font-black">【用工准许】</div>
+                <div className="text-[8px] font-black">{t('detail.stampApproved')}</div>
               </div>
 
               <div className="flex items-center gap-2 text-blue-300 font-bold text-xs border-b border-black/60 pb-2">
                 <Stamp size={15} />
-                <span>阿米诺斯帝国人力资源公署 · 正式用工公证备忘</span>
+                <span>{t('detail.memoTitle')}</span>
               </div>
 
               <div className="text-gray-300 text-xs leading-relaxed space-y-1">
-                <div>• 本岗位经帝国公署审核备案，出勤班次及薪酬所得受法律保障。</div>
-                <div>• 雇员上岗后需恪尽职守，按规完成日常巡查、核验与工作事项。</div>
+                <div>{t('detail.memo1')}</div>
+                <div>{t('detail.memo2')}</div>
               </div>
             </div>
           </div>
@@ -1056,11 +1061,11 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                 {/* 童工（未满 16 岁） */}
                 {age < MIN_WORK_AGE && (
                   <div className="bg-[#2a2219] border-2 border-amber-700/70 rounded-2xl p-3 shadow-[0_2px_0_#000] space-y-2">
-                    <div className="text-amber-300 font-black text-xs">🧒 童工（{age} 岁）</div>
+                    <div className="text-amber-300 font-black text-xs">{t('child.title', { age })}</div>
                     {childLaborAllowed ? (
                       <>
                         <p className="text-amber-100/80 text-[11px] font-bold leading-relaxed">
-                          家里贫困，只能出去做工补贴家用。童工每月自动发薪，但会额外损耗健康；年满 {MIN_WORK_AGE} 岁后可正式求职。
+                          {t('child.desc', { min: MIN_WORK_AGE })}
                         </p>
                         {CHILD_JOBS.map((j) => {
                           const active = childJobId === j.id;
@@ -1071,25 +1076,25 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                                 <div className="text-gray-400 text-[10px] font-bold truncate">{j.desc}</div>
                               </div>
                               <div className="text-right shrink-0">
-                                <div className="text-amber-300 font-mono font-black text-[11px]">{j.salary} {CURRENCY.symbol}/月</div>
-                                <div className="text-red-400 text-[10px] font-bold">健康 -{j.healthCost}/月</div>
+                                <div className="text-amber-300 font-mono font-black text-[11px]">{t('child.salary', { salary: j.salary, symbol: CURRENCY.symbol })}</div>
+                                <div className="text-red-400 text-[10px] font-bold">{t('child.health', { cost: j.healthCost })}</div>
                               </div>
                               <button
                                 onClick={() => {
                                   setChildJob(active ? null : j.id);
                                   if (!active) addLifeLog('事业', `开始做童工：${j.title}`, j.desc);
-                                  showToast(active ? `已辞去「${j.title}」` : `开始做「${j.title}」，每月 ${j.salary} ${CURRENCY.symbol}`);
+                                  showToast(active ? t('child.quit', { job: j.title }) : t('child.started', { job: j.title, salary: j.salary, symbol: CURRENCY.symbol }));
                                 }}
                                 className={`text-[10px] font-black px-2 py-1 rounded-lg border border-black shrink-0 cursor-pointer ${active ? 'bg-gray-600 text-white' : 'bg-amber-400 text-black'}`}
                               >
-                                {active ? '辞工' : '做工'}
+                                {active ? t('child.quitButton') : t('child.work')}
                               </button>
                             </div>
                           );
                         })}
                       </>
                     ) : (
-                      <p className="text-amber-100/80 text-[11px] font-bold">家里条件尚可，不需要你出去做工。年满 {MIN_WORK_AGE} 岁后可以正式求职。</p>
+                      <p className="text-amber-100/80 text-[11px] font-bold">{t('child.notNeeded', { min: MIN_WORK_AGE })}</p>
                     )}
                   </div>
                 )}
@@ -1099,17 +1104,17 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 animate-pulse" />
                       <span className="text-gray-300 font-bold text-xs truncate">
-                        当前任职：<span className="text-white font-black">{currentJob.title}</span>
+                        {t('current')}<span className="text-white font-black">{currentJob.title}</span>
                       </span>
                       <span className="text-amber-400 font-mono font-bold text-xs flex-shrink-0">
-                        {currentJob.dailySalary} {CURRENCY.symbol}/天
+                        {t('perDay', { salary: currentJob.dailySalary, symbol: CURRENCY.symbol })}
                       </span>
                     </div>
 
                     <span className="text-[10px] font-black text-emerald-300 bg-emerald-950/80 border border-emerald-500/50 px-2 py-1 rounded-lg flex-shrink-0">
                       {age >= MIN_WORK_AGE
-                        ? `月薪 ${(currentJob.dailySalary * WORK_DAYS_PER_MONTH).toLocaleString()} ${CURRENCY.symbol} · 每月自动发放`
-                        : `未满 ${MIN_WORK_AGE} 岁，暂不发薪`}
+                        ? t('monthly', { salary: (currentJob.dailySalary * WORK_DAYS_PER_MONTH).toLocaleString(), symbol: CURRENCY.symbol })
+                        : t('notPaid', { min: MIN_WORK_AGE })}
                     </span>
                   </div>
                 )}
@@ -1123,7 +1128,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                       type="text"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      placeholder="搜索岗位名称 / 部门 / 职能关键字..."
+                      placeholder={t('search')}
                       className="w-full bg-[#131520] text-white text-xs font-bold pl-9 pr-8 py-2 rounded-xl border-2 border-black focus:border-blue-400 focus:outline-none transition-colors"
                     />
                     {search && (
@@ -1150,7 +1155,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                               : 'bg-[#131520] text-gray-400 border-black hover:text-white'
                           }`}
                         >
-                          {cat}
+                          {cat === CATEGORY_ALL ? t('all') : cat}
                         </button>
                       ))}
                     </div>
@@ -1163,9 +1168,9 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                         onChange={(e) => setSortBy(e.target.value as any)}
                         className="bg-[#131520] text-xs font-bold text-gray-200 border border-black rounded-xl px-2.5 py-1 focus:outline-none focus:border-blue-400 cursor-pointer"
                       >
-                        <option value="default">默认推荐排序</option>
-                        <option value="salary_desc">日薪从高到低</option>
-                        <option value="salary_asc">日薪从低到高</option>
+                        <option value="default">{t('sorts.default')}</option>
+                        <option value="salary_desc">{t('sorts.salary_desc')}</option>
+                        <option value="salary_asc">{t('sorts.salary_asc')}</option>
                       </select>
                     </div>
                   </div>
@@ -1174,22 +1179,22 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                 {/* Job Cards List */}
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between text-xs font-black text-gray-400 px-1">
-                    <span>招募岗位清单 ({filteredJobs.length} 项)</span>
-                    <span className="text-[10px] font-mono text-gray-500">公署认可按日核算发薪</span>
+                    <span>{t('listTitle', { count: filteredJobs.length })}</span>
+                    <span className="text-[10px] font-mono text-gray-500">{t('listHint')}</span>
                   </div>
 
                   {filteredJobs.length === 0 ? (
                     <div className="bg-[#232635] border-2 border-black rounded-2xl p-8 text-center text-gray-400 text-xs font-bold space-y-2">
                       <Search size={24} className="mx-auto text-gray-500" />
-                      <div>未找到匹配“{search}”的就业岗位</div>
+                      <div>{t('noMatch', { search })}</div>
                       <button
                         onClick={() => {
                           setSearch('');
-                          setSelectedCategory('全部');
+                          setSelectedCategory(CATEGORY_ALL);
                         }}
                         className="text-blue-400 text-xs font-bold underline cursor-pointer"
                       >
-                        重置所有搜寻条件
+                        {t('resetSearch')}
                       </button>
                     </div>
                   ) : (
@@ -1220,7 +1225,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                                   {isCurrent && (
                                     <span className="bg-amber-400 text-black text-[9px] font-black px-1.5 py-0.2 rounded border border-black flex items-center gap-0.5">
                                       <CheckCircle2 size={10} />
-                                      <span>履职中</span>
+                                      <span>{t('working')}</span>
                                     </span>
                                   )}
                                 </div>
@@ -1245,14 +1250,14 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                               <div className="text-amber-400 font-mono font-black text-sm sm:text-base">
                                 {job.dailySalary.toLocaleString()} {CURRENCY.symbol}
                               </div>
-                              <div className="text-gray-400 text-[9px] font-mono">×22 天 = 月薪</div>
+                              <div className="text-gray-400 text-[9px] font-mono">{t('monthlyFormula')}</div>
                             </div>
                           </div>
 
                           {/* Bottom Quick Specs & Action Bar */}
                           <div className="flex items-center justify-between border-t border-black/40 pt-2 text-xs gap-2">
                             <span className="text-gray-400 text-[10px] font-mono truncate">
-                              门槛: <span className="text-blue-300 font-bold">{job.reqSkill}</span>
+                              {t('threshold')}<span className="text-blue-300 font-bold">{job.reqSkill}</span>
                             </span>
 
                             <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -1261,7 +1266,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                                 className="bg-[#181a24] hover:bg-[#2b2f42] text-gray-200 text-xs font-bold px-2 py-1 rounded-xl border border-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer flex items-center gap-1"
                               >
                                 <FileCheck size={12} />
-                                <span>岗位详情</span>
+                                <span>{t('jobDetail')}</span>
                               </button>
 
                               <button
@@ -1273,7 +1278,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                                     : 'bg-blue-600 hover:bg-blue-500 text-white'
                                 }`}
                               >
-                                {isCurrent ? '履职中' : '应聘此岗'}
+                                {isCurrent ? t('working') : t('apply')}
                               </button>
                             </div>
                           </div>
@@ -1295,19 +1300,19 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                       <Briefcase size={20} />
                     </div>
                     <div>
-                      <h3 className="text-white font-black text-base">履职岗位记录</h3>
-                      <p className="text-gray-400 text-xs font-mono">共入职/曾任 {historyJobs.length} 个岗位</p>
+                      <h3 className="text-white font-black text-base">{t('historyTitle')}</h3>
+                      <p className="text-gray-400 text-xs font-mono">{t('historyCount', { count: historyJobs.length })}</p>
                     </div>
                   </div>
 
                   {currentJob ? (
                     <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 text-xs font-black px-3 py-1 rounded-full flex items-center gap-1.5">
                       <UserCheck size={14} />
-                      <span>在岗：{currentJob.title}</span>
+                      <span>{t('onDuty', { job: currentJob.title })}</span>
                     </span>
                   ) : (
                     <span className="bg-gray-700 text-gray-300 text-xs font-bold px-3 py-1 rounded-full">
-                      待业中
+                      {t('unemployed')}
                     </span>
                   )}
                 </div>
@@ -1339,11 +1344,11 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                                   {isCurrent ? (
                                     <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 font-black text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
                                       <UserCheck size={11} />
-                                      <span>当前在岗</span>
+                                      <span>{t('currentTag')}</span>
                                     </span>
                                   ) : (
                                     <span className="bg-gray-700/60 text-gray-400 border border-gray-600/50 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                      曾经任职
+                                      {t('formerTag')}
                                     </span>
                                   )}
                                 </div>
@@ -1351,28 +1356,28 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                                   onClick={() => setSelectedCompanyDetail(getCompanyInfo(job.department))}
                                   className="text-blue-400 hover:text-blue-300 text-xs font-mono mt-0.5 hover:underline text-left block truncate"
                                 >
-                                  单位：{job.department}
+                                  {t('department', { department: job.department })}
                                 </button>
                               </div>
                             </div>
 
                             <div className="text-right flex-shrink-0">
                               <div className="text-amber-400 font-mono font-black text-base">{job.dailySalary} {CURRENCY.symbol}</div>
-                              <div className="text-gray-400 text-[9px] font-mono">日薪</div>
+                              <div className="text-gray-400 text-[9px] font-mono">{t('dailySalary')}</div>
                             </div>
                           </div>
 
                           {/* Controls Footer */}
                           <div className="flex items-center justify-between gap-2 pt-0.5">
                             <div className="text-xs text-gray-400 font-mono">
-                              技能要求: <span className="text-gray-200">{job.reqSkill}</span>
+                              {t('skill')}<span className="text-gray-200">{job.reqSkill}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => setSelectedJobDetail(job)}
                                 className="bg-[#181a24] hover:bg-[#1f2230] text-gray-200 border border-black/80 px-3 py-1.5 rounded-xl font-bold text-xs shadow-[0_2px_0_#000] cursor-pointer"
                               >
-                                岗位详解
+                                {t('detailButton')}
                               </button>
                               {isCurrent ? (
                                 <button
@@ -1380,14 +1385,14 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                                   className="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-500/50 px-3 py-1.5 rounded-xl font-bold text-xs shadow-[0_2px_0_#000] cursor-pointer flex items-center gap-1"
                                 >
                                   <LogOut size={13} />
-                                  <span>办理离职</span>
+                                  <span>{t('resign')}</span>
                                 </button>
                               ) : (
                                 <button
                                   onClick={() => handleApply(job)}
                                   className="bg-blue-600 hover:bg-blue-500 text-white border border-black px-3 py-1.5 rounded-xl font-black text-xs shadow-[0_2px_0_#000] cursor-pointer"
                                 >
-                                  重新入职
+                                  {t('rejoin')}
                                 </button>
                               )}
                             </div>
@@ -1398,9 +1403,9 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                   ) : (
                     <div className="bg-[#232635] border-2 border-black rounded-2xl p-8 text-center text-gray-400 space-y-2">
                       <Briefcase size={32} className="mx-auto text-gray-500" />
-                      <div className="text-white font-bold text-sm">暂无任职记录</div>
+                      <div className="text-white font-bold text-sm">{t('noHistory')}</div>
                       <p className="text-xs text-gray-400 font-mono">
-                        请前往【招募岗位大厅】挑选并应聘您的岗位！
+                        {t('noHistoryHint')}
                       </p>
                     </div>
                   )}

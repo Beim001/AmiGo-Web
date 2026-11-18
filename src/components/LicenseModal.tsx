@@ -37,6 +37,7 @@ import {
 } from '../lib/vehicles';
 import { randomGivenName } from '../lib/names';
 import { addLifeLog } from '../lib/lifeLog';
+import { useTranslation } from 'react-i18next';
 
 // 驾照管理（第 67.4 题）：考执照；车马市场（马匹、车辆、游艇与特种、马场）；雇佣或买来车夫
 
@@ -55,6 +56,7 @@ type Tab = 'license' | 'market' | 'coachman';
 const KIND_ORDER: VehicleKind[] = ['horse', 'vehicle', 'special', 'estate'];
 
 export const LicenseModal: React.FC<LicenseModalProps> = ({ onClose, coins, setCoins, changeReputation, isRegistered, age, gameYear }) => {
+  const { t } = useTranslation('license');
   const [tab, setTab] = useState<Tab>('license');
   const [licenses, setLicenses] = useState<LicenseId[]>(loadLicenses);
   const [vehicles, setVehicles] = useState<VehicleId[]>(loadVehicles);
@@ -84,7 +86,7 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ onClose, coins, setC
     setLicenses(next);
     saveLicenses(next);
     addLifeLog('事业', `考取${def.name}`, `交考试费 ${money(def.fee)}，取得${def.name}。`);
-    showToast(`🪪 考取${def.name}`);
+    showToast(t('toast.licensed', { name: def.name }));
   };
 
   const buy = (def: VehicleDef) => {
@@ -94,7 +96,7 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ onClose, coins, setC
     if (def.reputation) changeReputation(def.reputation);
     updateVehicles([...vehicles, def.id]);
     addLifeLog('财富', `购入${def.name}`, `花费 ${money(def.price)}${def.reputation ? `，声望 +${def.reputation}` : ''}。`);
-    showToast(`购入${def.name}${def.reputation ? `，声望 +${def.reputation}` : ''}`);
+    showToast(def.reputation ? t('toast.boughtRep', { name: def.name, rep: def.reputation }) : t('toast.bought', { name: def.name }));
   };
 
   const sell = (def: VehicleDef) => {
@@ -102,16 +104,16 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ onClose, coins, setC
     setCoins((prev) => prev + refund);
     updateVehicles(vehicles.filter((id) => id !== def.id));
     addLifeLog('财富', `出售${def.name}`, `转卖到账 ${money(refund)}。`);
-    showToast(`出售${def.name}，到账 +${money(refund)}`);
+    showToast(t('toast.sold', { name: def.name, amount: money(refund) }));
   };
 
   const hire = () => {
-    if (!isRegistered) return showToast('请先完成出生登记');
-    if (coachman) return showToast('家里已经有车夫');
+    if (!isRegistered) return showToast(t('toast.notRegistered'));
+    if (coachman) return showToast(t('toast.hasCoachman'));
     const next: Coachman = { kind: 'hired', name: randomGivenName('男') };
     updateCoachman(next);
     addLifeLog('财富', `雇佣车夫${next.name}`, `月薪 ${money(HIRED_COACHMAN_WAGE)}。`);
-    showToast(`雇佣车夫${next.name}，月薪 ${money(HIRED_COACHMAN_WAGE)}`);
+    showToast(t('toast.hired', { name: next.name, wage: money(HIRED_COACHMAN_WAGE) }));
   };
 
   const buySlave = () => {
@@ -122,7 +124,7 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ onClose, coins, setC
     changeReputation(SLAVE_REPUTATION);
     updateCoachman(next);
     addLifeLog('财富', `买下车夫${next.name}`, `在奴隶市场花 ${money(SLAVE_PRICE)} 买下${next.name}赶车，声望 ${SLAVE_REPUTATION}。`);
-    showToast(`买下车夫${next.name}，声望 ${SLAVE_REPUTATION}`);
+    showToast(t('toast.boughtSlave', { name: next.name, rep: SLAVE_REPUTATION }));
   };
 
   const release = () => {
@@ -130,10 +132,10 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ onClose, coins, setC
     if (coachman.kind === 'slave') {
       changeReputation(FREE_SLAVE_REPUTATION);
       addLifeLog('财富', `释放车夫${coachman.name}`, `还${coachman.name}自由，声望 +${FREE_SLAVE_REPUTATION}。`);
-      showToast(`还${coachman.name}自由，声望 +${FREE_SLAVE_REPUTATION}`);
+      showToast(t('toast.freed', { name: coachman.name, rep: FREE_SLAVE_REPUTATION }));
     } else {
       addLifeLog('财富', `辞退车夫${coachman.name}`, '不再雇佣车夫。');
-      showToast(`辞退车夫${coachman.name}`);
+      showToast(t('toast.fired', { name: coachman.name }));
     }
     updateCoachman(null);
   };
@@ -146,9 +148,9 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ onClose, coins, setC
   const travelling = canTravel(vehicles, licenses, coachman);
 
   const TABS: Array<[Tab, string, React.ReactNode]> = [
-    ['license', '执照', <IdCard size={14} key="i" />],
-    ['market', '车马市场', <Store size={14} key="s" />],
-    ['coachman', '车夫', <UserRound size={14} key="u" />],
+    ['license', t('tabs.license'), <IdCard size={14} key="i" />],
+    ['market', t('tabs.market'), <Store size={14} key="s" />],
+    ['coachman', t('tabs.coachman'), <UserRound size={14} key="u" />],
   ];
 
   return (
@@ -169,7 +171,7 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ onClose, coins, setC
         <div className="flex-1 flex items-center justify-center pointer-events-none px-2">
           <div className="bg-[#2a2d3e] border-2 border-slate-400/80 px-5 py-1.5 rounded-xl shadow-[0_3px_0_#000] flex items-center gap-2">
             <Car size={18} className="text-slate-200 flex-shrink-0" />
-            <span className="text-slate-100 text-sm font-black tracking-widest">驾照管理</span>
+            <span className="text-slate-100 text-sm font-black tracking-widest">{t('title')}</span>
           </div>
         </div>
         <div className="flex items-center bg-[#151722] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black">
@@ -196,16 +198,16 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ onClose, coins, setC
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3 shadow-[0_3px_0_#000] space-y-1">
           <div className={`text-[11px] font-black ${travelling ? 'text-emerald-300' : 'text-gray-400'}`}>
-            {travelling ? `🐎 出行有车马代步：付得起开销的月份健康恢复 +${VEHICLE_HEALTH_BONUS}` : '🚶 目前出行靠步行'}
+            {travelling ? t('travelling', { bonus: VEHICLE_HEALTH_BONUS }) : t('walking')}
           </div>
           <p className="text-[10px] text-gray-400 font-bold">
-            马车要配挽马，由持照的本人或车夫驾驶；汽车需本人持汽车执照；骑乘马、名驹可直接骑。马匹车辆每月按价格 1% 付保养。车马与车夫属于家族，传承后保留；执照是个人证件，继承人需重新报考。
+            {t('rules')}
           </p>
         </div>
 
         {tab === 'license' && (
           <>
-            <p className="text-[11px] text-gray-300 font-bold">年满 {LICENSE_MIN_AGE} 岁可报考。持马车执照可应聘「车夫」。</p>
+            <p className="text-[11px] text-gray-300 font-bold">{t('examAge', { age: LICENSE_MIN_AGE })}</p>
             {LICENSES.map((def) => {
               const has = licenses.includes(def.id);
               const blocked = licenseBlocked(def, ctx);
@@ -214,16 +216,16 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ onClose, coins, setC
                   <div className="min-w-0">
                     <div className="text-white font-black text-xs">{def.name}</div>
                     <div className="text-[10px] text-gray-400 font-bold mt-0.5">
-                      考试费 {money(def.fee)}
-                      {def.fromYear > 0 && ` · ${def.fromYear} 年起开考`}
+                      {t('examFee', { fee: money(def.fee) })}
+                      {def.fromYear > 0 && t('examFrom', { year: def.fromYear })}
                     </div>
                     {!has && blocked && <div className="text-[10px] text-rose-300 font-bold mt-0.5">{blocked}</div>}
                   </div>
                   {has ? (
-                    <span className="text-emerald-300 text-xs font-black shrink-0">✅ 已持有</span>
+                    <span className="text-emerald-300 text-xs font-black shrink-0">{t('owned')}</span>
                   ) : (
                     <button onClick={() => takeExam(def)} disabled={!!blocked} className={btn}>
-                      报考
+                      {t('takeExam')}
                     </button>
                   )}
                 </div>
@@ -246,22 +248,22 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ onClose, coins, setC
                       <div className="text-white font-black text-xs">{def.name}</div>
                       <div className="text-[10px] text-gray-400 font-bold mt-0.5">{def.desc}</div>
                       <div className="text-[11px] text-amber-300 font-black mt-1">
-                        {owned ? `转卖价 ${money(vehicleResale(def))}` : money(def.price)}
-                        {!owned && def.reputation > 0 && ` · 声望 +${def.reputation}`}
+                        {owned ? t('resale', { price: money(vehicleResale(def)) }) : money(def.price)}
+                        {!owned && def.reputation > 0 && t('reputation', { rep: def.reputation })}
                         {def.kind === 'estate'
-                          ? ` · 每月繁育卖马分红，战乱年份 ×1.5；${Math.round(RANCH_PLAGUE_CHANCE * 100)}% 闹马瘟（兽医费 ${money(RANCH_VET_FEE)}）`
-                          : ` · 每月保养 ${money(vehicleUpkeep(def))}`}
+                          ? t('ranch', { chance: Math.round(RANCH_PLAGUE_CHANCE * 100), fee: money(RANCH_VET_FEE) })
+                          : t('upkeep', { fee: money(vehicleUpkeep(def)) })}
                       </div>
-                      {locked && <div className="text-[10px] text-gray-400 font-bold mt-0.5">本时代未开放（{def.fromYear} 年起）</div>}
+                      {locked && <div className="text-[10px] text-gray-400 font-bold mt-0.5">{t('locked', { year: def.fromYear })}</div>}
                       {!owned && !locked && blocked && <div className="text-[10px] text-rose-300 font-bold mt-0.5">{blocked}</div>}
                     </div>
                     {owned ? (
                       <button onClick={() => sell(def)} className={grayBtn}>
-                        出售
+                        {t('sell')}
                       </button>
                     ) : (
                       <button onClick={() => buy(def)} disabled={!!blocked} className={btn}>
-                        购买
+                        {t('buy')}
                       </button>
                     )}
                   </div>
@@ -275,19 +277,19 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ onClose, coins, setC
             <div className={card}>
               <div className="min-w-0">
                 <div className="text-white font-black text-xs">
-                  {coachman ? `${coachman.kind === 'hired' ? '雇来的' : '买来的'}车夫：${coachman.name}` : '家里还没有车夫'}
+                  {coachman ? t(coachman.kind === 'hired' ? 'coachmanHired' : 'coachmanSlave', { name: coachman.name }) : t('noCoachman')}
                 </div>
                 <div className="text-[10px] text-gray-400 font-bold mt-0.5">
                   {coachman
                     ? coachman.kind === 'hired'
-                      ? `月薪 ${money(HIRED_COACHMAN_WAGE)}；付不起工钱会辞工`
-                      : `每月口粮 ${money(SLAVE_FOOD)}；每月可能逃跑，动乱年份与断粮时更容易逃`
-                    : '有车夫替你驾马车，本人没有马车执照也能出行'}
+                      ? t('hiredDesc', { wage: money(HIRED_COACHMAN_WAGE) })
+                      : t('slaveDesc', { food: money(SLAVE_FOOD) })
+                    : t('coachmanHint')}
                 </div>
               </div>
               {coachman && (
                 <button onClick={release} className={grayBtn}>
-                  {coachman.kind === 'slave' ? '还他自由' : '辞退'}
+                  {coachman.kind === 'slave' ? t('free') : t('fire')}
                 </button>
               )}
             </div>
@@ -295,25 +297,25 @@ export const LicenseModal: React.FC<LicenseModalProps> = ({ onClose, coins, setC
               <>
                 <div className={card}>
                   <div className="min-w-0">
-                    <div className="text-white font-black text-xs">雇佣车夫</div>
-                    <div className="text-[10px] text-gray-400 font-bold mt-0.5">从车马行雇一名熟手，月薪 {money(HIRED_COACHMAN_WAGE)}。</div>
+                    <div className="text-white font-black text-xs">{t('hireTitle')}</div>
+                    <div className="text-[10px] text-gray-400 font-bold mt-0.5">{t('hireDesc', { wage: money(HIRED_COACHMAN_WAGE) })}</div>
                   </div>
                   <button onClick={hire} disabled={!isRegistered} className={btn}>
-                    雇佣
+                    {t('hire')}
                   </button>
                 </div>
                 <div className={card}>
                   <div className="min-w-0">
-                    <div className="text-white font-black text-xs">奴隶市场</div>
+                    <div className="text-white font-black text-xs">{t('slaveMarket')}</div>
                     <div className="text-[10px] text-gray-400 font-bold mt-0.5">
-                      身价 {money(SLAVE_PRICE)}，每月口粮 {money(SLAVE_FOOD)}；声望 {SLAVE_REPUTATION}，可能逃跑；{SLAVE_TRADE_ENDS} 年帝国灭亡后废除。
+                      {t('slaveMarketDesc', { price: money(SLAVE_PRICE), food: money(SLAVE_FOOD), rep: SLAVE_REPUTATION, year: SLAVE_TRADE_ENDS })}
                     </div>
                     {slaveBlocked({ isRegistered, year: gameYear, coins, coachman }) && (
                       <div className="text-[10px] text-rose-300 font-bold mt-0.5">{slaveBlocked({ isRegistered, year: gameYear, coins, coachman })}</div>
                     )}
                   </div>
                   <button onClick={buySlave} disabled={!!slaveBlocked({ isRegistered, year: gameYear, coins, coachman })} className={btn}>
-                    买下
+                    {t('buySlave')}
                   </button>
                 </div>
               </>

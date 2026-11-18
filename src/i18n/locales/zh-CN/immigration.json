@@ -1,0 +1,76 @@
+{
+  "toast": {
+    "notRegistered": "❌ 请先完成出生登记，取得合法公民身份后方可申办海外居留",
+    "alreadyHas": "⚠️ 你已持有【{{country}}】永久居留身份，无需重复申领",
+    "feeShort": "❌ 申请规费不足！需要 {{cost}} {{symbol}}，当前拥有 {{coins}} {{symbol}}",
+    "assetsShort": "❌ 资产储备不达标！【{{country}}】要求个人储备资金 ≥ {{amount}} {{symbol}}",
+    "healthShort": "❌ 健康体魄不达标！体检要求体魄 ≥ {{min}} 点（当前：{{health}}）",
+    "granted": "🎉 恭喜！已获发【{{country}}】永久居留绿卡！扣除规费 {{cost}} {{symbol}}",
+    "naturalizeFee": "❌ 归化入籍国籍公证书规费需 {{fee}} {{symbol}}",
+    "naturalized": "👑 宣誓完成！正式加入【{{country}}】国籍，尊享全套主权国民政治与经济特权！"
+  },
+  "countryTitle": "{{country}} · 移民居留",
+  "title": "移民居留",
+  "tabs": {
+    "offices": "各国移民署",
+    "residencies": "居留权",
+    "naturalize": "归化入籍盟约"
+  },
+  "unregistered": {
+    "title": "尚未登记合法公民身份",
+    "desc": "你尚未办理出生登记。各国移民公署要求申请人必须具备合法的本国公民身份，方可受理跨国居留与归化审理。",
+    "go": "前往办理出生登记"
+  },
+  "search": "搜索国家...",
+  "granted": "已获居留",
+  "programCount": "{{count}} 项法案",
+  "office": "{{country}} 移民署",
+  "backToList": "返回列表",
+  "fee": "规费",
+  "assetsRequired": "资产要求:",
+  "healthRequired": "体魄要求:",
+  "healthValue": "≥{{min}}点",
+  "rules": "法案规程",
+  "apply": "申领居留 ({{cost}} {{symbol}})",
+  "none": {
+    "title": "暂无已获居留权",
+    "desc": "你当前仅持有阿米诺斯本土公民身份。可前往「各国移民署」申办居留。",
+    "browse": "浏览各国移民署法案"
+  },
+  "ownedList": "已持有名录 ({{count}})",
+  "certified": "公署认证",
+  "naturalizedTag": "已归化",
+  "active": "居留生效中",
+  "holder": "持证: ",
+  "cardNo": "编号: ",
+  "issued": "签发: {{date}}",
+  "applyNaturalize": "申请归化【{{country}}】国籍",
+  "law": {
+    "title": "主权国归化入籍法案 (Naturalization Law)",
+    "desc": "在持有该国永久居留证件的基础上，外国居民可向其内政公署提出《归化入籍宣言》，签署忠诚盟约，正式取得双重国籍与主权国民全部政治与外交保护权。",
+    "noneTitle": "尚无可供归化的永居身份",
+    "noneDesc": "请先前往办理海外永久居留绿卡，满足移民公署居住资质后方可进行入籍宣誓。"
+  },
+  "naturalizedAt": "于 {{year}}.{{month}} 完成归化",
+  "canNaturalize": "已满足永居前置条件，可申请归化",
+  "citizen": "正统公民",
+  "oath": "入籍宣誓",
+  "officeShort": "{{country}}移民署",
+  "detail": {
+    "lore": "历史法案背景",
+    "requirements": "公署资格审查标准",
+    "perks": "持卡人专属法权与常驻收益",
+    "submit": "立即递交居留申请 ({{cost}} {{symbol}})"
+  },
+  "back": "返回",
+  "ceremony": {
+    "title": "【{{country}}】归化入籍盟约仪式",
+    "heading": "签署归化忠诚誓言",
+    "oath": "我谨以【{{name}}】之名宣誓：恪守【{{country}}】宪章与主权法度，自愿履行主权国民之神圣义务，受帝国法律庇佑。",
+    "swearer": "宣誓人：",
+    "cardNo": "居留凭证编号：",
+    "fee": "国籍公证规费：",
+    "sign": "签署盟誓并盖印归化 (支付 3,000 {{symbol}})"
+  },
+  "cancel": "取消"
+}

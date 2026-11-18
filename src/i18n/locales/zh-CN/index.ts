@@ -17,5 +17,9 @@ import bank from './bank.json';
 import wealth from './wealth.json';
 import stock from './stock.json';
 import housing from './housing.json';
+import license from './license.json';
+import immigration from './immigration.json';
+import job from './job.json';
+import visa from './visa.json';
 
-export const zhCN = { common, auth, nav, log, funct, role, simple, sim, family, app, game, profile, season, auction, shop, bank, wealth, stock, housing };
+export const zhCN = { common, auth, nav, log, funct, role, simple, sim, family, app, game, profile, season, auction, shop, bank, wealth, stock, housing, license, immigration, job, visa };
