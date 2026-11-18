@@ -77,7 +77,9 @@ npm test                         # 单元测试：前端规则库（happy-dom）
 └── src/
     ├── main.tsx / index.css          # 挂载入口与全局样式
     ├── version.ts                    # 游戏版本号
-    ├── App.tsx                       # 主应用：全局状态、月度结算、各界面开关
+    ├── App.tsx                       # 主应用：全局状态、各界面开关，调用每月结算与各功能 hook
+    ├── hooks/                        # 从 App 拆出的功能 hook：useCredits（致谢名单）、useAntibodies（抗体与疫苗）、
+    │                                 #   useGodMode（测试兑换码）、useSeason（赛季进度与成绩上报）
     ├── data/
     │   ├── fixedFamilies.ts          # 固定家族列表（皇族、贵族与以后出现的家族）
     │   └── credits.ts                # 致谢名单内容
