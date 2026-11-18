@@ -4,6 +4,7 @@
 import { Hono, type Context } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { hashPassword, verifyPassword, generateToken, sha256Hex, PBKDF2_ITERATIONS } from './crypto';
+import { currentSeason } from '../../src/data/seasons';
 
 export interface Env {
   DB: D1Database;
@@ -15,6 +16,8 @@ export interface Env {
   RESEND_API_KEY?: string;
   /** 'true' 时在接口响应里附带邮件链接，便于本地测试；线上不要开启 */
   DEV_MODE?: string;
+  /** 管理员邮箱，逗号分隔；这些已验证账号可以查看举报、隐藏或恢复赛季成绩 */
+  ADMIN_EMAILS?: string;
 }
 
 type AppContext = Context<{ Bindings: Env }>;
@@ -342,7 +345,8 @@ app.put('/api/save', async (c) => {
 
 /**
  * 记录当前账号集齐全部成就，返回名次（第几个集齐的玩家）。
- * 同一账号重复调用返回同一个名次。成就数据保存在客户端，服务器无法核验是否真的集齐。
+ * 同一账号重复调用返回同一个名次。成就数据保存在客户端，服务器无法核验是否真的集齐；
+ * 只能拒绝服务器已知用过测试兑换码或被管理员隐藏过赛季成绩的账号。
  */
 app.post('/api/achievements/complete', async (c) => {
   const { user, error } = await requireVerifiedUser(c);
@@ -351,6 +355,10 @@ app.post('/api/achievements/complete', async (c) => {
     c.env.DB.prepare('SELECT rank FROM completions WHERE user_id = ?').bind(user.id).first<{ rank: number }>();
   const existing = await findRank();
   if (existing) return c.json({ ok: true, rank: existing.rank });
+  const flagged = await c.env.DB.prepare('SELECT 1 AS x FROM season_scores WHERE user_id = ? AND (cheat = 1 OR hidden = 1) LIMIT 1')
+    .bind(user.id)
+    .first();
+  if (flagged) return fail(c, 403, 'NOT_ELIGIBLE');
 
   // 并发时两个请求可能算出同一个名次，rank 的唯一约束会让其中一个失败，失败后重试。
   // 「WHERE true」用于消除 SQLite 中 INSERT ... SELECT 与 ON CONFLICT 的语法歧义。
@@ -375,8 +383,37 @@ app.post('/api/achievements/complete', async (c) => {
 const SEASON_RE = /^S\d{1,3}$/;
 const MAX_SEASON_SCORE = 10_000_000;
 const MAX_COMPLETION_MS = 10 * 365 * 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+// 成绩由客户端计算，服务器无法复算，只能按现实时间限制涨分速度：超出的部分先截掉，之后随时间补上
+const SCORE_PER_HOUR = 3000;
+// 正常集齐全部成就约需 50 分钟，更短的用时视为伪造，不计入速通榜
+const MIN_COMPLETION_MS = 30 * 60 * 1000;
+const SCORE_SUBMITS_PER_MINUTE = 30;
+const REPORTS_PER_HOUR = 10;
+const REPORT_REASONS = ['score', 'speed'];
+const MODERATE_ACTIONS = ['hide', 'unhide', 'dismiss'];
+// 排行与名次只统计没用过测试兑换码、也没被管理员隐藏的成绩
+const VISIBLE = 's.cheat = 0 AND s.hidden = 0';
 
-/** 上报本赛季成绩。积分取最新值；全成就用时保留第一次集齐时的值；偷懒标记一旦为真就不再取消 */
+const isAdmin = (c: AppContext, user: UserRow) =>
+  user.email_verified === 1 &&
+  (c.env.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+    .includes(user.email.toLowerCase());
+
+const requireAdmin = async (c: AppContext) => {
+  const { user, error } = await requireVerifiedUser(c);
+  if (error) return { error };
+  if (!isAdmin(c, user)) return { error: fail(c, 403, 'FORBIDDEN') };
+  return { user };
+};
+
+/**
+ * 上报本赛季成绩，只接受当前赛季。积分取最新值，但比上次最多多涨「SCORE_PER_HOUR × 间隔小时数」，首次最多 SCORE_PER_HOUR；
+ * 全成就用时保留第一次有效的值；偷懒、作弊标记一旦为真就不再取消。返回服务器实际记录的积分与用时。
+ */
 app.put('/api/season/score', async (c) => {
   const { user, error } = await requireVerifiedUser(c);
   if (error) return error;
@@ -385,59 +422,155 @@ app.put('/api/season/score', async (c) => {
   const score = Number(body.score);
   const completed = body.completedMs === null || body.completedMs === undefined ? null : Number(body.completedMs);
   const lazy = body.lazy === true ? 1 : 0;
+  const cheat = body.cheat === true ? 1 : 0;
   if (!SEASON_RE.test(season) || !Number.isInteger(score) || score < 0 || score > MAX_SEASON_SCORE) return fail(c, 400, 'BAD_REQUEST');
   if (completed !== null && (!Number.isInteger(completed) || completed < 0 || completed > MAX_COMPLETION_MS)) return fail(c, 400, 'BAD_REQUEST');
-  await c.env.DB.prepare(
-    `INSERT INTO season_scores (user_id, season, score, completed_ms, lazy, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+  if (season !== currentSeason().id) return fail(c, 409, 'SEASON_CLOSED');
+  if (!(await rateLimit(c.env.DB, `season:${user.id}`, SCORE_SUBMITS_PER_MINUTE, 60))) return fail(c, 429, 'TOO_MANY_REQUESTS');
+
+  const now = Date.now();
+  const prev = await c.env.DB.prepare('SELECT score, updated_at FROM season_scores WHERE user_id = ? AND season = ?')
+    .bind(user.id, season)
+    .first<{ score: number; updated_at: number }>();
+  const cap = prev ? prev.score + Math.floor((SCORE_PER_HOUR * Math.max(0, now - prev.updated_at)) / HOUR_MS) : SCORE_PER_HOUR;
+  const accepted = Math.min(score, cap);
+  const validCompleted = completed !== null && completed >= MIN_COMPLETION_MS ? completed : null;
+  const row = await c.env.DB.prepare(
+    `INSERT INTO season_scores (user_id, season, score, completed_ms, lazy, cheat, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(user_id, season) DO UPDATE SET
        score = excluded.score,
        completed_ms = COALESCE(season_scores.completed_ms, excluded.completed_ms),
        lazy = MAX(season_scores.lazy, excluded.lazy),
-       updated_at = excluded.updated_at`,
+       cheat = MAX(season_scores.cheat, excluded.cheat),
+       updated_at = excluded.updated_at
+     RETURNING score, completed_ms`,
   )
-    .bind(user.id, season, score, completed, lazy, Date.now())
-    .run();
-  return c.json({ ok: true });
+    .bind(user.id, season, accepted, validCompleted, lazy, cheat, now)
+    .first<{ score: number; completed_ms: number | null }>();
+  return c.json({ ok: true, score: row?.score ?? accepted, completedMs: row?.completed_ms ?? null });
 });
 
-/** 赛季排行：board=score（积分榜）或 speed（全成就速通榜，只含已集齐的玩家）；附带当前登录账号的名次 */
+/** 赛季排行：board=score（积分榜）或 speed（全成就速通榜，只含已集齐的玩家）；附带当前登录账号的名次与是否为管理员 */
 app.get('/api/season/leaderboard', async (c) => {
   const season = c.req.query('season') ?? '';
   const board = c.req.query('board') === 'speed' ? 'speed' : 'score';
   if (!SEASON_RE.test(season)) return fail(c, 400, 'BAD_REQUEST');
-  const where = board === 'speed' ? 'WHERE s.season = ? AND s.completed_ms IS NOT NULL' : 'WHERE s.season = ?';
+  const where = board === 'speed' ? `WHERE s.season = ? AND ${VISIBLE} AND s.completed_ms IS NOT NULL` : `WHERE s.season = ? AND ${VISIBLE}`;
   const order = board === 'speed' ? 's.completed_ms ASC, s.updated_at ASC' : 's.score DESC, s.updated_at ASC';
   const rows = await c.env.DB.prepare(
     `SELECT s.user_id, u.display_name AS name, s.score, s.completed_ms, s.lazy FROM season_scores s JOIN users u ON u.id = s.user_id ${where} ORDER BY ${order} LIMIT 50`,
   )
     .bind(season)
     .all<{ user_id: string; name: string; score: number; completed_ms: number | null; lazy: number }>();
-  const list = (rows.results ?? []).map((r, i) => ({ rank: i + 1, name: r.name, score: r.score, completedMs: r.completed_ms, lazy: r.lazy === 1, isMe: false, userId: r.user_id }));
+  const list = (rows.results ?? []).map((r, i) => ({ rank: i + 1, uid: r.user_id, name: r.name, score: r.score, completedMs: r.completed_ms, lazy: r.lazy === 1, isMe: false }));
 
-  let me: { rank: number | null; score: number; completedMs: number | null; lazy: boolean } | null = null;
+  let me: { rank: number | null; score: number; completedMs: number | null; lazy: boolean; excluded: 'cheat' | 'hidden' | null } | null = null;
   const user = await currentUser(c);
   if (user) {
-    const mine = await c.env.DB.prepare('SELECT score, completed_ms, lazy, updated_at FROM season_scores WHERE user_id = ? AND season = ?')
+    const mine = await c.env.DB.prepare('SELECT score, completed_ms, lazy, cheat, hidden, updated_at FROM season_scores WHERE user_id = ? AND season = ?')
       .bind(user.id, season)
-      .first<{ score: number; completed_ms: number | null; lazy: number; updated_at: number }>();
+      .first<{ score: number; completed_ms: number | null; lazy: number; cheat: number; hidden: number; updated_at: number }>();
     if (mine) {
+      const excluded = mine.cheat === 1 ? 'cheat' : mine.hidden === 1 ? 'hidden' : null;
       let rank: number | null = null;
-      if (board === 'score') {
-        const better = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM season_scores WHERE season = ? AND (score > ? OR (score = ? AND updated_at < ?))')
+      // 名次的并列规则必须与上面列表的 ORDER BY 一致，否则「我的名次」会与列表中的位置对不上
+      if (!excluded && board === 'score') {
+        const better = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM season_scores s WHERE s.season = ? AND ${VISIBLE} AND (s.score > ? OR (s.score = ? AND s.updated_at < ?))`)
           .bind(season, mine.score, mine.score, mine.updated_at)
           .first<{ n: number }>();
         rank = (better?.n ?? 0) + 1;
-      } else if (mine.completed_ms !== null) {
-        const better = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM season_scores WHERE season = ? AND completed_ms IS NOT NULL AND completed_ms < ?')
-          .bind(season, mine.completed_ms)
+      } else if (!excluded && mine.completed_ms !== null) {
+        const better = await c.env.DB.prepare(
+          `SELECT COUNT(*) AS n FROM season_scores s WHERE s.season = ? AND ${VISIBLE} AND s.completed_ms IS NOT NULL AND (s.completed_ms < ? OR (s.completed_ms = ? AND s.updated_at < ?))`,
+        )
+          .bind(season, mine.completed_ms, mine.completed_ms, mine.updated_at)
           .first<{ n: number }>();
         rank = (better?.n ?? 0) + 1;
       }
-      me = { rank, score: mine.score, completedMs: mine.completed_ms, lazy: mine.lazy === 1 };
+      me = { rank, score: mine.score, completedMs: mine.completed_ms, lazy: mine.lazy === 1, excluded };
     }
-    list.forEach((r) => (r.isMe = r.userId === user.id));
+    list.forEach((r) => (r.isMe = r.uid === user.id));
   }
-  return c.json({ ok: true, season, board, list: list.map(({ userId, ...r }) => r), me });
+  return c.json({ ok: true, season, board, admin: !!user && isAdmin(c, user), list, me });
+});
+
+/** 举报某位玩家的赛季成绩：不能举报自己；同一人对同一玩家重复举报只更新原记录 */
+app.post('/api/season/report', async (c) => {
+  const { user, error } = await requireVerifiedUser(c);
+  if (error) return error;
+  const body = await readJson(c);
+  const season = String(body.season ?? '');
+  const uid = String(body.uid ?? '');
+  const reason = String(body.reason ?? '');
+  if (!SEASON_RE.test(season) || !uid || uid === user.id || !REPORT_REASONS.includes(reason)) return fail(c, 400, 'BAD_REQUEST');
+  if (!(await rateLimit(c.env.DB, `report:${user.id}`, REPORTS_PER_HOUR, 3600))) return fail(c, 429, 'TOO_MANY_REQUESTS');
+  const target = await c.env.DB.prepare('SELECT 1 AS x FROM season_scores WHERE user_id = ? AND season = ?').bind(uid, season).first();
+  if (!target) return fail(c, 404, 'NOT_FOUND');
+  await c.env.DB.prepare(
+    `INSERT INTO season_reports (season, target_id, reporter_id, reason, created_at) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(season, target_id, reporter_id) DO UPDATE SET reason = excluded.reason, created_at = excluded.created_at, resolved = 0`,
+  )
+    .bind(season, uid, user.id, reason, Date.now())
+    .run();
+  return c.json({ ok: true });
+});
+
+// ---------- 赛季排行管理（仅 ADMIN_EMAILS 中的账号） ----------
+
+/** 待处理举报与已隐藏的成绩：按未处理举报数从多到少 */
+app.get('/api/admin/season/reports', async (c) => {
+  const { error } = await requireAdmin(c);
+  if (error) return error;
+  const season = c.req.query('season') ?? '';
+  if (!SEASON_RE.test(season)) return fail(c, 400, 'BAD_REQUEST');
+  const rows = await c.env.DB.prepare(
+    `SELECT s.user_id, u.display_name AS name, s.score, s.completed_ms, s.lazy, s.cheat, s.hidden,
+            COUNT(r.reporter_id) AS reports, GROUP_CONCAT(DISTINCT r.reason) AS reasons
+     FROM season_scores s
+     JOIN users u ON u.id = s.user_id
+     LEFT JOIN season_reports r ON r.season = s.season AND r.target_id = s.user_id AND r.resolved = 0
+     WHERE s.season = ?
+     GROUP BY s.user_id
+     HAVING reports > 0 OR s.hidden = 1
+     ORDER BY reports DESC, s.score DESC
+     LIMIT 100`,
+  )
+    .bind(season)
+    .all<{ user_id: string; name: string; score: number; completed_ms: number | null; lazy: number; cheat: number; hidden: number; reports: number; reasons: string | null }>();
+  const list = (rows.results ?? []).map((r) => ({
+    uid: r.user_id,
+    name: r.name,
+    score: r.score,
+    completedMs: r.completed_ms,
+    lazy: r.lazy === 1,
+    cheat: r.cheat === 1,
+    hidden: r.hidden === 1,
+    reports: r.reports,
+    reasons: r.reasons ? r.reasons.split(',') : [],
+  }));
+  return c.json({ ok: true, season, list });
+});
+
+/** 处理某位玩家的赛季成绩：hide 隐藏、unhide 恢复、dismiss 驳回举报；三种操作都会把该玩家的待处理举报标为已处理 */
+app.post('/api/admin/season/moderate', async (c) => {
+  const { error } = await requireAdmin(c);
+  if (error) return error;
+  const body = await readJson(c);
+  const season = String(body.season ?? '');
+  const uid = String(body.uid ?? '');
+  const action = String(body.action ?? '');
+  if (!SEASON_RE.test(season) || !uid || !MODERATE_ACTIONS.includes(action)) return fail(c, 400, 'BAD_REQUEST');
+  const resolve = c.env.DB.prepare('UPDATE season_reports SET resolved = 1 WHERE season = ? AND target_id = ? AND resolved = 0').bind(season, uid);
+  if (action === 'dismiss') {
+    await resolve.run();
+    return c.json({ ok: true });
+  }
+  const [updated] = await c.env.DB.batch([
+    c.env.DB.prepare('UPDATE season_scores SET hidden = ? WHERE user_id = ? AND season = ?').bind(action === 'hide' ? 1 : 0, uid, season),
+    resolve,
+  ]);
+  if (updated.meta.changes === 0) return fail(c, 404, 'NOT_FOUND');
+  return c.json({ ok: true });
 });
 
 // 未知接口返回 JSON 404；其余请求交给前端静态文件

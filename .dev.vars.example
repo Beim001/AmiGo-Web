@@ -9,3 +9,6 @@ DEV_MODE=true
 # 需要在本地真实发信时再填写
 # RESEND_API_KEY=
 # MAIL_FROM=AmiGO <noreply@你的域名>
+
+# 赛季排行管理员邮箱（逗号分隔），本地测试举报与隐藏成绩时填写自己注册的邮箱
+# ADMIN_EMAILS=

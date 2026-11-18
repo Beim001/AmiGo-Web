@@ -126,8 +126,11 @@ export const claimCompletionRank = async (): Promise<number> => {
 
 // ---------- 赛季排行（第 55 题） ----------
 
+export type SeasonBoardId = 'score' | 'speed';
+
 export interface SeasonRow {
   rank: number;
+  uid: string;
   name: string;
   score: number;
   completedMs: number | null;
@@ -137,17 +140,49 @@ export interface SeasonRow {
 
 export interface SeasonBoard {
   list: SeasonRow[];
-  me: { rank: number | null; score: number; completedMs: number | null; lazy: boolean } | null;
+  /** excluded：cheat 用过测试兑换码，hidden 被管理员隐藏；两种情况都不参与排名 */
+  me: { rank: number | null; score: number; completedMs: number | null; lazy: boolean; excluded: 'cheat' | 'hidden' | null } | null;
+  /** 当前账号是否为赛季排行管理员 */
+  admin: boolean;
 }
 
-/** 上报本赛季成绩（仅已验证的邮箱账号） */
-export const submitSeasonScore = async (body: { season: string; score: number; completedMs: number | null; lazy: boolean }): Promise<void> => {
-  await call('/season/score', { method: 'PUT', body: JSON.stringify(body) });
-};
+/**
+ * 上报本赛季成绩（仅已验证的邮箱账号）。cheat 表示本赛季用过测试兑换码，服务器会永久排除这条成绩。
+ * 服务器会限制涨分速度、丢弃过短的速通用时，返回值是服务器实际记录的成绩。
+ */
+export const submitSeasonScore = (body: { season: string; score: number; completedMs: number | null; lazy: boolean; cheat: boolean }) =>
+  call<{ score: number; completedMs: number | null }>('/season/score', { method: 'PUT', body: JSON.stringify(body) });
 
 /** 读取赛季排行：score 积分榜，speed 全成就速通榜 */
-export const fetchSeasonBoard = (season: string, board: 'score' | 'speed') =>
+export const fetchSeasonBoard = (season: string, board: SeasonBoardId) =>
   call<SeasonBoard>(`/season/leaderboard?season=${encodeURIComponent(season)}&board=${board}`);
+
+/** 举报某位玩家的赛季成绩；reason 取举报时所在的榜单：score 积分异常，speed 速通用时异常 */
+export const reportSeasonEntry = async (season: string, uid: string, reason: SeasonBoardId): Promise<void> => {
+  await post('/season/report', { season, uid, reason });
+};
+
+export interface SeasonReportRow {
+  uid: string;
+  name: string;
+  score: number;
+  completedMs: number | null;
+  lazy: boolean;
+  cheat: boolean;
+  hidden: boolean;
+  /** 未处理的举报数 */
+  reports: number;
+  reasons: SeasonBoardId[];
+}
+
+/** 管理员：待处理举报与已隐藏的成绩 */
+export const fetchSeasonReports = async (season: string): Promise<SeasonReportRow[]> =>
+  (await call<{ list: SeasonReportRow[] }>(`/admin/season/reports?season=${encodeURIComponent(season)}`)).list;
+
+/** 管理员：hide 隐藏成绩、unhide 恢复、dismiss 驳回举报 */
+export const moderateSeasonEntry = async (season: string, uid: string, action: 'hide' | 'unhide' | 'dismiss'): Promise<void> => {
+  await post('/admin/season/moderate', { season, uid, action });
+};
 
 // ---------- 错误文案 ----------
 

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Wrench, X, CircleDollarSign, FastForward, Baby, Cake, Square, Trophy, Gift } from 'lucide-react';
 import { GIFTS, GIFT_QUALITY_STYLE } from '../lib/gifts';
+import { formatDuration } from '../lib/season';
 
 // 开发测试工具：仅在 `npm run dev` 下由 App 渲染（import.meta.env.DEV），生产构建中不存在。
-// 悬浮在所有界面之上：调整现金、一键快进月份、编辑年龄、新增子嗣、发放礼物、成就测试。
+// 悬浮在所有界面之上：调整现金、一键快进月份、编辑年龄、新增子嗣、发放礼物、成就与赛季上报测试。
 // 约定：新增需要手动测试的功能时，同步在这里加测试入口。
 
 interface DevToolsPanelProps {
@@ -49,6 +50,8 @@ interface DevToolsPanelProps {
   allowancePreview: string;
   /** 把在世父母的好感度设为指定值（测试零花的 30% 门槛） */
   onSetParentAffinity: (value: number) => void;
+  /** 向服务器上报一条指定的赛季成绩，返回服务器实际记录的值；未登录已验证邮箱账号时为 undefined */
+  onTestSeasonSubmit?: (score: number, completedMs: number | null) => Promise<{ score: number; completedMs: number | null }>;
 }
 
 const QUICK_ADD = [10_000, 100_000, 1_000_000];
@@ -57,6 +60,8 @@ const QUICK_MONTHS: Array<[number, string]> = [[1, '+1 月'], [12, '+1 年'], [6
 const MIN_AGE = 8;
 const MAX_AGE = 120;
 const MAX_FAST_FORWARD_MONTHS = 1200;
+const FAKE_SEASON_SCORE = 9_999_999;
+const FAKE_COMPLETION_MS = 1000;
 
 const clampCoins = (value: number) => Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(value)));
 
@@ -94,8 +99,10 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
   onAddGiftsGiven,
   allowancePreview,
   onSetParentAffinity,
+  onTestSeasonSubmit,
 }) => {
   const [open, setOpen] = useState(false);
+  const [seasonTestResult, setSeasonTestResult] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('money');
   const [amountInput, setAmountInput] = useState('');
   const [monthsInput, setMonthsInput] = useState('');
@@ -387,6 +394,28 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
             </button>
           </div>
           <div className="text-[9px] text-gray-500 font-bold mt-1.5">可用于测试「集齐全部成就」后的致谢名单。</div>
+
+          <div className={`${label} mt-3`}>赛季排行防作弊</div>
+          <button
+            disabled={!onTestSeasonSubmit}
+            onClick={() => {
+              if (!onTestSeasonSubmit) return;
+              setSeasonTestResult('上报中…');
+              onTestSeasonSubmit(FAKE_SEASON_SCORE, FAKE_COMPLETION_MS)
+                .then((r) =>
+                  setSeasonTestResult(
+                    `上报积分 ${FAKE_SEASON_SCORE.toLocaleString()}、用时 1 秒 → 服务器记录积分 ${r.score.toLocaleString()}，速通用时 ${r.completedMs === null ? '未计入' : formatDuration(r.completedMs)}`,
+                  ),
+                )
+                .catch((err) => setSeasonTestResult(`上报失败：${err instanceof Error ? err.message : String(err)}`));
+            }}
+            className={`${btn} w-full`}
+          >
+            上报伪造成绩（{FAKE_SEASON_SCORE.toLocaleString()} 分、1 秒速通）
+          </button>
+          <div className="text-[9px] text-gray-500 font-bold mt-1.5">
+            {onTestSeasonSubmit ? seasonTestResult ?? '服务器应把积分截到每小时 3000 分以内，并丢弃短于 30 分钟的速通用时。' : '需要登录已验证的邮箱账号。'}
+          </div>
         </>
       )}
 

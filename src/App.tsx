@@ -3947,6 +3947,12 @@ export default function App() {
     setHealth(100);
     setDisease(null);
     markSeasonCheat();
+    // 立即告知服务器，否则玩家删掉本地的作弊标记后成绩仍会上榜
+    if (cloud.enabled) {
+      submitSeasonScore({ season: currentSeason().id, score: seasonScore(readAchievements(), readSeasonSimPoints(), familyClass.id), completedMs: null, lazy: isSeasonLazy(), cheat: true }).catch((err) =>
+        console.warn('[赛季] 上报测试兑换码标记失败', err),
+      );
+    }
     const added = unlockAllForTesting();
     autoPlayCreditsIfComplete();
     return `🛠️ 测试兑换码生效：无限金币、无限体力、无限寿命，已解锁全部成就（新增 ${added} 项）。本赛季成绩不计入排行。`;
@@ -3971,11 +3977,13 @@ export default function App() {
     achieved: seasonAchievements(seasonRecord).length,
     total: ACHIEVEMENTS.length,
   };
-  // 已验证的邮箱账号：每次推进月份或成绩变化后上报（延迟 3 秒合并）
+  // 已验证的邮箱账号：每次推进月份或成绩变化后上报（延迟 3 秒合并）；用过测试兑换码也照常上报并带上标记，由服务器排除
   React.useEffect(() => {
-    if (!cloud.enabled || !isRegistered || seasonMine.cheat) return;
+    if (!cloud.enabled || !isRegistered) return;
     const timer = setTimeout(() => {
-      submitSeasonScore({ season: currentSeason().id, score: seasonMine.score, completedMs: seasonMine.completedMs, lazy: seasonMine.lazy }).catch(() => {});
+      submitSeasonScore({ season: currentSeason().id, score: seasonMine.score, completedMs: seasonMine.completedMs, lazy: seasonMine.lazy, cheat: seasonMine.cheat }).catch((err) =>
+        console.warn('[赛季] 上报成绩失败', err),
+      );
     }, 3000);
     return () => clearTimeout(timer);
   }, [cloud.enabled, isRegistered, seasonMine.score, seasonMine.completedMs, seasonMine.lazy, seasonMine.cheat]);
@@ -5176,6 +5184,11 @@ export default function App() {
                setShowCredits(false);
                showToast('🛠️ 已清空全部成就');
              }}
+             onTestSeasonSubmit={
+               cloud.enabled
+                 ? (score, completedMs) => submitSeasonScore({ season: currentSeason().id, score, completedMs, lazy: seasonMine.lazy, cheat: seasonMine.cheat })
+                 : undefined
+             }
            />
          )}
 
