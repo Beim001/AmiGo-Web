@@ -83,6 +83,7 @@ npm test                         # 单元测试：前端规则库（happy-dom）
     ├── version.ts                    # 游戏版本号
     ├── i18n/                         # 界面多语言（i18next + react-i18next）：index.ts 初始化与语言切换，
     │                                 #   locales/<语言代码>/ 下按命名空间存放语言包，i18next.d.ts 让 t() 的键名参与类型检查
+    │                                 #   README.md 列出未翻译的内容及原因
     ├── App.tsx                       # 主应用：全局状态、各界面开关，调用每月结算与各功能 hook
     ├── hooks/                        # useGameState（统一游戏状态：useReducer、初始化与自动存档）；
     │                                 #   从 App 拆出的功能 hook：useCredits（致谢名单）、useAntibodies（抗体与疫苗）、
