@@ -4,6 +4,7 @@
 import type { SimEventDef } from './simEvents';
 import { optionBlocked } from './simEvents';
 import type { StockHolding, StockItem, StockTradeLog } from './stockMarket';
+import { classRank } from './lineage';
 
 export const SIMPLE_MODE_KEY = 'amigo_simple_mode';
 
@@ -16,9 +17,21 @@ export const autoOptionIndex = (def: SimEventDef, coins: number): number | null 
   return hit ? hit.i : null;
 };
 
-/** 推荐工作：日薪从高到低，取前 count 个 */
-export const recommendJobs = <T extends { dailySalary: number }>(jobs: T[], count = 3): T[] =>
-  [...jobs].sort((a, b) => b.dailySalary - a.dailySalary).slice(0, count);
+/**
+ * 推荐工作：岗位按日薪从低到高分成三档，乞丐、平民家庭从低薪档推荐，小康、中产从中间档，富商、贵族、皇族从高薪档；
+ * 在档位内随机挑 count 个（rng 由调用方按月份固定种子，同一个月内推荐不变）。
+ */
+export const recommendJobs = <T extends { dailySalary: number }>(jobs: T[], classId: string, rng: () => number, count = 3): T[] => {
+  const sorted = [...jobs].sort((a, b) => a.dailySalary - b.dailySalary);
+  const rank = Math.max(0, classRank(classId));
+  const tier = rank <= 1 ? 0 : rank <= 3 ? 1 : 2;
+  const size = Math.ceil(sorted.length / 3);
+  const band = sorted.slice(tier * size, (tier + 1) * size);
+  const pool = [...band];
+  const picked: T[] = [];
+  while (picked.length < count && pool.length > 0) picked.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
+  return picked.sort((a, b) => b.dailySalary - a.dailySalary);
+};
 
 /** 推荐住房：买得起的房子里，留出三成现金后最舒适的一套；都买不起返回 null */
 export const recommendHome = <T extends { price: number; comfortBonus: number }>(homes: T[], coins: number): T | null => {

@@ -18,6 +18,7 @@ import { loadMarket, STOCK_KEYS, StockHolding, StockTradeLog } from '../lib/stoc
 import { JOB_POSITIONS, readCurrentJobId, readJobHistoryIds, CURRENT_JOB_KEY, JOB_HISTORY_KEY } from '../components/JobModal';
 import { HOUSING_MARKET_PROPERTIES } from '../components/HousingModal';
 import { loadStored, saveStored } from '../lib/storage';
+import { seededRng } from '../lib/appearance';
 import type { Game } from './useGameState';
 
 // 简洁模式（第 49 题）：面向 7 岁儿童的一屏界面，与完整模式共用存档。
@@ -288,7 +289,7 @@ export const useSimpleMode = ({
         question: '要去工作吗？',
         hint: '有工作才能领俸禄，还能拿到月薪',
         laterLabel: '以后再说',
-        choices: recommendJobs(JOB_POSITIONS, 3).map((j) => ({ id: j.id, title: j.title, detail: `${j.department} · 每月约 ${(j.dailySalary * 22).toLocaleString()} ₽` })),
+        choices: recommendJobs(JOB_POSITIONS, familyClass.id, seededRng(`simple_jobs_${gameYear}_${gameMonth}`)).map((j) => ({ id: j.id, title: j.title, detail: `${j.department} · 每月约 ${(j.dailySalary * 22).toLocaleString()} ₽` })),
       };
     }
     if (currentAge >= 8 && currentAge <= CHILD_LABOR_MAX_AGE && familyClass.childLabor && !childJob && !snoozed('child')) {
