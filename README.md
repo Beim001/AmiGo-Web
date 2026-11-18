@@ -78,7 +78,8 @@ npm test                         # 单元测试：前端规则库（happy-dom）
     ├── main.tsx / index.css          # 挂载入口与全局样式
     ├── version.ts                    # 游戏版本号
     ├── App.tsx                       # 主应用：全局状态、各界面开关，调用每月结算与各功能 hook
-    ├── hooks/                        # 从 App 拆出的功能 hook：useCredits（致谢名单）、useAntibodies（抗体与疫苗）、
+    ├── hooks/                        # useGameState（统一游戏状态：useReducer、初始化与自动存档）；
+    │                                 #   从 App 拆出的功能 hook：useCredits（致谢名单）、useAntibodies（抗体与疫苗）、
     │                                 #   useGodMode（测试兑换码）、useSeason（赛季进度与成绩上报）
     ├── data/
     │   ├── fixedFamilies.ts          # 固定家族列表（皇族、贵族与以后出现的家族）
@@ -152,7 +153,7 @@ npm test                         # 单元测试：前端规则库（happy-dom）
 
 | 组件 / 函数 | 作用 |
 | :--- | :--- |
-| `App()` | 根组件，维护全局状态（账号、出生登记、金币、健康、游戏年月、银行、家族、声望、推演、拍卖会、各界面开关等），大部分状态持久化到 `localStorage`。 |
+| `App()` | 根组件。游戏进度状态（出生登记、金币、健康、游戏年月、银行、家族、疾病与抗体、特质、声望、推演、拍卖会、外貌、寿命等）统一由 `hooks/useGameState.ts` 的 reducer 管理并自动存档；账号状态与各界面开关由 App 自己持有。 |
 | `handleNextMonth()` | 推进一个月：读取存档中的输入，调用 `lib/monthTick.ts` 的纯函数 `advanceMonth` 完成全部月度结算，再把结果写回状态与存档。结算内容：俸禄或零花、月薪、童工薪水、房租、存贷利息、股市、健康与疾病、家族（生育、情人、好感衰减与分家、监护、声望、阶层提升）、推演事件、拍卖会、人生日志；健康归零时进入传承流程。 |
 | `handleRegisterBirth()` | 出生登记：随机家族阶层与出身（起始资产、父母家、家人），名字中的姓换成家族姓，初始年龄 8 岁。 |
 | `handleSuccession()` | 角色去世后由继承人接续（未成年继承人进入监护），可选择把前任的大事写入家族大事记。 |

@@ -13,27 +13,27 @@ import { SimTab } from './components/SimTab';
 import { LogTab } from './components/LogTab';
 import { FamilyTab } from './components/FamilyTab';
 import { MarriageModal } from './components/MarriageModal';
-import { FamilyState, INITIAL_FAMILY_STATE, childLifespan, ageAt, generateSpouseCandidates, marry, MARRIAGE_FEE, MARRIAGE_MIN_AGE, SPOUSE_MEMBER_ID, canInteract, applyInteraction, GIFT_COST, getHeirlooms, addHeirloom, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, FamilyMemberView } from './lib/family';
-import { randomTraits, affinityBonus, withBirthPrivilege, rollMaintenance, fertileMaxAge, MAINTENANCE_COST, FERTILITY_TRAITS, SIMPLE_MAINTENANCE_CHANCE, SIMPLE_MAINTENANCE_RESERVE, PLAYER_TRAITS_KEY, traitNames, traitById } from './lib/traits';
-import { REPUTATION_KEY, REP, clampReputation, CHARITY_KEY, CHARITY_UNIT, charityRemaining } from './lib/reputation';
+import { INITIAL_FAMILY_STATE, childLifespan, ageAt, generateSpouseCandidates, marry, MARRIAGE_FEE, MARRIAGE_MIN_AGE, SPOUSE_MEMBER_ID, canInteract, applyInteraction, GIFT_COST, getHeirlooms, addHeirloom, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs, succeed, Gender, FamilyMemberView } from './lib/family';
+import { randomTraits, affinityBonus, withBirthPrivilege, rollMaintenance, fertileMaxAge, MAINTENANCE_COST, FERTILITY_TRAITS, SIMPLE_MAINTENANCE_CHANCE, SIMPLE_MAINTENANCE_RESERVE, traitNames, traitById } from './lib/traits';
+import { REP, clampReputation, CHARITY_UNIT, charityRemaining } from './lib/reputation';
 import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, unlockAllForTesting, clearAchievementsForTesting, readGiftsGiven, recordGiftsGiven } from './lib/achievements';
 import { CreditsRoll } from './components/CreditsRoll';
-import { Appearance, APPEARANCE_KEY, randomAppearance, rollBeauty, applyBeauty, BEAUTY_TRAIT } from './lib/appearance';
+import { Appearance, randomAppearance, rollBeauty, applyBeauty, BEAUTY_TRAIT } from './lib/appearance';
 import { currentSeason } from './data/seasons';
 import { VACCINE_SUCCESS, vaccinesAvailable, antibodyNames, DISEASES } from './lib/disease';
 import { SimpleModeView, SimpleCard } from './components/SimpleModeView';
 import { SIMPLE_MODE_KEY, autoOptionIndex, recommendJobs, recommendHome, shouldSuggestHome, buyRecommended, sellAll } from './lib/simpleMode';
-import { GiftInventory, GIFT_INVENTORY_KEY, addGifts, giftCount, giftById, giftAffinityGain, removeGift } from './lib/gifts';
+import { addGifts, giftCount, giftById, giftAffinityGain, removeGift } from './lib/gifts';
 import { submitSeasonScore } from './lib/authClient';
-import { GUARDIANSHIP_KEY, Guardianship, takeCustody, ORPHANAGE_NAME, ADULT_AGE as GUARDIAN_ADULT_AGE } from './lib/guardianship';
+import { takeCustody, ORPHANAGE_NAME, ADULT_AGE as GUARDIAN_ADULT_AGE } from './lib/guardianship';
 import { rankFamilies, familyNetWorth } from './lib/familyRank';
-import { rollClass, generateOrigin, classById, readChildJob, CHILD_JOB_KEY, CHILD_LABOR_MAX_AGE, CHILD_JOBS, PLAYER_LIFESPAN_KEY, rollPlayerLifespan } from './lib/lineage';
+import { rollClass, generateOrigin, classById, readChildJob, CHILD_JOB_KEY, CHILD_LABOR_MAX_AGE, CHILD_JOBS, rollPlayerLifespan } from './lib/lineage';
 import { applySurname } from './lib/names';
-import { Auction, AUCTION_KEY, TICKET_PRICE, generateAuction, raiseBid, buyoutLot, passLot, normalizeLot, isInvited, heirloomById, heirloomsValue } from './lib/heirlooms';
+import { TICKET_PRICE, generateAuction, raiseBid, buyoutLot, passLot, normalizeLot, isInvited, heirloomById, heirloomsValue } from './lib/heirlooms';
 import { AuctionModal } from './components/AuctionModal';
-import { diseaseInfo, DISEASE_KEY, ActiveDisease } from './lib/disease';
+import { diseaseInfo } from './lib/disease';
 import { SuccessionModal } from './components/SuccessionModal';
-import { SimEventInstance, eventDef, resolveOption, optionBlocked, SIM_EVENTS_KEY, SIM_SCORE_KEY, SIM_QUIET_KEY, readSimRecent, recordSimRecent } from './lib/simEvents';
+import { eventDef, resolveOption, optionBlocked, readSimRecent, recordSimRecent } from './lib/simEvents';
 import { addLifeLog, readLifeLog, clearLifeLog } from './lib/lifeLog';
 import { isMinor } from './lib/monthly';
 import { familyAllowance } from './lib/allowance';
@@ -42,6 +42,7 @@ import { useCredits } from './hooks/useCredits';
 import { useAntibodies } from './hooks/useAntibodies';
 import { useGodMode } from './hooks/useGodMode';
 import { useSeason } from './hooks/useSeason';
+import { useGameState, registeredName } from './hooks/useGameState';
 import {
   buildDefaultAccounts,
   loadAccounts,
@@ -115,47 +116,20 @@ export default function App() {
   const [showMarriage, setShowMarriage] = useState(false);
   const [showAuction, setShowAuction] = useState(false);
 
+  // 游戏进度状态统一由 useGameState 管理（初始化、自动存档）；setter 与 useState 的用法相同
+  const game = useGameState();
+  const { isRegistered, gender, birthRegisteredYear, playerName, coins, health, gameYear, gameMonth, equippedClothing, ownedClothes, freeDrawUsed, bankDeposit, bankLoan, family, disease, playerTraits, reputation, guardianship, charity, simEvents, simScore, simQuiet, auction, appearance, playerLifespan, giftInventory, antibodies, godMode } = game.state;
+  const { setIsRegistered, setGender, setBirthRegisteredYear, setPlayerName, setCoins, setHealth, setGameYear, setGameMonth, setEquippedClothing, setOwnedClothes, setFreeDrawUsed, setBankDeposit, setBankLoan, setFamily, setDisease, setPlayerTraits, setReputation, setGuardianship, setCharity, setSimEvents, setSimScore, setSimQuiet, setAuction, setAppearance, setPlayerLifespan, setGiftInventory, setAntibodies, setGodMode } = game.setters;
+
   // 礼物背包：宝箱抽得，在家族页送给家人（第 35 题）
-  const [giftInventory, setGiftInventory] = useState<GiftInventory>(() => loadStored<GiftInventory>(GIFT_INVENTORY_KEY, {}));
-  React.useEffect(() => saveStored(GIFT_INVENTORY_KEY, giftInventory), [giftInventory]);
 
   const { showCredits, setShowCredits, creditsLoading, creditsRank, playCredits, autoPlayCreditsIfComplete } = useCredits();
 
-  const [isRegistered, setIsRegistered] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('amigo_is_registered') === 'true';
-    } catch (e) {
-      return false;
-    }
-  });
 
-  const [gender, setGender] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('amigo_gender') || null;
-    } catch (e) {
-      return null;
-    }
-  });
 
-  const [birthRegisteredYear, setBirthRegisteredYear] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem('amigo_birth_registered_year');
-      return saved ? parseInt(saved, 10) : 1870;
-    } catch (e) {
-      return 1870;
-    }
-  });
 
   const [authUser, setAuthUser] = useState<AppUser | null>(() => (DEV_SKIP_AUTH ? DEV_MOCK_USER : readCachedUser()));
   const [authLoading, setAuthLoading] = useState(!DEV_SKIP_AUTH);
-  const registeredName = (): string | null => {
-    try {
-      return localStorage.getItem('amigo_is_registered') === 'true' ? localStorage.getItem('amigo_player_name') : null;
-    } catch (e) {
-      return null;
-    }
-  };
-  const [playerName, setPlayerName] = useState(() => registeredName() || readCachedUser()?.displayName || 'AmiGo·玩家');
 
   const applySignedInUser = (user: AppUser) => {
     setAuthUser(user);
@@ -207,27 +181,8 @@ export default function App() {
     return true;
   };
 
-  const [coins, setCoins] = useState<number>(() => loadStored('amigo_coins', 1047650));
-  const [health, setHealth] = useState<number>(() => loadStored('amigo_health', 100));
-  const [equippedClothing, setEquippedClothing] = useState<string>(() => loadStored('amigo_equipped_clothing', 'default'));
 
-  const [gameYear, setGameYear] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem('amigo_game_year');
-      return saved ? parseInt(saved, 10) : 1870;
-    } catch (e) {
-      return 1870;
-    }
-  });
 
-  const [gameMonth, setGameMonth] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem('amigo_game_month');
-      return saved ? parseInt(saved, 10) : 1;
-    } catch (e) {
-      return 1;
-    }
-  });
 
   const [toast, setToast] = useState<string | null>(null);
 
@@ -609,45 +564,18 @@ export default function App() {
     }
     return <CartoonCharacter clothing={equippedClothing} appearance={appearance} age={isRegistered ? currentAge : 25} gender={gender} />;
   };
-  const [ownedClothes, setOwnedClothes] = useState<string[]>(() => loadStored('amigo_owned_clothes', ['default']));
 
-  const [bankDeposit, setBankDeposit] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem('amigo_bank_deposit');
-      return saved ? parseInt(saved, 10) : 500000;
-    } catch (e) {
-      return 500000;
-    }
-  });
 
-  const [bankLoan, setBankLoan] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem('amigo_bank_loan');
-      return saved ? parseInt(saved, 10) : 0;
-    } catch (e) {
-      return 0;
-    }
-  });
 
-  const [freeDrawUsed, setFreeDrawUsed] = useState<boolean>(() => loadStored('amigo_free_draw_used', false));
 
   // 核心状态持久化（刷新页面后保留）
-  React.useEffect(() => saveStored('amigo_coins', coins), [coins]);
-  React.useEffect(() => saveStored('amigo_health', health), [health]);
-  React.useEffect(() => saveStored('amigo_equipped_clothing', equippedClothing), [equippedClothing]);
-  React.useEffect(() => saveStored('amigo_owned_clothes', ownedClothes), [ownedClothes]);
-  React.useEffect(() => saveStored('amigo_free_draw_used', freeDrawUsed), [freeDrawUsed]);
 
   // 家族：好感度、婚姻、子嗣与家族大事
-  const [family, setFamily] = useState<FamilyState>(() => loadStored('amigo_family', INITIAL_FAMILY_STATE));
-  React.useEffect(() => saveStored('amigo_family', family), [family]);
 
   // 云端存档（仅已验证的邮箱账号）
   const cloud = useCloudSave(authUser);
 
   // 疾病（undefined.md 第 20 题）
-  const [disease, setDisease] = useState<ActiveDisease | null>(() => loadStored<ActiveDisease | null>(DISEASE_KEY, null));
-  React.useEffect(() => saveStored(DISEASE_KEY, disease), [disease]);
   const currentDisease = diseaseInfo(disease);
 
   // 家族出身（旧存档为贵族 · 瓦伦丁家族）
@@ -656,14 +584,6 @@ export default function App() {
   const [showSuccession, setShowSuccession] = useState(false);
 
   // 特质（第 27 题）、声望（第 22 题）、未成年继承的监护（第 25 题）
-  const [playerTraits, setPlayerTraits] = useState<string[]>(() => loadStored<string[]>(PLAYER_TRAITS_KEY, []));
-  const [reputation, setReputation] = useState<number>(() => loadStored(REPUTATION_KEY, isRegistered ? familyClass.startReputation : 0));
-  const [guardianship, setGuardianship] = useState<Guardianship | null>(() => loadStored<Guardianship | null>(GUARDIANSHIP_KEY, null));
-  const [charity, setCharity] = useState<{ month: string; gained: number } | null>(() => loadStored(CHARITY_KEY, null));
-  React.useEffect(() => saveStored(PLAYER_TRAITS_KEY, playerTraits), [playerTraits]);
-  React.useEffect(() => saveStored(REPUTATION_KEY, reputation), [reputation]);
-  React.useEffect(() => saveStored(GUARDIANSHIP_KEY, guardianship), [guardianship]);
-  React.useEffect(() => saveStored(CHARITY_KEY, charity), [charity]);
   const changeReputation = (delta: number) => setReputation((r) => clampReputation(r + delta));
 
   /** 慈善捐款：每 10,000 ₽ 声望 +1，每个游戏月最多 +5 */
@@ -681,16 +601,8 @@ export default function App() {
 
 
   // 推演：待处理事件、推演积分、最近一次「本月无事发生」提示
-  const [simEvents, setSimEvents] = useState<SimEventInstance[]>(() => loadStored<SimEventInstance[]>(SIM_EVENTS_KEY, []));
-  const [simScore, setSimScore] = useState<number>(() => loadStored(SIM_SCORE_KEY, 0));
-  const [simQuiet, setSimQuiet] = useState<string | null>(() => loadStored<string | null>(SIM_QUIET_KEY, null));
-  React.useEffect(() => saveStored(SIM_EVENTS_KEY, simEvents), [simEvents]);
-  React.useEffect(() => saveStored(SIM_SCORE_KEY, simScore), [simScore]);
-  React.useEffect(() => saveStored(SIM_QUIET_KEY, simQuiet), [simQuiet]);
 
   // 拍卖会（每月随机开办，只在开办当月有效）
-  const [auction, setAuction] = useState<Auction | null>(() => loadStored<Auction | null>(AUCTION_KEY, null));
-  React.useEffect(() => saveStored(AUCTION_KEY, auction), [auction]);
 
   /** 处理推演事件的选项（只结算金币与健康） */
   const handleSimResolve = (uid: string, optionIndex: number) => {
@@ -773,8 +685,6 @@ export default function App() {
     familyAllowance(family, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth }, age, familyClass.id);
 
   // 外貌（第 61 题）：出生登记时捏脸；旧存档没有外貌时随机生成
-  const [appearance, setAppearance] = useState<Appearance | null>(() => loadStored<Appearance | null>(APPEARANCE_KEY, null));
-  React.useEffect(() => saveStored(APPEARANCE_KEY, appearance), [appearance]);
   React.useEffect(() => {
     if (isRegistered && !appearance) {
       const g = gender === '男' || gender === '女' ? gender : null;
@@ -782,11 +692,9 @@ export default function App() {
     }
   }, [isRegistered, appearance]);
 
-  const { antibodies, setAntibodies, gainRecoveryImmunity, handleVaccinate, vaccineList } = useAntibodies({ coins, setCoins, gameYear, gameMonth, family, setFamily });
+  const { gainRecoveryImmunity, handleVaccinate, vaccineList } = useAntibodies({ antibodies, setAntibodies, coins, setCoins, gameYear, gameMonth, family, setFamily });
 
   // 主角寿命（第 51 题）：旧存档或传承后没有寿命时，按当前阶层与特质补抽
-  const [playerLifespan, setPlayerLifespan] = useState<number | null>(() => loadStored<number | null>(PLAYER_LIFESPAN_KEY, null));
-  React.useEffect(() => saveStored(PLAYER_LIFESPAN_KEY, playerLifespan), [playerLifespan]);
   React.useEffect(() => {
     if (isRegistered && playerLifespan === null) setPlayerLifespan(rollPlayerLifespan(familyClass.id, playerTraits));
   }, [isRegistered, playerLifespan, familyClass.id]);
@@ -794,7 +702,7 @@ export default function App() {
   // ---------- 简洁模式（第 49 题）：面向 7 岁儿童的一屏界面，与完整模式共用存档 ----------
   const [simpleMode, setSimpleMode] = useState<boolean>(() => loadStored<boolean>(SIMPLE_MODE_KEY, false));
   React.useEffect(() => saveStored(SIMPLE_MODE_KEY, simpleMode), [simpleMode]);
-  const { godMode, setGodMode, activateGodMode } = useGodMode({ coins, setCoins, health, setHealth, isRegistered, setDisease, cloud, familyClass, autoPlayCreditsIfComplete });
+  const { activateGodMode } = useGodMode({ godMode, setGodMode, coins, setCoins, health, setHealth, isRegistered, setDisease, cloud, familyClass, autoPlayCreditsIfComplete });
 
   const seasonMine = useSeason({ simScore, simpleMode, isRegistered, cloud, familyClass });
 

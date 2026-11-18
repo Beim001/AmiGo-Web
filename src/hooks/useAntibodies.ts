@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { loadStored, saveStored } from '../lib/storage';
-import { ANTIBODY_KEY, VACCINE_SUCCESS, immunityAfterRecovery, diseaseById, vaccinesAvailable } from '../lib/disease';
+import type React from 'react';
+import { VACCINE_SUCCESS, immunityAfterRecovery, diseaseById, vaccinesAvailable } from '../lib/disease';
 import { addLifeLog } from '../lib/lifeLog';
 import { FamilyState, ageAt, childLifespan } from '../lib/family';
 
-// 抗体（第 53 题）：接种疫苗或传染病痊愈后按概率获得，有抗体的病不会再患
+// 抗体（第 53 题）：接种疫苗或传染病痊愈后按概率获得，有抗体的病不会再患。抗体列表本身存放在统一游戏状态中
 
-export const useAntibodies = ({ coins, setCoins, gameYear, gameMonth, family, setFamily }: {
+export const useAntibodies = ({ antibodies, setAntibodies, coins, setCoins, gameYear, gameMonth, family, setFamily }: {
+  antibodies: string[];
+  setAntibodies: React.Dispatch<React.SetStateAction<string[]>>;
   coins: number;
   setCoins: React.Dispatch<React.SetStateAction<number>>;
   gameYear: number;
@@ -14,8 +15,6 @@ export const useAntibodies = ({ coins, setCoins, gameYear, gameMonth, family, se
   family: FamilyState;
   setFamily: React.Dispatch<React.SetStateAction<FamilyState>>;
 }) => {
-  const [antibodies, setAntibodies] = useState<string[]>(() => loadStored<string[]>(ANTIBODY_KEY, []));
-  React.useEffect(() => saveStored(ANTIBODY_KEY, antibodies), [antibodies]);
   /** 传染病痊愈后按概率获得抗体；返回是否获得 */
   const gainRecoveryImmunity = (diseaseId: string): boolean => {
     if (antibodies.includes(diseaseId) || !immunityAfterRecovery(diseaseId)) return false;
@@ -60,5 +59,5 @@ export const useAntibodies = ({ coins, setCoins, gameYear, gameMonth, family, se
   };
   const vaccineList = vaccinesAvailable(gameYear).map((d) => ({ id: d.id, name: d.name, cost: d.vaccineCost ?? 0, owned: antibodies.includes(d.id) }));
 
-  return { antibodies, setAntibodies, gainRecoveryImmunity, handleVaccinate, vaccineList };
+  return { gainRecoveryImmunity, handleVaccinate, vaccineList };
 };
