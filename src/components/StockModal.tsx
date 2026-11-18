@@ -43,9 +43,14 @@ import {
   TRADING_DAYS_PER_MONTH,
 } from '../lib/stockMarket';
 import { CURRENCY } from '../data/seasons';
+import { useTranslation } from 'react-i18next';
 
 export type { StockItem, StockHolding, StockTradeLog, StockNewsItem } from '../lib/stockMarket';
 export { INITIAL_STOCKS, NEWS_TEMPLATES } from '../lib/stockMarket';
+
+// 板块筛选中“全部”与“自选”的取值；其余取值是股票的板块名（行情数据，保持原文）
+const SECTOR_ALL = 'all';
+const SECTOR_FAV = 'favorites';
 
 export const StockModal: React.FC<{
   onClose: () => void;
@@ -54,6 +59,7 @@ export const StockModal: React.FC<{
   /** 家族金融背景（满足时为说明文字，否则为 null）；决定能否开立证券账户 */
   financeBackground: string | null;
 }> = ({ onClose, coins, setCoins, financeBackground }) => {
+  const { t } = useTranslation('stock');
   // 证券账户：旧存档已有持仓的视为已开户
   const [accountOpened, setAccountOpened] = useState<boolean>(() => {
     try {
@@ -115,7 +121,7 @@ export const StockModal: React.FC<{
   const [selectedStock, setSelectedStock] = useState<StockItem | null>(null);
   const [orderType, setOrderType] = useState<'buy' | 'sell'>('buy');
   const [tradeSharesInput, setTradeSharesInput] = useState('100');
-  const [sectorFilter, setSectorFilter] = useState('全部');
+  const [sectorFilter, setSectorFilter] = useState(SECTOR_ALL);
   const [searchQuery, setSearchQuery] = useState('');
   const [chartMode, setChartMode] = useState<'line' | 'candlestick'>('line');
   const [hoveredDataPoint, setHoveredDataPoint] = useState<{ day: number; price: number } | null>(null);
@@ -134,10 +140,10 @@ export const StockModal: React.FC<{
     let updated: string[];
     if (favorites.includes(stockId)) {
       updated = favorites.filter((id) => id !== stockId);
-      showToast('已从自选股移除');
+      showToast(t('toast.unfavorited'));
     } else {
       updated = [...favorites, stockId];
-      showToast('已加入自选关注 ⭐');
+      showToast(t('toast.favorited'));
     }
     setFavorites(updated);
     try {
@@ -216,12 +222,12 @@ export const StockModal: React.FC<{
   // Buy Stock
   const handleBuy = (stock: StockItem, shares: number) => {
     if (shares <= 0 || isNaN(shares)) {
-      showToast('请输入有效的买入股数！');
+      showToast(t('toast.buyInvalid'));
       return;
     }
     const cost = Math.round(shares * stock.price);
     if (coins < cost) {
-      showToast(`❌ 现金不足！购买 ${shares} 股需 ${cost.toLocaleString()} ${CURRENCY.symbol}，当前拥有 ${coins.toLocaleString()} ${CURRENCY.symbol}`);
+      showToast(t('toast.buyNoCash', { shares, cost: cost.toLocaleString(), coins: coins.toLocaleString(), symbol: CURRENCY.symbol }));
       return;
     }
 
@@ -261,19 +267,19 @@ export const StockModal: React.FC<{
     setTradeLogs(updatedLogs);
     saveAllData(stocks, updatedHoldings, updatedLogs, newsFeed, tradingDay);
 
-    showToast(`🎉 成功买入【${stock.name}】${shares.toLocaleString()} 股！扣除 ${cost.toLocaleString()} ${CURRENCY.symbol}`);
+    showToast(t('toast.bought', { stock: stock.name, shares: shares.toLocaleString(), cost: cost.toLocaleString(), symbol: CURRENCY.symbol }));
   };
 
   // Sell Stock
   const handleSell = (stock: StockItem, shares: number) => {
     if (shares <= 0 || isNaN(shares)) {
-      showToast('请输入有效的卖出股数！');
+      showToast(t('toast.sellInvalid'));
       return;
     }
 
     const existing = holdings.find((h) => h.stockId === stock.id);
     if (!existing || existing.shares < shares) {
-      showToast(`❌ 持仓不足！你仅持有 ${existing ? existing.shares : 0} 股【${stock.name}】`);
+      showToast(t('toast.sellShort', { shares: existing ? existing.shares : 0, stock: stock.name }));
       return;
     }
 
@@ -311,7 +317,7 @@ export const StockModal: React.FC<{
     if (Math.abs(realized) >= 10000) {
       addLifeLog('财富', realized > 0 ? `股票大赚：${stock.name}` : `股票重亏：${stock.name}`, `卖出 ${shares.toLocaleString()} 股，${realized > 0 ? '盈利' : '亏损'} ${Math.abs(realized).toLocaleString()} ${CURRENCY.symbol}。`);
     }
-    showToast(`💰 成功平仓卖出【${stock.name}】${shares.toLocaleString()} 股！资金回收 +${revenue.toLocaleString()} ${CURRENCY.symbol}`);
+    showToast(t('toast.sold', { stock: stock.name, shares: shares.toLocaleString(), revenue: revenue.toLocaleString(), symbol: CURRENCY.symbol }));
   };
 
   const filteredStocks = useMemo(() => {
@@ -324,10 +330,10 @@ export const StockModal: React.FC<{
 
       if (!matchSearch) return false;
 
-      if (sectorFilter === '⭐自选') {
+      if (sectorFilter === SECTOR_FAV) {
         return favorites.includes(s.id);
       }
-      if (sectorFilter === '全部') return true;
+      if (sectorFilter === SECTOR_ALL) return true;
       return s.sector.includes(sectorFilter);
     });
   }, [stocks, sectorFilter, favorites, searchQuery]);
@@ -358,7 +364,7 @@ export const StockModal: React.FC<{
     } catch (e) {}
     setAccountOpened(true);
     addLifeLog('财富', '开立证券账户', `开户资格：${financeBackground}。`);
-    showToast('🎉 证券账户开立成功，欢迎入市！');
+    showToast(t('toast.opened'));
   };
 
   if (!accountOpened) {
@@ -371,30 +377,30 @@ export const StockModal: React.FC<{
           >
             <ChevronLeft size={18} strokeWidth={3} />
           </button>
-          <span className="text-amber-300 text-sm font-black tracking-wider">帝国证券交易所 · 开户柜台</span>
+          <span className="text-amber-300 text-sm font-black tracking-wider">{t('openCounter')}</span>
         </div>
         <div className="flex-1 overflow-y-auto p-5 flex flex-col items-center justify-center gap-4 text-center">
           <FileText size={48} className="text-amber-400" />
-          <h2 className="text-white font-black text-lg">开立证券账户</h2>
+          <h2 className="text-white font-black text-lg">{t('openTitle')}</h2>
           <p className="text-gray-300 text-xs font-bold leading-relaxed max-w-xs">
-            交易所只为具备金融背景的家族开立账户：家族中需有人读过金融学，或从事过金融相关工作（例如交易所代理经纪人、商行账房）。
+            {t('openRule')}
           </p>
           {financeBackground ? (
             <>
               <div className="bg-emerald-950/80 border-2 border-emerald-500/70 text-emerald-200 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-2">
-                <CheckCircle2 size={14} /> 符合条件：{financeBackground}
+                <CheckCircle2 size={14} /> {t('eligible', { background: financeBackground })}
               </div>
               <button
                 onClick={handleOpenAccount}
                 className="bg-gradient-to-r from-amber-400 to-amber-500 text-black font-black text-sm px-6 py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer active:translate-y-0.5"
               >
-                立即开户
+                {t('openNow')}
               </button>
             </>
           ) : (
             <div className="bg-red-950/70 border-2 border-red-500/60 text-red-200 text-xs font-bold px-3 py-2 rounded-xl flex items-start gap-2 max-w-xs text-left">
               <AlertCircle size={14} className="shrink-0 mt-0.5" />
-              <span>暂不符合开户条件。可在「就业招聘」应聘交易所代理经纪人，或与从事金融工作的人结婚后再来办理。</span>
+              <span>{t('notEligible')}</span>
             </div>
           )}
         </div>
@@ -423,14 +429,14 @@ export const StockModal: React.FC<{
           className="h-9 px-2.5 bg-[#23273a] hover:bg-[#2e334a] border-2 border-black rounded-xl active:translate-y-0.5 shadow-[0_2px_0_#000] cursor-pointer text-white flex items-center gap-1 transition-all z-10"
         >
           <ChevronLeft size={18} className="text-white" strokeWidth={3} />
-          {selectedStock && <span className="text-xs font-bold text-gray-200">返回</span>}
+          {selectedStock && <span className="text-xs font-bold text-gray-200">{t('back')}</span>}
         </button>
 
         <div className="flex-1 flex flex-col items-center justify-center pointer-events-none px-2">
           <div className="bg-[#1b1f30] border border-amber-500/50 px-3 py-1 rounded-xl shadow-[0_2px_0_#000] flex items-center gap-2 max-w-[90%]">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
             <span className="text-amber-300 text-xs sm:text-sm font-black tracking-wider truncate">
-              {selectedStock ? `${selectedStock.name} · ${selectedStock.code}` : '帝国证券交易所'}
+              {selectedStock ? t('stockTitle', { name: selectedStock.name, code: selectedStock.code }) : t('exchange')}
             </span>
             {!selectedStock && (
               <span className="text-[10px] text-gray-400 font-mono hidden sm:inline">
@@ -441,8 +447,8 @@ export const StockModal: React.FC<{
         </div>
 
         <div className="z-10 text-right leading-tight">
-          <div className="text-[9px] text-gray-400 font-bold">行情随月份推进</div>
-          <div className="text-[10px] text-amber-300 font-black">每月 {TRADING_DAYS_PER_MONTH} 个交易日</div>
+          <div className="text-[9px] text-gray-400 font-bold">{t('marketByMonth')}</div>
+          <div className="text-[10px] text-amber-300 font-black">{t('tradingDays', { count: TRADING_DAYS_PER_MONTH })}</div>
         </div>
       </div>
 
@@ -452,9 +458,9 @@ export const StockModal: React.FC<{
           <div className="flex items-center gap-3">
             <div>
               <div className="text-[10px] text-gray-400 font-bold flex items-center gap-1.5">
-                <span>帝国综指</span>
+                <span>{t('index')}</span>
                 <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1 py-0.2 rounded font-mono text-[9px]">
-                  交易日 #{tradingDay}
+                  {t('tradingDay', { day: tradingDay })}
                 </span>
               </div>
               <div className="flex items-baseline gap-2 font-mono font-black mt-0.5">
@@ -474,9 +480,9 @@ export const StockModal: React.FC<{
           {/* Market Breadth Multi-Bar */}
           <div className="text-right">
             <div className="flex items-center justify-end gap-2 text-[10px] font-mono">
-              <span className="text-red-400 font-bold">涨 {gainersCount}</span>
-              <span className="text-gray-400">平 {flatCount}</span>
-              <span className="text-emerald-400 font-bold">跌 {losersCount}</span>
+              <span className="text-red-400 font-bold">{t('up', { count: gainersCount })}</span>
+              <span className="text-gray-400">{t('flat', { count: flatCount })}</span>
+              <span className="text-emerald-400 font-bold">{t('down', { count: losersCount })}</span>
             </div>
             {/* Visual ratio indicator bar */}
             <div className="w-28 sm:w-36 h-1.5 bg-gray-800 rounded-full overflow-hidden flex mt-1 border border-black/80">
@@ -509,7 +515,7 @@ export const StockModal: React.FC<{
             }`}
           >
             <BarChart2 size={13} />
-            <span>行情看板</span>
+            <span>{t('tabs.market')}</span>
           </button>
           <button
             onClick={() => setActiveTab('portfolio')}
@@ -520,7 +526,7 @@ export const StockModal: React.FC<{
             }`}
           >
             <Wallet size={13} />
-            <span>我的持仓 ({holdings.length})</span>
+            <span>{t('tabs.holdings', { count: holdings.length })}</span>
           </button>
           <button
             onClick={() => setActiveTab('news')}
@@ -531,7 +537,7 @@ export const StockModal: React.FC<{
             }`}
           >
             <Newspaper size={13} />
-            <span>盘面快讯</span>
+            <span>{t('tabs.news')}</span>
           </button>
           <button
             onClick={() => setActiveTab('history')}
@@ -542,7 +548,7 @@ export const StockModal: React.FC<{
             }`}
           >
             <History size={13} />
-            <span>流水明细</span>
+            <span>{t('tabs.logs')}</span>
           </button>
         </div>
       )}
@@ -562,10 +568,10 @@ export const StockModal: React.FC<{
                       {selectedStock.code}
                     </span>
                     <span className="bg-purple-950/80 text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded border border-purple-500/40">
-                      {selectedStock.sector}板块
+                      {t('sectorBoard', { sector: selectedStock.sector })}
                     </span>
                     <span className="bg-[#121522] text-gray-400 text-[10px] font-mono px-1.5 py-0.5 rounded border border-black">
-                      帝国主板 A-01
+                      {t('mainBoard')}
                     </span>
                   </div>
                   <p className="text-gray-300 text-xs font-medium leading-relaxed max-w-md">
@@ -578,14 +584,14 @@ export const StockModal: React.FC<{
                   className="p-2 bg-[#23273a] hover:bg-[#2e334a] border-2 border-black rounded-xl text-amber-400 flex items-center gap-1 cursor-pointer shadow-[0_2px_0_#000] active:translate-y-0.5 transition-all text-xs font-black flex-shrink-0"
                 >
                   <Star size={15} fill={favorites.includes(selectedStock.id) ? '#f59e0b' : 'none'} />
-                  <span>{favorites.includes(selectedStock.id) ? '已自选' : '关注'}</span>
+                  <span>{favorites.includes(selectedStock.id) ? t('favorited') : t('follow')}</span>
                 </button>
               </div>
 
               {/* Price & Metric Strip */}
               <div className="mt-3.5 pt-3 border-t border-gray-800 flex items-end justify-between">
                 <div>
-                  <span className="text-gray-400 text-[10px] font-bold block">现价 (RMB/{CURRENCY.symbol})</span>
+                  <span className="text-gray-400 text-[10px] font-bold block">{t('price', { symbol: CURRENCY.symbol })}</span>
                   <div className="text-amber-300 text-2xl sm:text-3xl font-black font-mono tracking-tight mt-0.5">
                     {selectedStock.price.toFixed(2)} {CURRENCY.symbol}
                   </div>
@@ -597,7 +603,7 @@ export const StockModal: React.FC<{
                   const isUp = change >= 0;
                   return (
                     <div className="text-right">
-                      <span className="text-gray-400 text-[10px] font-bold block">日内涨跌幅</span>
+                      <span className="text-gray-400 text-[10px] font-bold block">{t('dailyChange')}</span>
                       <div
                         className={`text-base sm:text-lg font-black font-mono mt-0.5 flex items-center justify-end ${
                           isUp ? 'text-red-400' : 'text-emerald-400'
@@ -614,21 +620,21 @@ export const StockModal: React.FC<{
               {/* High / Low / Volume Stats Grid */}
               <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-gray-800 text-center font-mono">
                 <div className="bg-[#10121d] p-2 rounded-xl border border-black">
-                  <div className="text-[9px] text-gray-400 font-bold font-sans">最高价</div>
+                  <div className="text-[9px] text-gray-400 font-bold font-sans">{t('high')}</div>
                   <div className="text-red-400 font-black text-xs mt-0.5">{selectedStock.highPrice.toFixed(2)}</div>
                 </div>
                 <div className="bg-[#10121d] p-2 rounded-xl border border-black">
-                  <div className="text-[9px] text-gray-400 font-bold font-sans">最低价</div>
+                  <div className="text-[9px] text-gray-400 font-bold font-sans">{t('low')}</div>
                   <div className="text-emerald-400 font-black text-xs mt-0.5">{selectedStock.lowPrice.toFixed(2)}</div>
                 </div>
                 <div className="bg-[#10121d] p-2 rounded-xl border border-black">
-                  <div className="text-[9px] text-gray-400 font-bold font-sans">昨收价</div>
+                  <div className="text-[9px] text-gray-400 font-bold font-sans">{t('prevClose')}</div>
                   <div className="text-gray-300 font-black text-xs mt-0.5">{selectedStock.prevPrice.toFixed(2)}</div>
                 </div>
                 <div className="bg-[#10121d] p-2 rounded-xl border border-black">
-                  <div className="text-[9px] text-gray-400 font-bold font-sans">成交量</div>
+                  <div className="text-[9px] text-gray-400 font-bold font-sans">{t('volume')}</div>
                   <div className="text-amber-300 font-black text-xs mt-0.5">
-                    {(selectedStock.volume / 10000).toFixed(0)}万
+                    {t('wan', { n: (selectedStock.volume / 10000).toFixed(0) })}
                   </div>
                 </div>
               </div>
@@ -639,7 +645,7 @@ export const StockModal: React.FC<{
               <div className="flex justify-between items-center text-xs font-black text-gray-300 border-b border-gray-800 pb-2">
                 <div className="flex items-center gap-2">
                   <BarChart2 size={15} className="text-amber-400" />
-                  <span>近10日交易走势 (推演行情)</span>
+                  <span>{t('trend')}</span>
                 </div>
 
                 <div className="flex items-center gap-1 bg-[#10121d] p-0.5 rounded-lg border border-black">
@@ -649,7 +655,7 @@ export const StockModal: React.FC<{
                       chartMode === 'line' ? 'bg-amber-400 text-black' : 'text-gray-400 hover:text-white'
                     }`}
                   >
-                    分时走势
+                    {t('intraday')}
                   </button>
                   <button
                     onClick={() => setChartMode('candlestick')}
@@ -657,7 +663,7 @@ export const StockModal: React.FC<{
                       chartMode === 'candlestick' ? 'bg-amber-400 text-black' : 'text-gray-400 hover:text-white'
                     }`}
                   >
-                    K线模拟
+                    {t('kline')}
                   </button>
                 </div>
               </div>
@@ -685,15 +691,15 @@ export const StockModal: React.FC<{
                     <div className="relative w-full h-full">
                       {/* Top / Bottom Price Guides */}
                       <div className="absolute top-1 right-2 text-[9px] font-mono text-gray-500">
-                        最高: {max.toFixed(1)} {CURRENCY.symbol}
+                        {t('chartHigh', { price: max.toFixed(1), symbol: CURRENCY.symbol })}
                       </div>
                       <div className="absolute bottom-1 right-2 text-[9px] font-mono text-gray-500">
-                        最低: {min.toFixed(1)} {CURRENCY.symbol}
+                        {t('chartLow', { price: min.toFixed(1), symbol: CURRENCY.symbol })}
                       </div>
 
                       {hoveredDataPoint && (
                         <div className="absolute top-1 left-2 bg-[#23273a] text-amber-300 border border-amber-500/40 text-[10px] font-mono px-2 py-0.5 rounded shadow z-10">
-                          第 {hoveredDataPoint.day} 日 · 价格: {hoveredDataPoint.price.toFixed(2)} {CURRENCY.symbol}
+                          {t('chartPoint', { day: hoveredDataPoint.day, price: hoveredDataPoint.price.toFixed(2), symbol: CURRENCY.symbol })}
                         </div>
                       )}
 
@@ -801,7 +807,7 @@ export const StockModal: React.FC<{
                   }`}
                 >
                   <ArrowUpRight size={15} />
-                  <span>买入 · 增持做多</span>
+                  <span>{t('buyTab')}</span>
                 </button>
                 <button
                   onClick={() => setOrderType('sell')}
@@ -812,28 +818,28 @@ export const StockModal: React.FC<{
                   }`}
                 >
                   <ArrowDownRight size={15} />
-                  <span>卖出 · 获利平仓</span>
+                  <span>{t('sellTab')}</span>
                 </button>
               </div>
 
               {/* Balance & Limits Information */}
               <div className="flex items-center justify-between text-xs bg-[#10121d] p-2.5 rounded-xl border border-black font-mono">
                 <span className="text-gray-400">
-                  {orderType === 'buy' ? '可用流动资金:' : '当前可用持仓:'}
+                  {orderType === 'buy' ? t('availableCash') : t('availableShares')}
                 </span>
                 <span className="text-amber-300 font-bold">
-                  {orderType === 'buy' ? `${coins.toLocaleString()} ${CURRENCY.symbol}` : `${currentHoldingShares.toLocaleString()} 股`}
+                  {orderType === 'buy' ? `${coins.toLocaleString()} ${CURRENCY.symbol}` : t('shares', { count: currentHoldingShares.toLocaleString() })}
                 </span>
               </div>
 
               {/* Shares Input & Step Presets */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-xs font-bold text-gray-300">
-                  <span>委托股数：</span>
+                  <span>{t('orderShares')}</span>
                   <span className="text-gray-400 text-[10px] font-mono">
-                    最大可{orderType === 'buy' ? '买' : '卖'}:{' '}
+                    {orderType === 'buy' ? t('maxBuy') : t('maxSell')}{' '}
                     <strong className="text-white">
-                      {orderType === 'buy' ? maxBuyShares.toLocaleString() : maxSellShares.toLocaleString()} 股
+                      {t('shares', { count: orderType === 'buy' ? maxBuyShares.toLocaleString() : maxSellShares.toLocaleString() })}
                     </strong>
                   </span>
                 </div>
@@ -843,7 +849,7 @@ export const StockModal: React.FC<{
                     type="number"
                     value={tradeSharesInput}
                     onChange={(e) => setTradeSharesInput(e.target.value)}
-                    placeholder="输入股数"
+                    placeholder={t('sharesPlaceholder')}
                     className="w-36 bg-[#10121d] text-white font-black font-mono text-sm px-3 py-2 rounded-xl border-2 border-black focus:border-amber-400 focus:outline-none flex-shrink-0"
                   />
                   <div className="grid grid-cols-3 gap-1.5 flex-1">
@@ -866,10 +872,10 @@ export const StockModal: React.FC<{
               {/* Position Ratio Buttons */}
               <div className="grid grid-cols-4 gap-1.5">
                 {[
-                  { label: '25% 仓', ratio: 0.25 },
-                  { label: '50% 半仓', ratio: 0.5 },
-                  { label: '75% 仓', ratio: 0.75 },
-                  { label: '100% 全仓', ratio: 1.0 },
+                  { label: t('positions.p25'), ratio: 0.25 },
+                  { label: t('positions.p50'), ratio: 0.5 },
+                  { label: t('positions.p75'), ratio: 0.75 },
+                  { label: t('positions.p100'), ratio: 1.0 },
                 ].map((pos) => (
                   <button
                     key={pos.label}
@@ -897,11 +903,11 @@ export const StockModal: React.FC<{
                 return (
                   <div className="bg-[#10121d] p-3 rounded-xl border border-black space-y-1.5 text-xs font-mono">
                     <div className="flex justify-between text-gray-300 font-bold font-sans">
-                      <span>委托单价：</span>
+                      <span>{t('orderPrice')}</span>
                       <span className="text-white font-black">{selectedStock.price.toFixed(2)} {CURRENCY.symbol}</span>
                     </div>
                     <div className="flex justify-between text-gray-300 font-bold font-sans">
-                      <span>预计{orderType === 'buy' ? '发生金额' : '回收现金'}：</span>
+                      <span>{orderType === 'buy' ? t('estimatedCost') : t('estimatedRevenue')}</span>
                       <span className="text-amber-400 font-black text-sm">{totalEstimated.toLocaleString()} {CURRENCY.symbol}</span>
                     </div>
 
@@ -924,8 +930,7 @@ export const StockModal: React.FC<{
                     >
                       {orderType === 'buy' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
                       <span>
-                        确认{orderType === 'buy' ? '买入' : '平仓卖出'} (
-                        {totalEstimated.toLocaleString()} {CURRENCY.symbol})
+                        {t(orderType === 'buy' ? 'confirmBuy' : 'confirmSell', { amount: totalEstimated.toLocaleString(), symbol: CURRENCY.symbol })}
                       </span>
                     </button>
                   </div>
@@ -947,9 +952,9 @@ export const StockModal: React.FC<{
                     <div className="p-1 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400">
                       <TrendingUp size={13} />
                     </div>
-                    <span className="text-white font-black text-xs tracking-wide">今日领涨 · 涨幅 TOP3</span>
+                    <span className="text-white font-black text-xs tracking-wide">{t('topGainers')}</span>
                   </div>
-                  <span className="text-red-400 font-mono font-bold text-[10px]">多头主攻</span>
+                  <span className="text-red-400 font-mono font-bold text-[10px]">{t('bulls')}</span>
                 </div>
 
                 <div className="space-y-1.5">
@@ -993,9 +998,9 @@ export const StockModal: React.FC<{
                     <div className="p-1 bg-emerald-500/20 border border-emerald-500/50 rounded-lg text-emerald-400">
                       <TrendingDown size={13} />
                     </div>
-                    <span className="text-white font-black text-xs tracking-wide">今日领跌 · 跌幅 TOP3</span>
+                    <span className="text-white font-black text-xs tracking-wide">{t('topLosers')}</span>
                   </div>
-                  <span className="text-emerald-400 font-mono font-bold text-[10px]">空头回调</span>
+                  <span className="text-emerald-400 font-mono font-bold text-[10px]">{t('bears')}</span>
                 </div>
 
                 <div className="space-y-1.5">
@@ -1044,7 +1049,7 @@ export const StockModal: React.FC<{
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                 <input
                   type="text"
-                  placeholder="搜索股票代码、名称或行业板块..."
+                  placeholder={t('searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-[#141724] text-white placeholder-gray-500 text-xs rounded-xl border-2 border-black pl-8.5 pr-3 py-2 focus:outline-none focus:border-amber-400 shadow-[0_2px_0_#000]"
@@ -1053,7 +1058,7 @@ export const StockModal: React.FC<{
 
               {/* Sector selector pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
-                {['全部', '⭐自选', '重工', '医药', '工坊', '物流', '矿业', '科技', '消费', '金融'].map((sec) => (
+                {[SECTOR_ALL, SECTOR_FAV, '重工', '医药', '工坊', '物流', '矿业', '科技', '消费', '金融'].map((sec) => (
                   <button
                     key={sec}
                     onClick={() => setSectorFilter(sec)}
@@ -1063,8 +1068,8 @@ export const StockModal: React.FC<{
                         : 'bg-[#181b2a] text-gray-400 border-black hover:text-white'
                     }`}
                   >
-                    <span>{sec}</span>
-                    {sec === '⭐自选' && <span className="text-[10px] opacity-80">({favorites.length})</span>}
+                    <span>{sec === SECTOR_ALL ? t('all') : sec === SECTOR_FAV ? t('favorites') : sec}</span>
+                    {sec === SECTOR_FAV && <span className="text-[10px] opacity-80">({favorites.length})</span>}
                   </button>
                 ))}
               </div>
@@ -1074,8 +1079,8 @@ export const StockModal: React.FC<{
             <div className="bg-[#181b2a] border-2 border-black rounded-2xl overflow-hidden shadow-[0_4px_0_#000] divide-y divide-black/60">
               {filteredStocks.length === 0 ? (
                 <div className="p-8 text-center text-gray-400 text-xs font-bold space-y-1">
-                  <div>⭐ 暂无匹配的股票</div>
-                  <div className="text-[10px] text-gray-500 font-normal">可调整筛选标签或重置搜索词</div>
+                  <div>{t('noMatch')}</div>
+                  <div className="text-[10px] text-gray-500 font-normal">{t('noMatchHint')}</div>
                 </div>
               ) : (
                 filteredStocks.map((stock) => {
@@ -1109,7 +1114,7 @@ export const StockModal: React.FC<{
                         <button
                           onClick={(e) => toggleFavorite(e, stock.id)}
                           className="p-1 text-amber-400 hover:scale-110 active:scale-95 transition-transform cursor-pointer flex-shrink-0"
-                          title={isFav ? '取消自选' : '加入自选'}
+                          title={isFav ? t('unfavorite') : t('favorite')}
                         >
                           <Star size={16} fill={isFav ? '#f59e0b' : 'none'} />
                         </button>
@@ -1121,7 +1126,7 @@ export const StockModal: React.FC<{
                             </span>
                             {holding && holding.shares > 0 && (
                               <span className="bg-amber-400 text-black text-[9px] font-black px-1 rounded border border-black flex-shrink-0">
-                                持仓 {holding.shares}
+                                {t('holding', { shares: holding.shares })}
                               </span>
                             )}
                           </div>
@@ -1150,7 +1155,7 @@ export const StockModal: React.FC<{
                             {stock.price.toFixed(2)} {CURRENCY.symbol}
                           </div>
                           <div className="text-[10px] text-gray-500 font-mono">
-                            昨 {stock.prevPrice.toFixed(2)}
+                            {t('prev', { price: stock.prevPrice.toFixed(2) })}
                           </div>
                         </div>
 
@@ -1181,21 +1186,21 @@ export const StockModal: React.FC<{
               <div className="flex items-center justify-between border-b border-gray-800 pb-2">
                 <span className="text-white font-black text-xs flex items-center gap-1.5">
                   <Wallet size={15} className="text-amber-400" />
-                  <span>股票资产与浮动盈亏</span>
+                  <span>{t('portfolio')}</span>
                 </span>
-                <span className="text-amber-300 font-mono text-xs font-bold">持仓标的: {holdings.length} 只</span>
+                <span className="text-amber-300 font-mono text-xs font-bold">{t('holdingCount', { count: holdings.length })}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div className="bg-[#10121d] p-3 rounded-xl border border-black">
-                  <div className="text-gray-400 text-[10px] font-bold">持仓股票总市值</div>
+                  <div className="text-gray-400 text-[10px] font-bold">{t('marketValue')}</div>
                   <div className="text-white text-lg font-black font-mono mt-0.5">
                     {totalMarketValue.toLocaleString()} {CURRENCY.symbol}
                   </div>
                 </div>
 
                 <div className="bg-[#10121d] p-3 rounded-xl border border-black">
-                  <div className="text-gray-400 text-[10px] font-bold">累计浮动盈亏</div>
+                  <div className="text-gray-400 text-[10px] font-bold">{t('floatingPL')}</div>
                   <div
                     className={`text-lg font-black font-mono mt-0.5 ${
                       totalFloatProfit >= 0 ? 'text-red-400' : 'text-emerald-400'
@@ -1215,8 +1220,8 @@ export const StockModal: React.FC<{
             {holdings.length === 0 ? (
               <div className="bg-[#181b2a] border-2 border-black rounded-2xl p-8 text-center text-gray-400 space-y-2">
                 <BarChart2 size={32} className="mx-auto text-gray-600 mb-1" />
-                <div className="text-xs font-bold text-gray-300">暂无任何股票持仓</div>
-                <p className="text-[10px] text-gray-500">前往「行情看板」选购心仪的帝国实业与科技股票吧！</p>
+                <div className="text-xs font-bold text-gray-300">{t('noHoldings')}</div>
+                <p className="text-[10px] text-gray-500">{t('noHoldingsHint')}</p>
               </div>
             ) : (
               <div className="bg-[#181b2a] border-2 border-black rounded-2xl overflow-hidden shadow-[0_4px_0_#000] divide-y divide-black/60">
@@ -1239,7 +1244,7 @@ export const StockModal: React.FC<{
                             </span>
                           </div>
                           <div className="text-gray-400 text-[10px] font-mono mt-0.5">
-                            持仓: {h.shares.toLocaleString()} 股 · 成本: {h.avgCost.toFixed(2)} {CURRENCY.symbol}
+                            {t('holdingDetail', { shares: h.shares.toLocaleString(), cost: h.avgCost.toFixed(2), symbol: CURRENCY.symbol })}
                           </div>
                         </div>
 
@@ -1264,13 +1269,13 @@ export const StockModal: React.FC<{
                           onClick={() => setSelectedStock(stock)}
                           className="flex-1 bg-amber-400 hover:bg-amber-300 text-black text-[11px] font-black py-1.5 rounded-xl border border-black shadow-[0_1px_0_#000] cursor-pointer"
                         >
-                          加仓 / 看盘
+                          {t('addOrView')}
                         </button>
                         <button
                           onClick={() => handleSell(stock, h.shares)}
                           className="bg-emerald-500 hover:bg-emerald-400 text-black text-[11px] font-black px-4 py-1.5 rounded-xl border border-black shadow-[0_1px_0_#000] cursor-pointer"
                         >
-                          一键平仓
+                          {t('closeAll')}
                         </button>
                       </div>
                     </div>
@@ -1287,9 +1292,9 @@ export const StockModal: React.FC<{
             <div className="text-white font-black text-xs border-b border-gray-800 pb-2 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <Newspaper size={15} className="text-amber-400" />
-                <span>帝国证券交易所 · 权威财经快讯</span>
+                <span>{t('newsTitle')}</span>
               </span>
-              <span className="text-gray-400 text-[10px] font-mono">第 {tradingDay} 交易日</span>
+              <span className="text-gray-400 text-[10px] font-mono">{t('newsDay', { day: tradingDay })}</span>
             </div>
 
             <div className="space-y-2">
@@ -1320,7 +1325,7 @@ export const StockModal: React.FC<{
                           onClick={() => setSelectedStock(linkedStock)}
                           className="text-[10px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 cursor-pointer"
                         >
-                          <span>查看关联标的【{linkedStock.name}】</span>
+                          <span>{t('viewLinked', { name: linkedStock.name })}</span>
                           <ArrowRight size={11} />
                         </button>
                       </div>
@@ -1336,12 +1341,12 @@ export const StockModal: React.FC<{
         {!selectedStock && activeTab === 'history' && (
           <div className="bg-[#181b2a] border-2 border-black rounded-2xl p-3.5 shadow-[0_4px_0_#000] space-y-3 max-w-2xl mx-auto">
             <div className="text-white font-black text-xs border-b border-gray-800 pb-2 flex items-center justify-between">
-              <span>股票买卖交易流水</span>
-              <span className="text-gray-400 text-[10px] font-mono">共 {tradeLogs.length} 笔订单</span>
+              <span>{t('logsTitle')}</span>
+              <span className="text-gray-400 text-[10px] font-mono">{t('logsCount', { count: tradeLogs.length })}</span>
             </div>
 
             {tradeLogs.length === 0 ? (
-              <div className="py-8 text-center text-gray-500 text-xs font-bold">暂无任何买卖交易记录</div>
+              <div className="py-8 text-center text-gray-500 text-xs font-bold">{t('noLogs')}</div>
             ) : (
               <div className="bg-[#10121d] border border-black rounded-xl divide-y divide-black/60">
                 {tradeLogs.map((log) => (
@@ -1353,12 +1358,12 @@ export const StockModal: React.FC<{
                             log.type === 'buy' ? 'bg-red-500 text-black' : 'bg-emerald-500 text-black'
                           }`}
                         >
-                          {log.type === 'buy' ? '买入' : '平仓卖出'}
+                          {log.type === 'buy' ? t('buy') : t('sell')}
                         </span>
                         <span className="text-white font-black text-xs">{log.stockName}</span>
                       </div>
                       <div className="text-gray-400 text-[10px] font-mono mt-0.5">
-                        {log.shares.toLocaleString()} 股 · 单价 {log.price.toFixed(2)} {CURRENCY.symbol} · {log.time}
+                        {t('logDetail', { shares: log.shares.toLocaleString(), price: log.price.toFixed(2), time: log.time, symbol: CURRENCY.symbol })}
                       </div>
                     </div>
 

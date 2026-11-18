@@ -10,6 +10,7 @@ import { unlockAchievement } from '../lib/achievements';
 import { loadStored, saveStored } from '../lib/storage';
 import { CURRENCY } from '../data/seasons';
 import { couponPrice, loadCouponLeft, saveCouponLeft } from '../lib/clothingCoupon';
+import { Trans, useTranslation } from 'react-i18next';
 
 // 商城：抽卡（含保底与开箱动画，奖品为卢布、家族礼物与服饰）、服饰购买与穿戴、理发店
 
@@ -22,6 +23,7 @@ const RESULT_BUTTON =
 
 /** onDrawAgain(times)：按本次的抽数再抽一次；drawCost(times)：该抽数的费用；coins：当前现金 */
 const ChestAnimation = ({ isDrawing, result, onComplete, onDrawAgain, drawCost, coins }: any) => {
+  const { t } = useTranslation('shop');
   const [phase, setPhase] = React.useState<'closed' | 'opening' | 'rewards'>('closed');
 
   React.useEffect(() => {
@@ -49,7 +51,7 @@ const ChestAnimation = ({ isDrawing, result, onComplete, onDrawAgain, drawCost, 
                 <div className="absolute inset-x-0 top-6 h-12 bg-[#d97706] rounded-t-2xl border-4 border-black origin-bottom"></div>
                 <div className="absolute left-1/2 top-14 -translate-x-1/2 w-6 h-8 bg-gray-300 border-2 border-black rounded-sm"></div>
              </div>
-             <div className="text-yellow-400 mt-8 font-black tracking-widest text-2xl animate-pulse drop-shadow-[0_2px_0_#000]">开启宝箱中...</div>
+             <div className="text-yellow-400 mt-8 font-black tracking-widest text-2xl animate-pulse drop-shadow-[0_2px_0_#000]">{t('opening')}</div>
           </div>
        )}
 
@@ -67,7 +69,7 @@ const ChestAnimation = ({ isDrawing, result, onComplete, onDrawAgain, drawCost, 
                    <div className="w-64 h-64 bg-white rounded-full blur-[40px] animate-pulse opacity-100"></div>
                 </div>
              </div>
-             <div className="absolute bottom-32 text-white font-black tracking-widest text-4xl drop-shadow-[0_0_20px_#facc15] z-50">金色传说！</div>
+             <div className="absolute bottom-32 text-white font-black tracking-widest text-4xl drop-shadow-[0_0_20px_#facc15] z-50">{t('legendary')}</div>
           </div>
        )}
 
@@ -78,7 +80,7 @@ const ChestAnimation = ({ isDrawing, result, onComplete, onDrawAgain, drawCost, 
                 <div className="absolute inset-0 bg-yellow-300/30 blur-2xl"></div>
              </div>
 
-             <div className="text-yellow-300 font-black text-4xl mb-8 tracking-wider drop-shadow-[0_4px_0_#000] z-10">获得奖励</div>
+             <div className="text-yellow-300 font-black text-4xl mb-8 tracking-wider drop-shadow-[0_4px_0_#000] z-10">{t('rewards')}</div>
 
              <div className={`grid ${result.length > 1 ? 'grid-cols-5 gap-3' : 'grid-cols-1 gap-6'} w-full z-10`}>
                 {result.map((item: any, idx: number) => (
@@ -94,12 +96,12 @@ const ChestAnimation = ({ isDrawing, result, onComplete, onDrawAgain, drawCost, 
                         {item.type !== 'coin' && <div className="absolute -top-1 -right-1 text-xs">✨</div>}
                      {item.type === 'gift' && (
                        <div className={`absolute bottom-0 inset-x-0 text-center font-black ${result.length > 1 ? 'text-[7px]' : 'text-[10px]'} ${GIFT_QUALITY_STYLE[item.quality as keyof typeof GIFT_QUALITY_STYLE]}`}>
-                         礼物·{item.quality}
+                         {t('giftQuality', { quality: item.quality })}
                        </div>
                      )}
                      {item.rarity && (
                        <div className={`absolute bottom-0 inset-x-0 text-center font-black ${result.length > 1 ? 'text-[7px]' : 'text-[10px]'} ${RARITY_STYLE[item.rarity as Rarity].badge}`}>
-                         {RARITY_LABEL[item.rarity as Rarity]}{item.isPity ? '·保底' : ''}
+                         {RARITY_LABEL[item.rarity as Rarity]}{item.isPity ? t('pity') : ''}
                        </div>
                      )}
                      </div>
@@ -125,11 +127,11 @@ const ChestAnimation = ({ isDrawing, result, onComplete, onDrawAgain, drawCost, 
              {(() => {
                const times = result.length > 1 ? 10 : 1;
                const cost: number = drawCost(times);
-               const label = times === 10 ? '再来十连' : '再来一次';
+               const label = times === 10 ? t('drawTenAgain') : t('drawAgain');
                return (
                  <div className="mt-12 flex items-stretch justify-center gap-3 z-10">
                    <button onClick={onComplete} className={RESULT_BUTTON}>
-                     收下奖励
+                     {t('collect')}
                    </button>
                    <button onClick={() => onDrawAgain(times)} disabled={coins < cost} className={RESULT_BUTTON}>
                      {label}
@@ -198,6 +200,7 @@ export const ShopModal = ({
   playerGender,
   isRegistered,
 }: any) => {
+  const { t } = useTranslation('shop');
   // 理发店（第 61 题）：只能改发型、发色、胡子
   const [barberDraft, setBarberDraft] = React.useState<Appearance | null>(appearance ?? null);
   const barberChanged = !!(appearance && barberDraft && BARBER_PARTS.some((k) => barberDraft[k] !== appearance[k]));
@@ -223,7 +226,7 @@ export const ShopModal = ({
     const cost = drawCost(times);
 
     if (coins < cost) {
-      showShopToast(`现金不足！需要 ${cost.toLocaleString()} ${CURRENCY.symbol}`);
+      showShopToast(t('noCash', { cost: cost.toLocaleString(), symbol: CURRENCY.symbol }));
       return;
     }
 
@@ -279,13 +282,13 @@ export const ShopModal = ({
           </button>
           <div className="absolute inset-0 pt-1 flex justify-center items-center pointer-events-none">
              <span className="text-white text-3xl font-black tracking-widest" style={{ textShadow: '-2px -2px 0 #072a66, 2px -2px 0 #072a66, -2px 2px 0 #072a66, 2px 2px 0 #072a66, 0 4px 6px rgba(0,0,0,0.6)' }}>
-               商城
+               {t('title')}
              </span>
           </div>
           {/* 右上角金钱余额 */}
           <div
             className="ml-auto relative flex items-center bg-[#1b1c25] rounded-full pl-1 pr-2.5 py-1 border-2 border-black shadow-[0_2px_0_#072a66]"
-            title="当前现金余额"
+            title={t('cashBalance')}
           >
             <div className="w-5 h-5 bg-yellow-400 rounded-full border border-yellow-700 flex justify-center items-center mr-1">
               <CurrencyIcon size={13} className="text-yellow-700" strokeWidth={3} />
@@ -299,7 +302,7 @@ export const ShopModal = ({
         <div className="px-4">
           <div className="flex justify-center">
             <div className="bg-[#2d2f3d] text-center text-gray-300 py-1 px-12 rounded-full text-sm font-bold border-2 border-black shadow-[0_2px_0_#000]">
-              限定宝箱
+              {t('gacha')}
             </div>
           </div>
 
@@ -312,18 +315,18 @@ export const ShopModal = ({
                  </div>
                </div>
                <div className="flex-1 pt-1 z-10">
-                 <h3 className="text-white text-3xl font-black drop-shadow-[0_2px_0_#000] leading-none mb-2 text-right tracking-wider">限定宝箱</h3>
+                 <h3 className="text-white text-3xl font-black drop-shadow-[0_2px_0_#000] leading-none mb-2 text-right tracking-wider">{t('gacha')}</h3>
                  <p className="text-white text-[10px] text-right font-extrabold drop-shadow-[0_1px_0_#000] leading-tight mt-1">
-                   每抽获得 1,000 {CURRENCY.name}、<span className="text-rose-200">家族礼物</span>，或<br/><span className="text-blue-300">高级</span>、<span className="text-purple-300">稀有</span>、<span className="text-orange-300">限定</span>服饰
+                   <Trans t={t} i18nKey="gachaDesc" values={{ currency: CURRENCY.name }} components={{ gift: <span className="text-rose-200" />, br: <br />, adv: <span className="text-blue-300" />, rare: <span className="text-purple-300" />, limited: <span className="text-orange-300" /> }} />
                  </p>
                  <div className="flex flex-col items-end mt-2 gap-1.5">
                    <div className="bg-[#c85ce6] border-2 border-[#9438ad] text-white text-[10px] px-3 py-0.5 rounded-full font-bold shadow-sm">
-                     9次内必得<span className="text-blue-300 ml-1">稀有</span>服饰
-                     <span className="ml-1 text-yellow-200">· 还剩 {PITY_RARE - pity.sinceRare} 次</span>
+                     <Trans t={t} i18nKey="pityRare" components={{ rare: <span className="text-blue-300 ml-1" /> }} />
+                     <span className="ml-1 text-yellow-200">{t('pityLeft', { count: PITY_RARE - pity.sinceRare })}</span>
                    </div>
                    <div className="bg-[#c85ce6] border-2 border-[#9438ad] text-white text-[10px] px-3 py-0.5 rounded-full font-bold shadow-sm">
-                     99次内必得<span className="text-orange-300 ml-1">限定</span>服饰
-                     <span className="ml-1 text-yellow-200">· 还剩 {PITY_LIMITED - pity.sinceLimited} 次</span>
+                     <Trans t={t} i18nKey="pityLimited" components={{ limited: <span className="text-orange-300 ml-1" /> }} />
+                     <span className="ml-1 text-yellow-200">{t('pityLeft', { count: PITY_LIMITED - pity.sinceLimited })}</span>
                    </div>
                  </div>
                </div>
@@ -331,13 +334,13 @@ export const ShopModal = ({
 
             <div className="flex gap-3 mt-4 relative z-10">
               <button onClick={() => handleDraw(1)} className="flex-1 bg-gradient-to-b from-[#ffe56c] to-[#f5b822] border-2 border-black rounded-xl py-1.5 flex flex-col items-center shadow-[0_4px_0_#000] active:translate-y-1 active:shadow-none transition-all">
-                 <span className="text-black font-black text-sm">抽1次</span>
+                 <span className="text-black font-black text-sm">{t('drawOne')}</span>
                  <span className="text-[#a46914] font-bold text-[10px] flex items-center gap-1">
-                    {!freeDrawUsed ? '首次免费' : <><CurrencyIcon size={10} className="text-[#a46914]"/> x{SINGLE_DRAW_COST}</>}
+                    {!freeDrawUsed ? t('firstFree') : <><CurrencyIcon size={10} className="text-[#a46914]"/> x{SINGLE_DRAW_COST}</>}
                  </span>
               </button>
               <button onClick={() => handleDraw(10)} className="flex-1 bg-gradient-to-b from-[#ffe56c] to-[#f5b822] border-2 border-black rounded-xl py-1.5 flex flex-col items-center shadow-[0_4px_0_#000] active:translate-y-1 active:shadow-none transition-all">
-                 <span className="text-black font-black text-sm">抽10次</span>
+                 <span className="text-black font-black text-sm">{t('drawTen')}</span>
                  <span className="text-[#a46914] font-bold text-[10px] flex items-center gap-1">
                     <CurrencyIcon size={10} className="text-[#a46914]"/> x{TEN_DRAW_COST}
                  </span>
@@ -347,11 +350,11 @@ export const ShopModal = ({
 
           <div className="flex justify-center mt-6">
             <div className="bg-[#2d2f3d] text-center text-gray-300 py-1 px-12 rounded-full text-sm font-bold border-2 border-black shadow-[0_2px_0_#000]">
-              服饰商城
+              {t('clothingShop')}
             </div>
           </div>
           {couponLeft > 0 && (
-            <div className="text-center text-yellow-300 text-[11px] font-black mt-2">🎟️ Aminoac2026 礼遇：购买服饰享 7 折，还剩 {couponLeft} 次</div>
+            <div className="text-center text-yellow-300 text-[11px] font-black mt-2">{t('coupon', { count: couponLeft })}</div>
           )}
 
           <div className="grid grid-cols-3 gap-3 mt-4">
@@ -375,10 +378,10 @@ export const ShopModal = ({
                       const left = couponLeft - 1;
                       setCouponLeft(left);
                       saveCouponLeft(left);
-                      showShopToast(`🎟️ 7 折购入，省下 ${(item.price - price).toLocaleString()} ${CURRENCY.symbol}${left > 0 ? `，折扣还剩 ${left} 次` : '，折扣已用完'}`);
+                      showShopToast(left > 0 ? t('couponBoughtLeft', { saved: (item.price - price).toLocaleString(), left, symbol: CURRENCY.symbol }) : t('couponBoughtLast', { saved: (item.price - price).toLocaleString(), symbol: CURRENCY.symbol }));
                     }
                   } else {
-                    showShopToast(`余额不足！需要 ${price.toLocaleString()} ${CURRENCY.symbol}`);
+                    showShopToast(t('notEnough', { price: price.toLocaleString(), symbol: CURRENCY.symbol }));
                   }
                 }
               };
@@ -398,7 +401,7 @@ export const ShopModal = ({
                     onClick={handleAction}
                     className={`w-full mt-auto bg-gradient-to-b ${isEquipped ? 'from-[#a1a1aa] to-[#71717a] text-white' : 'from-[#ffe56c] to-[#f5b822] text-black'} border-2 border-black font-black text-[11px] py-1 rounded-lg shadow-[0_2px_0_#000] active:translate-y-1 active:shadow-none flex justify-center items-center`}
                   >
-                     {isEquipped ? '已穿戴' : isOwned ? '穿戴' : (
+                     {isEquipped ? t('equipped') : isOwned ? t('equip') : (
                        <>
                          <CurrencyIcon size={12} className="text-yellow-700 mr-0.5 stroke-[3]"/>
                          {discounted && <span className="line-through opacity-50 mr-1">{item.price}</span>}
@@ -414,7 +417,7 @@ export const ShopModal = ({
             <>
               <div className="flex justify-center mt-6">
                 <div className="bg-[#2d2f3d] text-center text-gray-300 py-1 px-12 rounded-full text-sm font-bold border-2 border-black shadow-[0_2px_0_#000]">
-                  理发店
+                  {t('barber')}
                 </div>
               </div>
               <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3 mt-4 shadow-[0_4px_0_#000] flex gap-3">
@@ -444,19 +447,19 @@ export const ShopModal = ({
                     disabled={!barberChanged}
                     onClick={() => {
                       if (coins < BARBER_COST) {
-                        showShopToast(`余额不足！理发需要 ${BARBER_COST} ${CURRENCY.symbol}`);
+                        showShopToast(t('barberNoMoney', { cost: BARBER_COST, symbol: CURRENCY.symbol }));
                         return;
                       }
                       setCoins((prev: number) => prev - BARBER_COST);
                       setAppearance({ ...appearance, hair: barberDraft.hair, hairColor: barberDraft.hairColor, beard: barberDraft.beard, preset: undefined });
-                      showShopToast(`💇 理发完成（-${BARBER_COST} ${CURRENCY.symbol}）`);
+                      showShopToast(t('barberDone', { cost: BARBER_COST, symbol: CURRENCY.symbol }));
                       unlockAchievement('makeover');
                     }}
                     className="w-full bg-gradient-to-b from-[#ffe56c] to-[#f5b822] text-black text-xs font-black py-1.5 rounded-lg border-2 border-black shadow-[0_2px_0_#000] disabled:opacity-40 cursor-pointer"
                   >
-                    理发 {BARBER_COST} {CURRENCY.symbol}
+                    {t('haircut', { cost: BARBER_COST, symbol: CURRENCY.symbol })}
                   </button>
-                  <div className="text-[9px] text-gray-400 font-bold">五官与肤色是天生的，只能改发型、发色和胡子。</div>
+                  <div className="text-[9px] text-gray-400 font-bold">{t('barberHint')}</div>
                 </div>
               </div>
             </>

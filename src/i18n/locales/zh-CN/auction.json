@@ -1,0 +1,22 @@
+{
+  "title": "北城拍卖会",
+  "rules": "本场拍卖会只在本月举办。从起拍价开始叫价，每次至少加一档；其他竞买人会跟价，没人再跟就由你落槌拍得。也可以按一口价直接买下，或随时放弃。拍得时才付款。",
+  "cash": "当前现金：{{coins}} {{symbol}}",
+  "noInvite": "你没有收到邀请函",
+  "inviteRule": "贵族、皇族或声望达到 {{reputation}} 的人会受到邀请；其他人需购买门票入场。",
+  "buyTicket": "购买门票 {{price}} {{symbol}}",
+  "invited": "你受邀出席本场拍卖会",
+  "lotPrices": "估价 {{value}} {{symbol}} · 起拍 {{start}} {{symbol}} · 一口价 {{buyout}} {{symbol}}",
+  "currentPrice": "当前价 {{price}} {{symbol}} ·",
+  "noBid": "还没有人出价",
+  "youLead": "你领先",
+  "othersLead": "其他竞买人领先",
+  "openBid": "起拍 {{amount}} {{symbol}}",
+  "raise": "加价 {{amount}} {{symbol}}",
+  "buyout": "一口价 {{amount}} {{symbol}}",
+  "customBid": "自定义出价，至少 {{min}}",
+  "bid": "出价",
+  "pass": "放弃",
+  "won": "🎉 以 {{paid}} {{symbol}} 拍得，已收入家族传家宝",
+  "lost": "已结束：被其他竞买人以 {{price}} {{symbol}} 拍走"
+}

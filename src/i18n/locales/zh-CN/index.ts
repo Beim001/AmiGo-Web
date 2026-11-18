@@ -11,5 +11,11 @@ import app from './app.json';
 import game from './game.json';
 import profile from './profile.json';
 import season from './season.json';
+import auction from './auction.json';
+import shop from './shop.json';
+import bank from './bank.json';
+import wealth from './wealth.json';
+import stock from './stock.json';
+import housing from './housing.json';
 
-export const zhCN = { common, auth, nav, log, funct, role, simple, sim, family, app, game, profile, season };
+export const zhCN = { common, auth, nav, log, funct, role, simple, sim, family, app, game, profile, season, auction, shop, bank, wealth, stock, housing };
