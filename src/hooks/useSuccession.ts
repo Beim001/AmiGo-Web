@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ageAt, buildFamilyMembers, succeed, findDescendant, findDescendantPath, heirStartHealth, Gender, FamilyMemberView } from '../lib/family';
+import { ageAt, buildFamilyMembers, succeed, findDescendant, findDescendantPath, heirStartHealth, HEIR_MAX_DEPTH, Gender, FamilyMemberView } from '../lib/family';
 import { randomTraits } from '../lib/traits';
 import { REP, clampReputation } from '../lib/reputation';
 import { unlockAchievement } from '../lib/achievements';
@@ -25,7 +25,7 @@ export const useSuccession = ({ game, currentAge, playerOccupation, setShowSucce
   const { isRegistered, gender, playerName, coins, health, gameYear, gameMonth, bankDeposit, bankLoan, family, playerTraits, appearance, playerLifespan } = game.state;
   const { setGender, setBirthRegisteredYear, setPlayerName, setCoins, setHealth, setBankDeposit, setBankLoan, setFamily, setDisease, setPlayerTraits, setReputation, setGuardianship, setSimEvents, setAppearance, setPlayerLifespan, setAntibodies } = game.setters;
   /** 由子嗣或兄弟姐妹继承：资产保留，身份、年龄、家族世系换成继承人（undefined.md 第 21 题） */
-  /** 主动传位（第 58 题）：主角年满 RETIRE_MIN_AGE 岁，可把家业传给年满 18 岁的在世子女 */
+  /** 主动传位（第 58 题）：主角年满 RETIRE_MIN_AGE 岁，可把家业传给年满 18 岁的在世子女或孙辈（第 73 题） */
   const RETIRE_MIN_AGE = 50;
   const handleSuccession = (heirId: string, keepRecords: boolean, retire = false, coup = false) => {
     const members = buildFamilyMembers(family, {
@@ -130,9 +130,11 @@ export const useSuccession = ({ game, currentAge, playerOccupation, setShowSucce
   const handleRetire = (heirId: string): string | null => {
     if (!isRegistered || health <= 0) return '角色已故，请使用传承';
     if (currentAge < RETIRE_MIN_AGE) return `年满 ${RETIRE_MIN_AGE} 岁才能传位`;
-    const child = family.children.find((c) => c.id === heirId);
-    if (!child) return '只能传位给自己的子女';
-    if (ageAt(child.birthYear, child.birthMonth, gameYear, gameMonth) < 18) return '子女年满 18 岁才能接班';
+    // 第 73 题：可以跳过子辈，直接传给孙辈
+    const path = findDescendantPath(family.children, heirId);
+    if (!path || path.length > HEIR_MAX_DEPTH) return '只能传位给自己的子女或孙辈';
+    const heir = path[path.length - 1];
+    if (ageAt(heir.birthYear, heir.birthMonth, gameYear, gameMonth) < 18) return `${path.length === 1 ? '子女' : '孙辈'}年满 18 岁才能接班`;
     handleSuccession(heirId, true, true);
     return null;
   };

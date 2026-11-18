@@ -15,11 +15,12 @@ export interface SuccessionModalProps {
   onClose: () => void;
 }
 
-/** 角色去世后的「传承」界面：由子嗣或兄弟姐妹继承，或重开人生（undefined.md 第 21 题） */
+/** 角色去世后的「传承」界面：由子嗣、孙辈（第 73 题）或兄弟姐妹继承，或重开人生（undefined.md 第 21 题） */
 export const SuccessionModal: React.FC<SuccessionModalProps> = ({ deceasedName, deceasedAge, heirs, onChooseHeir, onRestart, onClose, majorRecordCount = 0 }) => {
   const [confirm, setConfirm] = useState<HeirCandidate | 'restart' | null>(null);
   const [keepRecords, setKeepRecords] = useState(true);
   const children = heirs.filter((h) => h.kind === 'child');
+  const descendants = heirs.filter((h) => h.kind === 'grandchild');
   const siblings = heirs.filter((h) => h.kind === 'sibling');
 
   const list = (title: string, items: HeirCandidate[]) =>
@@ -70,6 +71,7 @@ export const SuccessionModal: React.FC<SuccessionModalProps> = ({ deceasedName, 
         )}
 
         {list('子嗣', children)}
+        {list('孙辈及后代（可跳过子辈直接继承）', descendants)}
         {list('兄弟姐妹', siblings)}
         {heirs.length === 0 && (
           <div className="bg-[#21232e] border border-black rounded-xl p-3 text-xs text-gray-400 font-bold flex items-center gap-2">

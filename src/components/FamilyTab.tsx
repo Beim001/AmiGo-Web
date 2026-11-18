@@ -33,6 +33,7 @@ import {
   canArrangeMarriage,
   MATCHMAKING_FEE,
   MATCHMAKING_AFFINITY_PENALTY,
+  HEIR_MAX_DEPTH,
   renameChild,
   DISCONTENT_THRESHOLD,
   SPLIT_AFTER_MONTHS,
@@ -729,7 +730,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
               </div>
             )}
 
-            {onRetireTo && selectedMember.isChild && selectedMember.status !== '已故' && selectedMember.age >= 18 && age >= 50 && (
+            {onRetireTo && selectedMember.depth !== undefined && selectedMember.depth <= HEIR_MAX_DEPTH && selectedMember.status !== '已故' && selectedMember.age >= 18 && age >= 50 && (
               <button
                 onClick={() => {
                   if (confirmRetire !== selectedMember.id) {
