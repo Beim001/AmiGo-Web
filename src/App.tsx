@@ -95,62 +95,6 @@ const MAINTENANCE_LOG_KEY = 'amigo_maintenance_log';
 // 赛季进度与成就一样跨人生保留（第 55 题）
 const KEYS_KEPT_ON_RESET = new Set(['amigo_simple_mode', 'amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements', 'amigo_credits_seen', 'amigo_credits_rank', 'amigo_gifts_given', 'amigo_season_id', 'amigo_season_joined_at', 'amigo_season_sim_points', 'amigo_season_lazy', 'amigo_season_cheat']);
 
-
-
-const AgeIcon = () => (
-  <svg viewBox="0 0 24 24" width="22" height="22" className="drop-shadow-sm">
-    <path d="M6 4h12M6 20h12" stroke="black" strokeWidth="3" strokeLinecap="round"/>
-    <path d="M7 4h10v4.5l-4 5 4 5V20H7v-1.5l4-5-4-5V4z" fill="#bae6fd" stroke="black" strokeWidth="2" strokeLinejoin="round"/>
-    <path d="M9 4v3.5l3 3.75 3-3.75V4H9z" fill="#fde047" />
-    <path d="M9 20v-2.5l3-3.75 3 3.75V20H9z" fill="#fde047" />
-    <circle cx="12" cy="15" r="1.5" fill="#fde047" />
-  </svg>
-);
-
-const HealthIcon = () => (
-  <svg viewBox="0 0 24 24" width="22" height="22" className="drop-shadow-sm">
-    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#ef4444" stroke="black" strokeWidth="2" strokeLinejoin="round"/>
-    <path d="M6.5 8a2.5 2.5 0 0 1 2.5-2.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
-  </svg>
-);
-
-const WealthIcon = () => (
-  <svg viewBox="0 0 24 24" width="22" height="22" className="drop-shadow-sm">
-    <circle cx="12" cy="13" r="9" fill="#d97706" stroke="black" strokeWidth="2"/>
-    <circle cx="12" cy="11" r="9" fill="#fde047" stroke="black" strokeWidth="2"/>
-    <path d="M12 6v10M10 8h3a2 2 0 0 1 0 4h-2a2 2 0 0 0 0 4h3" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-  </svg>
-);
-
-const ChildIcon = () => (
-  <svg viewBox="0 0 24 24" width="22" height="22" className="drop-shadow-sm">
-    <circle cx="12" cy="9" r="6" fill="#fed7aa" stroke="black" strokeWidth="2"/>
-    <path d="M6 15c0-2.5 2.5-4 6-4s6 1.5 6 4v5H6v-5z" fill="#bfdbfe" stroke="black" strokeWidth="2" strokeLinejoin="round"/>
-    <path d="M10 10q2 2 4 0" stroke="black" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-    <circle cx="9.5" cy="8" r="1.2" fill="black"/>
-    <circle cx="14.5" cy="8" r="1.2" fill="black"/>
-    <path d="M12 3v1" stroke="black" strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-);
-
-const StatCard = ({ title, value, unit, color, icon, onClick }: { title: string, value: string, unit: string, color: string, icon: React.ReactNode, onClick?: () => void }) => (
-  <div 
-    onClick={onClick}
-    className={`${color} border-2 border-black rounded-xl p-3 flex items-center gap-2.5 shadow-[0_4px_0_#000] relative overflow-hidden ${onClick ? 'cursor-pointer active:scale-95 hover:brightness-110 transition-all' : ''}`}
-  >
-    <div className="absolute -right-2 -bottom-2 opacity-20 rotate-12 scale-[2.5] pointer-events-none">
-      {icon}
-    </div>
-    <div className="flex items-center justify-center relative z-10 w-9 h-9">
-      {icon}
-    </div>
-    <div className="flex flex-col relative z-10">
-      <span className="text-white text-[11px] font-extrabold drop-shadow-[0_1px_0_#000]">{title}</span>
-      <span className="text-white font-black text-xl leading-none mt-1 drop-shadow-[0_1.5px_0_#000]">{value}<span className="text-[11px] text-white/90 ml-0.5 font-bold drop-shadow-none">{unit}</span></span>
-    </div>
-  </div>
-);
-
 export default function App() {
   const [activeTab, setActiveTab] = useState('role');
   const [showShop, setShowShop] = useState(false);
