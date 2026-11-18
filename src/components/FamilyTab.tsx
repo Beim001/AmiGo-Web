@@ -83,6 +83,10 @@ export interface FamilyTabProps {
   setGiftInventory?: React.Dispatch<React.SetStateAction<GiftInventory>>;
 }
 
+/** 辈分层级不低于此值（祖辈及以上）、不高于 FOLD_BELOW_LEVEL（曾孙辈及以下）的默认折叠 */
+const FOLD_ABOVE_LEVEL = 2;
+const FOLD_BELOW_LEVEL = -3;
+
 const ARRANGED_LABEL: Record<ArrangedStatus, string> = { pending: '磨合中', content: '婚后和睦', estranged: '受枕边风影响，与家族生分' };
 
 export const FamilyTab: React.FC<FamilyTabProps> = ({
@@ -122,6 +126,8 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState('');
   const [confirmRetire, setConfirmRetire] = useState<string | null>(null);
+  const [showElders, setShowElders] = useState(false);
+  const [showYounger, setShowYounger] = useState(false);
 
   /** 家主权限（第 73 题）：为 30 岁以上仍未婚的子女、孙辈包办婚事 */
   const handleArrange = (member: FamilyMemberView) => {
@@ -165,7 +171,80 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   const livingCount = members.filter((m) => m.status !== '已故').length;
   const generationCount = new Set(members.map((m) => m.level)).size;
   // 辈分由高到低排列；后代可以延续到任意代（曾孙辈、玄孙辈……）
-  const visibleGenerations = [...new Map(members.map((m) => [m.generation, m.level])).entries()].sort((a, b) => b[1] - a[1]).map(([g]) => g);
+  const generationLevels = [...new Map(members.map((m) => [m.generation, m.level])).entries()].sort((a, b) => b[1] - a[1]);
+  // 第 73 题：默认只展开父辈、平辈、子辈、孙辈；祖辈及以上、曾孙辈及以下各折成一行
+  const elderGenerations = generationLevels.filter(([, lv]) => lv >= FOLD_ABOVE_LEVEL).map(([g]) => g);
+  const mainGenerations = generationLevels.filter(([, lv]) => lv < FOLD_ABOVE_LEVEL && lv > FOLD_BELOW_LEVEL).map(([g]) => g);
+  const youngerGenerations = generationLevels.filter(([, lv]) => lv <= FOLD_BELOW_LEVEL).map(([g]) => g);
+
+  const renderGeneration = (gen: string) => (
+    <div key={gen} className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000]">
+      <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-gray-700">
+        {gen === '子辈' ? <Baby size={16} className="text-yellow-400" /> : <GitFork size={16} className="text-yellow-400" />}
+        <span className="text-yellow-400 font-black text-xs tracking-wider">{gen}</span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {members
+          .filter((m) => m.generation === gen)
+          .map((member) => (
+            <div
+              key={member.id}
+              onClick={() => {
+                setSelectedId(member.id);
+                setNameDraft('');
+              }}
+              className={`bg-[#21232e] border-2 rounded-lg p-2.5 flex items-center justify-between cursor-pointer hover:border-yellow-400 transition-all shadow-[0_2px_0_#000] active:translate-y-0.5 ${member.isPlayer ? 'border-yellow-500/70' : 'border-black'}`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className="w-9 h-9 rounded-full border-2 border-black flex items-center justify-center font-black text-white text-xs shadow-[0_1px_0_#000] flex-shrink-0"
+                  style={{ backgroundColor: member.avatarBg }}
+                >
+                  {member.name[0]}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-white font-black text-xs truncate">{member.name}</span>
+                    <span className="text-[10px] text-gray-400 font-bold shrink-0">({member.relation})</span>
+                  </div>
+                  <div className="text-[10px] text-gray-300 font-bold mt-0.5 truncate max-w-[160px]">
+                    {member.status === '已故' ? `享年 ${member.age} 岁` : `${member.age} 岁`} · {member.occupation}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <span
+                  className={`text-[9px] font-black px-1.5 py-0.5 rounded border border-black ${
+                    member.status === '在世'
+                      ? 'bg-emerald-900/80 text-emerald-300'
+                      : member.status === '已故'
+                      ? 'bg-gray-800 text-gray-400'
+                      : 'bg-amber-900/80 text-amber-300'
+                  }`}
+                >
+                  {member.status}
+                </span>
+                {!member.isPlayer && <span className="text-[10px] text-yellow-400 font-bold">好感 {member.affinity}%</span>}
+              </div>
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+  const foldRow = (open: boolean, toggle: () => void, label: string, gens: string[]) =>
+    gens.length > 0 && (
+      <button
+        onClick={toggle}
+        className="w-full bg-[#2d2f3d] hover:bg-[#33364a] border-2 border-black rounded-xl px-3 py-2 shadow-[0_3px_0_#000] flex items-center justify-between text-xs font-black text-yellow-400 cursor-pointer"
+      >
+        <span className="flex items-center gap-2">
+          <GitFork size={16} />
+          {label}（{gens.join('、')}，共 {members.filter((m) => gens.includes(m.generation)).length} 人）
+        </span>
+        <span className="text-gray-300">{open ? '收起 ▴' : '展开 ▾'}</span>
+      </button>
+    );
 
   const handleInteraction = (member: FamilyMemberView, kind: InteractionKind) => {
     const blocked = canInteract(family, member, gameYear, gameMonth) || canDoInteraction(member, kind, age);
@@ -363,61 +442,11 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
         {/* Tab 1: 世系族谱 */}
         {subTab === 'tree' && (
           <div className="space-y-4">
-            {visibleGenerations.map((gen) => (
-              <div key={gen} className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000]">
-                <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-gray-700">
-                  {gen === '子辈' ? <Baby size={16} className="text-yellow-400" /> : <GitFork size={16} className="text-yellow-400" />}
-                  <span className="text-yellow-400 font-black text-xs tracking-wider">{gen}</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {members
-                    .filter((m) => m.generation === gen)
-                    .map((member) => (
-                      <div
-                        key={member.id}
-                        onClick={() => {
-                          setSelectedId(member.id);
-                          setNameDraft('');
-                        }}
-                        className={`bg-[#21232e] border-2 rounded-lg p-2.5 flex items-center justify-between cursor-pointer hover:border-yellow-400 transition-all shadow-[0_2px_0_#000] active:translate-y-0.5 ${member.isPlayer ? 'border-yellow-500/70' : 'border-black'}`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className="w-9 h-9 rounded-full border-2 border-black flex items-center justify-center font-black text-white text-xs shadow-[0_1px_0_#000] flex-shrink-0"
-                            style={{ backgroundColor: member.avatarBg }}
-                          >
-                            {member.name[0]}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-white font-black text-xs truncate">{member.name}</span>
-                              <span className="text-[10px] text-gray-400 font-bold shrink-0">({member.relation})</span>
-                            </div>
-                            <div className="text-[10px] text-gray-300 font-bold mt-0.5 truncate max-w-[160px]">
-                              {member.status === '已故' ? `享年 ${member.age} 岁` : `${member.age} 岁`} · {member.occupation}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          <span
-                            className={`text-[9px] font-black px-1.5 py-0.5 rounded border border-black ${
-                              member.status === '在世'
-                                ? 'bg-emerald-900/80 text-emerald-300'
-                                : member.status === '已故'
-                                ? 'bg-gray-800 text-gray-400'
-                                : 'bg-amber-900/80 text-amber-300'
-                            }`}
-                          >
-                            {member.status}
-                          </span>
-                          {!member.isPlayer && <span className="text-[10px] text-yellow-400 font-bold">好感 {member.affinity}%</span>}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            ))}
+            {foldRow(showElders, () => setShowElders((v) => !v), '祖辈及以上', elderGenerations)}
+            {showElders && elderGenerations.map(renderGeneration)}
+            {mainGenerations.map(renderGeneration)}
+            {foldRow(showYounger, () => setShowYounger((v) => !v), '曾孙辈及以下', youngerGenerations)}
+            {showYounger && youngerGenerations.map(renderGeneration)}
           </div>
         )}
 
