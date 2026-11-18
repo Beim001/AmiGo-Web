@@ -22,6 +22,8 @@ interface DevToolsPanelProps {
   onAddChild: (twins: boolean) => void;
   /** 新增一位 30 岁、未婚的子女（测试强制相亲与包办婚姻，第 73 题） */
   onAddAdultChild: () => void;
+  /** 所有在职家人立即失业（测试失业潮对零花与家族财力的影响，第 73 题） */
+  onKinLayoff: () => void;
   /** 已解锁 / 全部成就数 */
   achievementProgress: [number, number];
   onUnlockAllAchievements: () => void;
@@ -82,6 +84,7 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
   onSetAge,
   onAddChild,
   onAddAdultChild,
+  onKinLayoff,
   achievementProgress,
   onUnlockAllAchievements,
   onOpenAuctionNow,
@@ -321,6 +324,9 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
           </div>
           <button disabled={!isRegistered} onClick={onAddAdultChild} className={`${btn} w-full mt-1.5`}>
             +30 岁单身子女（测试强制相亲）
+          </button>
+          <button disabled={!isRegistered} onClick={onKinLayoff} className={`${btn} w-full mt-1.5`}>
+            所有在职家人失业（测试家人职业）
           </button>
           <div className="text-[9px] text-gray-500 font-bold mt-1.5">测试用：忽略婚姻、年龄与 6 人上限。想测试传承，可新增后再快进 16 年以上；在家族页点开 30 岁单身子女可强制相亲，再快进观察包办婚姻的结局。</div>
           <div className={`${label} mt-2`}>零花（不在职的月份由父母给）：{allowancePreview}</div>

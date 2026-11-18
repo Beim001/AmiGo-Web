@@ -61,6 +61,8 @@ export interface ParentInfo {
   occupation: string;
   affinity: number;
   status: '在世' | '已故' | '远游';
+  /** 当前实际月收入（有工作记录时；失业、退休为 0）；缺省时按职业名称估算 */
+  income?: number;
 }
 
 export interface AllowancePart {
@@ -86,8 +88,9 @@ export const computeAllowance = (
       if (p.affinity <= ALLOWANCE_MIN_AFFINITY) {
         return { name: p.name, relation: p.relation, amount: 0, reason: `好感度 ${p.affinity}% 不足 ${ALLOWANCE_MIN_AFFINITY}%` };
       }
+      if (p.income === 0) return { name: p.name, relation: p.relation, amount: 0, reason: `${p.occupation}，没有收入` };
       const amount = Math.round(
-        parentIncome(p.occupation, classId) *
+        (p.income ?? parentIncome(p.occupation, classId)) *
           allowanceRate(age) *
           (p.affinity / 100) *
           (isStepParent(p.relation) ? STEP_PARENT_FACTOR : 1) *
@@ -102,6 +105,6 @@ export const computeAllowance = (
 export const familyAllowance = (family: FamilyState, view: FamilyViewParams, age: number, classId: string) => {
   const parents = buildFamilyMembers(family, view)
     .filter((m) => m.kin === 'parent' && !m.isPlayer)
-    .map((m) => ({ name: m.name, relation: m.relation, occupation: m.occupation, affinity: m.affinity, status: m.status }));
+    .map((m) => ({ name: m.name, relation: m.relation, occupation: m.occupation, affinity: m.affinity, status: m.status, income: m.income }));
   return computeAllowance(parents, age, classId, !!family.playerIllegitimate);
 };

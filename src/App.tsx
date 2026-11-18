@@ -37,6 +37,7 @@ import { addLifeLog, readLifeLog, clearLifeLog } from './lib/lifeLog';
 import { isMinor } from './lib/monthly';
 import { familyAllowance } from './lib/allowance';
 import { advanceMonth, OwnedProperty } from './lib/monthTick';
+import { kinIncomeTotal, layoffAllForTesting } from './lib/kinJobs';
 import { useCredits } from './hooks/useCredits';
 import { useAntibodies } from './hooks/useAntibodies';
 import { useGodMode } from './hooks/useGodMode';
@@ -678,7 +679,7 @@ export default function App() {
   const familyMembersView = buildFamilyMembers(family, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth });
   const livingRelatives = familyMembersView.filter((m) => !m.isPlayer && m.status !== '已故');
   const familyCohesion = livingRelatives.length > 0 ? Math.round(livingRelatives.reduce((sum, m) => sum + m.affinity, 0) / livingRelatives.length) : 50;
-  const familyWealth = familyNetWorth(coins, bankDeposit, bankLoan, guardianship?.held ?? 0, heirloomsValue(getHeirlooms(family)));
+  const familyWealth = familyNetWorth(coins, bankDeposit, bankLoan, guardianship?.held ?? 0, heirloomsValue(getHeirlooms(family)), kinIncomeTotal(familyMembersView));
   const familyRanking = rankFamilies({
     surname: familyOrigin.surname,
     classLabel: familyOrigin.classLabel,
@@ -1306,6 +1307,10 @@ export default function App() {
              onSetAge={handleDevSetAge}
              onAddChild={handleDevAddChild}
              onAddAdultChild={handleDevAddAdultChild}
+             onKinLayoff={() => {
+               setFamily((prev) => layoffAllForTesting(prev));
+               showToast('🛠️ 所有在职家人都失业了');
+             }}
              achievementProgress={[ACHIEVEMENTS.filter((a) => readAchievements()[a.id]).length, ACHIEVEMENTS.length]}
              onUnlockAllAchievements={() => {
                const added = unlockAllForTesting();

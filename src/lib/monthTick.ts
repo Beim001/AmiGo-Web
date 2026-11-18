@@ -32,6 +32,7 @@ import { REP, HIGH_SALARY, clampReputation } from './reputation';
 import { driftGiftTastes, GIFT_TASTE_LABEL, CHILD_AGE as GIFT_CHILD_AGE } from './gifts';
 import { Guardianship, monthlyGuardianship, ORPHANAGE_NAME } from './guardianship';
 import { familyNetWorth } from './familyRank';
+import { monthlyKinJobs, kinIncomeTotal } from './kinJobs';
 import { Auction, AUCTION_CHANCE, generateAuction, isInvited, heirloomsValue } from './heirlooms';
 import { SimEventInstance, rollMonthlyEvent } from './simEvents';
 import { LogCategory } from './lifeLog';
@@ -378,8 +379,13 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
 
     // 声望：高薪岗位每年 +1
     if (nextM === 1 && salary >= HIGH_SALARY) repDelta += REP.highSalaryYearly;
+
+    // 家人的工作（第 73 题）：换工作、失业、再就业、退休；历史大事件期间为失业潮
+    const work = monthlyKinJobs(fam, buildFamilyMembers(fam, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth }), nextY, rng);
+    fam = work.state;
+    work.notes.forEach((n) => notes.push(`💼 ${n}`));
   }
-  // 阶层提升（第 32 题）：家族资产净值与声望达到门槛时晋升一级
+  // 阶层提升（第 32 题）：家族资产净值与声望达到门槛时晋升一级；家人的收入计入家族财力
   if (isRegistered && newHealth > 0) {
     const netWorthNow = familyNetWorth(
       Math.max(0, coins + netChange + familyCash),
@@ -387,6 +393,7 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
       bankTotals.loan,
       guardianship?.held ?? 0,
       heirloomsValue(getHeirlooms(fam)),
+      kinIncomeTotal(buildFamilyMembers(fam, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth })),
     );
     const promo = checkPromotion(getOrigin(fam).classId, netWorthNow, clampReputation(reputation + repDelta));
     if (promo) {

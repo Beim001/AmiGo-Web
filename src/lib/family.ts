@@ -199,7 +199,29 @@ export interface FamilyState {
   intimacyMonth?: number;
   /** 家族传家宝；旧存档没有此字段时，瓦伦丁家族默认持有三件祖传宝物 */
   heirlooms?: OwnedHeirloom[];
+  /** 成年家人的工作（第 73 题）：成员 id → 工作记录，每月由 kinJobs.ts 结算 */
+  jobs?: Record<string, KinJob>;
 }
+
+/** 家人的工作记录。name 为记录时的姓名：配偶更换等导致同一 id 换了人时，旧记录不再适用 */
+export interface KinJob {
+  name: string;
+  status: 'employed' | 'unemployed' | 'retired';
+  /** 当前（在职）或最后一份工作 */
+  title: string;
+  /** 在职时的月收入（₽） */
+  income: number;
+}
+
+/** 这位家人当前适用的工作记录；没有记录或已不属于这个人时返回 undefined */
+export const kinJobOf = (state: FamilyState, id: string, name: string): KinJob | undefined => {
+  const job = state.jobs?.[id];
+  return job && job.name === name ? job : undefined;
+};
+
+const kinJobText = (job: KinJob) => (job.status === 'employed' ? job.title : job.status === 'unemployed' ? `失业（原${job.title}）` : `已退休（原${job.title}）`);
+/** 在职时的月收入；失业、退休为 0；没有工作记录时为 undefined（零花等按职业名称估算） */
+const kinIncome = (job: KinJob | undefined) => (job ? (job.status === 'employed' ? job.income : 0) : undefined);
 
 export const INITIAL_FAMILY_STATE: FamilyState = {
   affinity: {},
@@ -308,6 +330,8 @@ export interface FamilyMemberView {
   married?: boolean;
   /** 后代的包办婚姻状态 */
   arranged?: ArrangedStatus;
+  /** 成年家人当前的月收入（失业、退休为 0）；还没有工作记录时缺省 */
+  income?: number;
   age: number;
   status: '在世' | '已故' | '远游';
   occupation: string;
@@ -381,6 +405,7 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
     const age = deceased ? def.lifespan : Math.max(0, rawAge);
     const chain = chainOfDef(def);
     const level = chain !== null ? chainLevel(chain) : levelOfLabel(def.generation);
+    const job = deceased ? undefined : kinJobOf(state, def.id, def.name);
     return {
       id: def.id,
       name: def.name,
@@ -392,7 +417,8 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
       age,
       status: deceased ? '已故' : def.traveling ? '远游' : '在世',
       appearance: def.appearance ?? stableAppearance(`${def.id}_${def.name}`, def.gender),
-      occupation: occupationFor(def.occupationByAge, age),
+      occupation: job ? kinJobText(job) : occupationFor(def.occupationByAge, age),
+      income: kinIncome(job),
       affinity: affinityOf(def.id, def.defaultAffinity),
       avatarBg: def.avatarBg,
       desc: def.desc,
@@ -420,6 +446,7 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
 
   if (state.spouse) {
     const s = state.spouse;
+    const job = kinJobOf(state, SPOUSE_MEMBER_ID, s.name);
     members.push({
       id: SPOUSE_MEMBER_ID,
       name: s.name,
@@ -429,7 +456,8 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
       level: 0,
       age: Math.max(0, gameYear - s.birthYear),
       status: '在世',
-      occupation: s.occupation,
+      occupation: job ? kinJobText(job) : s.occupation,
+      income: kinIncome(job),
       affinity: affinityOf(SPOUSE_MEMBER_ID, SPOUSE_INITIAL_AFFINITY),
       avatarBg: '#b2586a',
       desc: `${s.marriedYear} 年 ${s.marriedMonth} 月与你缔结婚姻，携手经营${origin.surname}家族的新一代。`,
@@ -450,6 +478,8 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
       const age = dead ? life : rawAge;
       const kids = c.kids ?? [];
       const direct = depth === 1;
+      const job = dead ? undefined : kinJobOf(state, c.id, c.name);
+      const occupation = job ? kinJobText(job) : occupationFor(CHILD_STAGES, age);
       members.push({
         id: c.id,
         name: c.name,
@@ -463,7 +493,8 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
         depth,
         age,
         status: dead ? '已故' : '在世',
-        occupation: c.spouse ? `已成家 · 配偶 ${c.spouse.name}` : occupationFor(CHILD_STAGES, age),
+        occupation: c.spouse ? `${job ? `${occupation} · ` : '已成家 · '}配偶 ${c.spouse.name}` : occupation,
+        income: kinIncome(job),
         married: !!c.spouse,
         ...(c.arranged ? { arranged: c.arranged } : {}),
         affinity: affinityOf(c.id, CHILD_INITIAL_AFFINITY),
@@ -1427,6 +1458,8 @@ export const succeed = (
       discontent: {},
       splitBranches: state.splitBranches ?? [],
       heirlooms: getHeirlooms(state),
+      // 家人的工作记录保留；继承人成为当家人，改用当家人自己的就业
+      jobs: Object.fromEntries(Object.entries(state.jobs ?? {}).filter(([id]) => id !== heir.id)),
       origin: { ...origin, members: kept },
       events: [
         ...state.events,

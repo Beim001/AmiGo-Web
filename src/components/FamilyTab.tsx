@@ -717,6 +717,11 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                 {confirmRetire === selectedMember.id ? `再点一次：确定把家业传给 ${selectedMember.name}？` : '👑 传位给 TA（退居幕后）'}
               </button>
             )}
+            {selectedMember.income !== undefined && (
+              <div className="text-[10px] text-emerald-300 font-bold mb-2">
+                💼 {selectedMember.occupation} · 月收入 {selectedMember.income.toLocaleString()} ₽（计入家族财力）
+              </div>
+            )}
             {selectedMember.arranged && (
               <div className={`text-[10px] font-bold mb-2 ${selectedMember.arranged === 'estranged' ? 'text-rose-300' : 'text-gray-300'}`}>
                 💍 包办婚姻 · {ARRANGED_LABEL[selectedMember.arranged]}

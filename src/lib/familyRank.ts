@@ -56,7 +56,10 @@ const readJson = <T,>(key: string, fallback: T): T => {
 };
 
 /** 家族资产净值 */
-export const familyNetWorth = (cash: number, deposit: number, loan: number, held = 0, heirloomValue = 0): number => {
+/** 家人的月收入按几个月计入家族资产净值（第 73 题：家人收入只计入家族财力） */
+export const KIN_INCOME_MONTHS = 12;
+
+export const familyNetWorth = (cash: number, deposit: number, loan: number, held = 0, heirloomValue = 0, kinIncome = 0): number => {
   const props = readJson<any[]>('amigo_owned_properties', []);
   const propertyValue = Array.isArray(props) ? props.reduce((s, p) => s + (p.currentValue || p.purchasePrice || 0), 0) : 0;
   const stocks = readJson<any[]>('amigo_stocks', []);
@@ -64,5 +67,5 @@ export const familyNetWorth = (cash: number, deposit: number, loan: number, held
   const stockValue = Array.isArray(holdings)
     ? holdings.reduce((s, h) => s + (h.shares || 0) * ((Array.isArray(stocks) ? stocks.find((x) => x.id === h.stockId)?.price : undefined) ?? h.avgCost ?? 0), 0)
     : 0;
-  return Math.max(0, cash + deposit - loan + propertyValue + stockValue + held + heirloomValue);
+  return Math.max(0, cash + deposit - loan + propertyValue + stockValue + held + heirloomValue + kinIncome * KIN_INCOME_MONTHS);
 };
