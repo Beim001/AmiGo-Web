@@ -15,6 +15,7 @@ import { applySurname } from '../lib/names';
 import { recordGiftsGiven } from '../lib/achievements';
 import { GiftInventory, giftById, giftAffinityGain, removeGift, tasteOf, GIFT_QUALITY_STYLE, GIFT_TASTE_LABEL } from '../lib/gifts';
 import { validatePlayerName } from '../utils/sensitiveWords';
+import { addLifeLog } from '../lib/lifeLog';
 import { ShieldCheck, GitFork, Crown, Building2, Shield, Sparkles, Heart, Baby } from 'lucide-react';
 import {
   FamilyState,
@@ -27,6 +28,11 @@ import {
   AFFINITY_GAIN,
   buildFamilyMembers,
   getOrigin,
+  ArrangedStatus,
+  arrangeMarriage,
+  canArrangeMarriage,
+  MATCHMAKING_FEE,
+  MATCHMAKING_AFFINITY_PENALTY,
   renameChild,
   DISCONTENT_THRESHOLD,
   SPLIT_AFTER_MONTHS,
@@ -77,6 +83,8 @@ export interface FamilyTabProps {
   setGiftInventory?: React.Dispatch<React.SetStateAction<GiftInventory>>;
 }
 
+const ARRANGED_LABEL: Record<ArrangedStatus, string> = { pending: '磨合中', content: '婚后和睦', estranged: '受枕边风影响，与家族生分' };
+
 export const FamilyTab: React.FC<FamilyTabProps> = ({
   isRegistered,
   playerName,
@@ -114,6 +122,28 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState('');
   const [confirmRetire, setConfirmRetire] = useState<string | null>(null);
+
+  /** 家主权限（第 73 题）：为 30 岁以上仍未婚的子女、孙辈包办婚事 */
+  const handleArrange = (member: FamilyMemberView) => {
+    const blocked = canArrangeMarriage(member);
+    if (blocked) {
+      showToast(blocked);
+      return;
+    }
+    if (coins < MATCHMAKING_FEE) {
+      showToast(`钱不够，包办婚事要 ${MATCHMAKING_FEE.toLocaleString()} ₽`);
+      return;
+    }
+    const r = arrangeMarriage(family, member.id, gameYear, gameMonth);
+    if (!r) {
+      showToast('暂时没有合适的人选');
+      return;
+    }
+    setCoins((prev) => prev - MATCHMAKING_FEE);
+    setFamily(r.state);
+    addLifeLog('大事', `为${member.name}包办婚事`, `${member.name}奉家主之命与 ${r.spouse.name}（${r.spouse.occupation}）成婚。`);
+    showToast(`💍 ${member.name} 奉命与 ${r.spouse.name} 成婚（-${MATCHMAKING_FEE.toLocaleString()} ₽，好感 -${MATCHMAKING_AFFINITY_PENALTY}）`);
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -685,6 +715,19 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                 className="w-full mb-3 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
               >
                 {confirmRetire === selectedMember.id ? `再点一次：确定把家业传给 ${selectedMember.name}？` : '👑 传位给 TA（退居幕后）'}
+              </button>
+            )}
+            {selectedMember.arranged && (
+              <div className={`text-[10px] font-bold mb-2 ${selectedMember.arranged === 'estranged' ? 'text-rose-300' : 'text-gray-300'}`}>
+                💍 包办婚姻 · {ARRANGED_LABEL[selectedMember.arranged]}
+              </div>
+            )}
+            {canArrangeMarriage(selectedMember) === null && (
+              <button
+                onClick={() => handleArrange(selectedMember)}
+                className="w-full mb-3 bg-pink-400 hover:bg-pink-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
+              >
+                💍 强制相亲（家主权限，-{MATCHMAKING_FEE.toLocaleString()} ₽，好感 -{MATCHMAKING_AFFINITY_PENALTY}）
               </button>
             )}
             {!selectedMember.isPlayer && selectedMember.status !== '已故' && (

@@ -552,6 +552,11 @@ export default function App() {
     setFamily(birth.state);
     showToast(`🛠️ 新增子嗣：${birth.children.map((c) => c.name).join('、')}`);
   };
+  const handleDevAddAdultChild = () => {
+    const birth = addChildForTesting(family, gameYear - 30, gameMonth, false, Math.random, playerTraits);
+    setFamily(birth.state);
+    showToast(`🛠️ 新增 30 岁单身子女：${birth.children[0].name}`);
+  };
 
   // 角色名持久化（改名、继承后刷新页面仍保留）
   React.useEffect(() => {
@@ -1300,6 +1305,7 @@ export default function App() {
              onStopFastForward={() => setFastForwardRemaining(0)}
              onSetAge={handleDevSetAge}
              onAddChild={handleDevAddChild}
+             onAddAdultChild={handleDevAddAdultChild}
              achievementProgress={[ACHIEVEMENTS.filter((a) => readAchievements()[a.id]).length, ACHIEVEMENTS.length]}
              onUnlockAllAchievements={() => {
                const added = unlockAllForTesting();

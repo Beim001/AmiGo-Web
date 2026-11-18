@@ -113,7 +113,11 @@ export interface Child {
   adopted?: boolean;
   /** 外貌（第 61 题）：出生时遗传父母 */
   appearance?: Appearance;
+  /** 包办婚姻（第 73 题）：pending 磨合中，content 婚后和睦，estranged 受枕边风影响与家族生分 */
+  arranged?: ArrangedStatus;
 }
+
+export type ArrangedStatus = 'pending' | 'content' | 'estranged';
 
 export interface FamilyEvent {
   year: number;
@@ -300,6 +304,10 @@ export interface FamilyMemberView {
   level: number;
   /** 当家人的第几代后代（子女 1、孙辈 2……）；不是后代时缺省 */
   depth?: number;
+  /** 后代是否已成家 */
+  married?: boolean;
+  /** 后代的包办婚姻状态 */
+  arranged?: ArrangedStatus;
   age: number;
   status: '在世' | '已故' | '远游';
   occupation: string;
@@ -456,6 +464,8 @@ export const buildFamilyMembers = (state: FamilyState, params: FamilyViewParams)
         age,
         status: dead ? '已故' : '在世',
         occupation: c.spouse ? `已成家 · 配偶 ${c.spouse.name}` : occupationFor(CHILD_STAGES, age),
+        married: !!c.spouse,
+        ...(c.arranged ? { arranged: c.arranged } : {}),
         affinity: affinityOf(c.id, CHILD_INITIAL_AFFINITY),
         avatarBg: c.gender === '女' ? '#c06a8a' : '#4a7aa8',
         desc: direct
@@ -514,6 +524,77 @@ export const spouseLifespan = (s: Spouse) => s.lifespan ?? stableLifespan(`spous
 /** 后代树中所有人（含已故） */
 export const allDescendants = (children: Child[]): Child[] => children.flatMap((c) => [c, ...allDescendants(c.kids ?? [])]);
 
+/** 修改后代树中指定的人；没有变化时返回原数组 */
+const updateDescendant = (children: Child[], id: string, fn: (c: Child) => Child): Child[] => {
+  let changed = false;
+  const next = children.map((c) => {
+    let u = c;
+    if (c.id === id) u = fn(c);
+    else if (c.kids?.length) {
+      const kids = updateDescendant(c.kids, id, fn);
+      if (kids !== c.kids) u = { ...c, kids };
+    }
+    if (u !== c) changed = true;
+    return u;
+  });
+  return changed ? next : children;
+};
+
+/** 从后代树中移除指定的人（连同其后代，例如分家独立） */
+const removeDescendants = (children: Child[], ids: Set<string>): Child[] =>
+  children.filter((c) => !ids.has(c.id)).map((c) => (c.kids?.length ? { ...c, kids: removeDescendants(c.kids, ids) } : c));
+
+// ---------- 强制相亲与包办婚姻（第 73 题，默认值） ----------
+// 家主可为 30 岁以上仍未婚的子女、孙辈包办婚事，当场成婚，被安排者对家主好感下降；
+// 之后每月判定：婚后和睦（好感回升）、不满离婚（恢复单身，可再次安排）、或受枕边风影响与家族生分
+// （生分后好感每月额外下降，好感长期过低时按分家规则带着自己这一支独立）。
+
+export const MATCHMAKING_MIN_AGE = 30;
+export const MATCHMAKING_MAX_DEPTH = 2;
+export const MATCHMAKING_FEE = MARRIAGE_FEE;
+export const MATCHMAKING_AFFINITY_PENALTY = 15;
+export const ARRANGED_CONTENT_CHANCE = 0.03;
+export const ARRANGED_DIVORCE_CHANCE = 0.02;
+export const ARRANGED_ESTRANGE_CHANCE = 0.01;
+export const ARRANGED_CONTENT_AFFINITY = 10;
+export const ARRANGED_DIVORCE_AFFINITY = 10;
+export const ESTRANGED_AFFINITY_DECAY = 3;
+
+/** 能否为这位家人强制相亲；可以时返回 null */
+export const canArrangeMarriage = (member: FamilyMemberView): string | null => {
+  if (member.depth === undefined || member.depth > MATCHMAKING_MAX_DEPTH) return '只能为子女和孙辈安排相亲';
+  if (member.status === '已故') return '这位家人已经过世';
+  if (member.married) return '已经成家了';
+  if (member.age < MATCHMAKING_MIN_AGE) return `${MATCHMAKING_MIN_AGE} 岁以上仍未婚才能强制相亲`;
+  return null;
+};
+
+/** 为后代包办婚事：当场成婚，好感下降；对方不在后代中或没有合适人选时返回 null。费用由调用方扣除 */
+export const arrangeMarriage = (
+  state: FamilyState,
+  memberId: string,
+  year: number,
+  month: number,
+  rng: () => number = Math.random,
+): { state: FamilyState; spouse: Spouse } | null => {
+  const target = findDescendant(state, memberId);
+  if (!target || target.spouse) return null;
+  const age = ageAt(target.birthYear, target.birthMonth, year, month);
+  const cand = generateSpouseCandidates(age, rng, 1, target.gender)[0];
+  if (!cand) return null;
+  const spouse: Spouse = { name: cand.name, gender: cand.gender, birthYear: year - cand.age, occupation: cand.occupation, marriedYear: year, marriedMonth: month, traits: cand.traits ?? [], lifespan: rollKinLifespan(rng), appearance: spouseAppearance(cand, rng) };
+  const affinity = state.affinity[memberId] ?? CHILD_INITIAL_AFFINITY;
+  return {
+    spouse,
+    state: {
+      ...state,
+      children: updateDescendant(state.children, memberId, (c) => ({ ...c, spouse, arranged: 'pending' })),
+      affinity: { ...state.affinity, [memberId]: Math.max(0, affinity - MATCHMAKING_AFFINITY_PENALTY) },
+      events: [...state.events, { year, month, title: `为${target.name}包办婚事`, desc: `${target.name}（${age} 岁）奉家主之命与 ${cand.name}（${cand.occupation}）成婚。` }],
+    },
+  };
+};
+
 export interface FamilyLifeResult {
   state: FamilyState;
   /** 本月家族里发生的事（用于提示与日志） */
@@ -548,6 +629,8 @@ export const monthlyFamilyLife = (
   }
 
   const usedNames = new Set<string>(allDescendants(state.children).map((c) => c.name));
+  const affinityDelta: Record<string, number> = {};
+  const addAffinity = (id: string, delta: number) => (affinityDelta[id] = (affinityDelta[id] ?? 0) + delta);
   // parentTraits：c 的父母的特质（c 生下的孩子的祖父母特质）
   const live = (c: Child, depth: number, chain: string, parentTraits: string[]): Child => {
     const age = ageAt(c.birthYear, c.birthMonth, year, month);
@@ -563,6 +646,23 @@ export const monthlyFamilyLife = (
           notes.push({ title: `${c.name} 成家`, desc: `${c.name} 与 ${cand.name}（${cand.occupation}）结为夫妻。`, record: depth <= FAMILY_NOTE_MAX_DEPTH });
         }
       }
+      // 包办婚姻：磨合中的每月判定结局；与家族生分的好感持续下降
+      if (child.spouse && child.arranged === 'pending') {
+        const r = rng();
+        if (r < ARRANGED_CONTENT_CHANCE) {
+          child = { ...child, arranged: 'content' };
+          addAffinity(c.id, ARRANGED_CONTENT_AFFINITY);
+          notes.push({ title: `${c.name} 婚后和睦`, desc: `${c.name} 与 ${child.spouse!.name} 日久生情，对这门亲事渐渐满意。`, record: true });
+        } else if (r < ARRANGED_CONTENT_CHANCE + ARRANGED_DIVORCE_CHANCE) {
+          notes.push({ title: `${c.name} 离婚`, desc: `${c.name} 始终不满家里包办的婚事，与 ${child.spouse!.name} 离婚。`, record: true });
+          child = { ...child, spouse: undefined, arranged: undefined };
+          addAffinity(c.id, -ARRANGED_DIVORCE_AFFINITY);
+        } else if (r < ARRANGED_CONTENT_CHANCE + ARRANGED_DIVORCE_CHANCE + ARRANGED_ESTRANGE_CHANCE) {
+          child = { ...child, arranged: 'estranged' };
+          notes.push({ title: `${c.name} 与家族生分`, desc: `${child.spouse!.name} 常吹枕边风，${c.name} 对家族越来越疏远。`, record: true });
+        }
+      }
+      if (child.spouse && child.arranged === 'estranged') addAffinity(c.id, -ESTRANGED_AFFINITY_DECAY);
       const sp = child.spouse;
       const kids = child.kids ?? [];
       if (
@@ -626,6 +726,11 @@ export const monthlyFamilyLife = (
       children,
       events: [...next.events, ...notes.filter((n) => n.record).map((n) => ({ year, month, title: n.title, desc: n.desc }))],
     };
+  }
+  if (Object.keys(affinityDelta).length > 0) {
+    const affinity = { ...next.affinity };
+    for (const [id, d] of Object.entries(affinityDelta)) affinity[id] = Math.max(0, Math.min(100, (affinity[id] ?? CHILD_INITIAL_AFFINITY) + d));
+    next = { ...next, affinity };
   }
   return { state: next, notes: notes.filter((n) => n.record || n.title.includes('离世')).map(({ title, desc }) => ({ title, desc })) };
 };
@@ -1037,7 +1142,7 @@ export const monthlyFamilyDrift = (state: FamilyState, members: FamilyMemberView
       affinity[m.id] = value;
     }
     discontent[m.id] = value < DISCONTENT_THRESHOLD ? (discontent[m.id] ?? 0) + 1 : 0;
-    const splittable = m.isChild || (m.kin !== undefined && SPLITTABLE_KINS.includes(m.kin));
+    const splittable = m.isChild || m.arranged === 'estranged' || (m.kin !== undefined && SPLITTABLE_KINS.includes(m.kin));
     if (splittable && discontent[m.id] >= SPLIT_AFTER_MONTHS) {
       splitIds.add(m.id);
       splits.push({ name: m.name, relation: m.relation, year, month });
@@ -1057,7 +1162,7 @@ export const monthlyFamilyDrift = (state: FamilyState, members: FamilyMemberView
       affinity,
       discontent,
       origin: { ...origin, members: origin.members.filter((d) => !splitIds.has(d.id)) },
-      children: state.children.filter((c) => !splitIds.has(c.id)),
+      children: removeDescendants(state.children, splitIds),
       splitBranches: [...(state.splitBranches ?? []), ...splits],
       events: [
         ...state.events,

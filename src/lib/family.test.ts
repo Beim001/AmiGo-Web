@@ -11,6 +11,15 @@ import {
   succeed,
   CHILD_MARRY_MIN_AGE,
   CHILD_MARRY_MAX_AGE,
+  canArrangeMarriage,
+  arrangeMarriage,
+  monthlyFamilyDrift,
+  MATCHMAKING_AFFINITY_PENALTY,
+  ARRANGED_CONTENT_CHANCE,
+  ARRANGED_DIVORCE_CHANCE,
+  ARRANGED_ESTRANGE_CHANCE,
+  ESTRANGED_AFFINITY_DECAY,
+  SPLIT_AFTER_MONTHS,
 } from './family';
 
 const YEAR = 1950;
@@ -138,5 +147,60 @@ describe('传承', () => {
     const ids = heirOf(state, 'a').state.origin!.members.map((d) => d.id);
     expect(ids).toContain('gg');
     expect(ids).not.toContain('fu');
+  });
+});
+
+describe('强制相亲与包办婚姻', () => {
+  /** 依次返回给定的值，之后一直返回 0.99（不再触发其他概率事件） */
+  const seq = (...values: number[]) => () => (values.length ? values.shift()! : 0.99);
+  const single = (age: number) => ({ ...INITIAL_FAMILY_STATE, children: [person('s', '女', age)] });
+  const arranged = (status: 'pending' | 'estranged') => ({
+    ...INITIAL_FAMILY_STATE,
+    children: [person('s', '女', 32, { spouse: spouse('女婿', '男', 33), arranged: status })],
+  });
+
+  it('只能为 30 岁以上、未婚、在世的子女与孙辈安排', () => {
+    const members = view(family());
+    expect(canArrangeMarriage(byId(view(single(30)), 's'))).toBeNull();
+    expect(canArrangeMarriage(byId(view(single(29)), 's'))).not.toBeNull();
+    expect(canArrangeMarriage(byId(members, 'a'))).not.toBeNull();
+    const great = family();
+    great.children[0].kids![0].kids![0] = person('a11', '女', 31);
+    expect(canArrangeMarriage(byId(view(great), 'a11'))).not.toBeNull();
+  });
+
+  it('包办婚事当场成婚，被安排者好感下降', () => {
+    const r = arrangeMarriage(single(31), 's', YEAR, MONTH)!;
+    const s = r.state.children[0];
+    expect(s.spouse?.name).toBe(r.spouse.name);
+    expect(s.arranged).toBe('pending');
+    expect(r.state.affinity.s).toBe(90 - MATCHMAKING_AFFINITY_PENALTY);
+  });
+
+  it('磨合中的婚姻每月判定：和睦、离婚或与家族生分', () => {
+    const content = monthlyFamilyLife(arranged('pending'), YEAR, MONTH, seq(ARRANGED_CONTENT_CHANCE / 2)).state;
+    const divorced = monthlyFamilyLife(arranged('pending'), YEAR, MONTH, seq(ARRANGED_CONTENT_CHANCE + ARRANGED_DIVORCE_CHANCE / 2)).state;
+    const estranged = monthlyFamilyLife(arranged('pending'), YEAR, MONTH, seq(ARRANGED_CONTENT_CHANCE + ARRANGED_DIVORCE_CHANCE + ARRANGED_ESTRANGE_CHANCE / 2)).state;
+    expect(content.children[0].arranged).toBe('content');
+    expect(divorced.children[0].spouse).toBeUndefined();
+    expect(estranged.children[0].arranged).toBe('estranged');
+    expect(content.affinity.s).toBeGreaterThan(divorced.affinity.s);
+  });
+
+  it('与家族生分后好感每月持续下降', () => {
+    const r = monthlyFamilyLife(arranged('estranged'), YEAR, MONTH, seq());
+    expect(r.state.affinity.s).toBe(90 - ESTRANGED_AFFINITY_DECAY);
+  });
+
+  it('生分的孙辈长期不满时带着自己这一支独立', () => {
+    const state = family();
+    state.children[0].kids![0] = { ...state.children[0].kids![0], spouse: spouse('孙媳', '女', 20), arranged: 'estranged' };
+    state.affinity = { a1: 30 };
+    state.discontent = { a1: SPLIT_AFTER_MONTHS - 1 };
+    const r = monthlyFamilyDrift(state, view(state), YEAR, MONTH);
+    expect(r.splits.map((b) => b.name)).toContain('成员a1');
+    const ids = view(r.state).map((m) => m.id);
+    expect(ids).not.toContain('a1');
+    expect(ids).not.toContain('a11');
   });
 });
