@@ -2,6 +2,7 @@
 // 取代原先的 Firebase Authentication（Firebase 在中国大陆不可用）
 
 import type { AppUser } from './bilibiliToy';
+import i18n from '../i18n';
 
 export class AuthError extends Error {
   code: string;
@@ -190,22 +191,22 @@ export const translateAuthError = (err: unknown): string => {
   const code = err instanceof AuthError ? err.code : '';
   switch (code) {
     case 'EMAIL_IN_USE':
-      return '该电子邮箱已被注册，请直接登录或使用其他邮箱';
+      return i18n.t('auth:errors.emailInUse');
     case 'INVALID_EMAIL':
-      return '请输入正确的电子邮箱格式';
+      return i18n.t('auth:errors.invalidEmail');
     case 'WEAK_PASSWORD':
-      return '密码长度需为 6–128 位';
+      return i18n.t('auth:errors.weakPassword');
     case 'INVALID_CREDENTIALS':
-      return '账号或密码错误，请检查后再试';
+      return i18n.t('auth:errors.invalidCredentials');
     case 'TOO_MANY_REQUESTS':
-      return '尝试次数过多，请稍后再试';
+      return i18n.t('auth:errors.tooManyRequests');
     case 'INVALID_TOKEN':
-      return '链接无效或已过期，请重新申请';
+      return i18n.t('auth:errors.invalidToken');
     case 'UNAUTHORIZED':
-      return '登录已失效，请重新登录';
+      return i18n.t('auth:errors.unauthorized');
     case 'NETWORK_ERROR':
-      return '网络连接失败，请检查您的网络设置';
+      return i18n.t('auth:errors.network');
     default:
-      return '操作失败，请重试';
+      return i18n.t('auth:errors.unknown');
   }
 };

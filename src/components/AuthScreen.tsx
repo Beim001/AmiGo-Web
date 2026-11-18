@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { login, register, requestPasswordReset, resetPassword, translateAuthError, cacheUser } from '../lib/authClient';
 import { getBilibiliUserProfile, AppUser } from '../lib/bilibiliToy';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 export interface AuthScreenProps {
   onLoginSuccess: (user: AppUser) => void;
@@ -32,6 +34,7 @@ const getLocalUid = (): string => {
 };
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
+  const { t } = useTranslation('auth');
   const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'reset'>('login');
 
   const [email, setEmail] = useState('');
@@ -52,9 +55,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       setResetToken(token);
       setMode('reset');
     } else if (params.get('verified') === '1') {
-      setSuccessMsg('🎉 邮箱验证成功！请登录进入游戏');
+      setSuccessMsg(t('screen.verifiedFromLink'));
     } else if (params.get('verify_error') === '1') {
-      setErrorMsg('验证链接无效或已过期，请登录后重新发送验证邮件');
+      setErrorMsg(t('screen.verifyLinkInvalid'));
     }
     if (token || params.has('verified') || params.has('verify_error')) {
       window.history.replaceState(null, '', window.location.pathname);
@@ -70,7 +73,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setErrorMsg('请填写电子邮箱与密码');
+      setErrorMsg(t('screen.credentialsRequired'));
       return;
     }
     setErrorMsg(null);
@@ -78,7 +81,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setLoading(true);
     try {
       const user = await login(email, password);
-      setSuccessMsg('验证通过，欢迎回来！');
+      setSuccessMsg(t('screen.loginSuccess'));
       setTimeout(() => onLoginSuccess(user), 600);
     } catch (err) {
       setErrorMsg(translateAuthError(err));
@@ -90,15 +93,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setErrorMsg('请填写电子邮箱与密码');
+      setErrorMsg(t('screen.credentialsRequired'));
       return;
     }
     if (password.length < 6) {
-      setErrorMsg('密码长度不能少于 6 位');
+      setErrorMsg(t('validation.passwordTooShort'));
       return;
     }
     if (password !== confirmPassword) {
-      setErrorMsg('两次输入的密码不一致');
+      setErrorMsg(t('validation.passwordMismatch'));
       return;
     }
     setErrorMsg(null);
@@ -106,7 +109,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setLoading(true);
     try {
       const user = await register(email, password, displayName.trim() || email.split('@')[0]);
-      setSuccessMsg('账号注册成功！验证邮件已发送至您的邮箱，请去邮箱点击链接完成验证');
+      setSuccessMsg(t('screen.registerSuccess'));
       setTimeout(() => onLoginSuccess(user), 600);
     } catch (err) {
       setErrorMsg(translateAuthError(err));
@@ -121,7 +124,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setLoading(true);
     try {
       const { profile, isMock } = await getBilibiliUserProfile();
-      const nickname = profile.nickname || 'B站玩家';
+      const nickname = profile.nickname || t('bilibili.defaultNickname');
       const avatar = profile.avatar || '';
       // 以 toyOpenId 作为 B 站玩家的唯一身份；缺失时用本机持久编号，保证每次登录 UID 一致
       const appUser: AppUser = {
@@ -138,10 +141,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       try {
         if (avatar) localStorage.setItem('amigo_avatar_source', 'social');
       } catch {}
-      setSuccessMsg(isMock ? `🎉 已接入哔哩哔哩体验账号：${nickname} (本地 Mock 模式)` : `🎉 哔哩哔哩授权成功，欢迎 ${nickname}！`);
+      setSuccessMsg(isMock ? t('bilibili.mockSuccess', { nickname }) : t('bilibili.success', { nickname }));
       setTimeout(() => onLoginSuccess(appUser), 600);
     } catch (err: any) {
-      setErrorMsg(err?.message || '哔哩哔哩登录授权失败');
+      setErrorMsg(err?.message || t('bilibili.failed'));
     } finally {
       setLoading(false);
     }
@@ -150,7 +153,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
-      setErrorMsg('请输入注册时使用的电子邮箱');
+      setErrorMsg(t('validation.resetEmailRequired'));
       return;
     }
     setErrorMsg(null);
@@ -158,7 +161,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setLoading(true);
     try {
       await requestPasswordReset(email);
-      setSuccessMsg('如果该邮箱已注册，重置密码邮件已发送，请检查收件箱（含垃圾邮件箱）');
+      setSuccessMsg(t('screen.resetMailSent'));
     } catch (err) {
       setErrorMsg(translateAuthError(err));
     } finally {
@@ -170,11 +173,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     e.preventDefault();
     if (!resetToken) return;
     if (password.length < 6) {
-      setErrorMsg('密码长度不能少于 6 位');
+      setErrorMsg(t('validation.passwordTooShort'));
       return;
     }
     if (password !== confirmPassword) {
-      setErrorMsg('两次输入的密码不一致');
+      setErrorMsg(t('validation.passwordMismatch'));
       return;
     }
     setErrorMsg(null);
@@ -185,7 +188,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       setPassword('');
       setConfirmPassword('');
       setMode('login');
-      setSuccessMsg('密码已更新，请使用新密码登录');
+      setSuccessMsg(t('screen.passwordUpdated'));
     } catch (err) {
       setErrorMsg(translateAuthError(err));
     } finally {
@@ -197,6 +200,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     <div className="h-[100dvh] w-full bg-[#1c1d25] flex justify-center font-sans overflow-hidden">
       {/* Container aligned with main game shell */}
       <div className="w-full h-full flex flex-col justify-center items-center relative shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-y-auto custom-scrollbar px-6 py-8">
+        <div className="absolute top-3 right-3 z-10">
+          <LanguageSwitcher />
+        </div>
         
         {/* Main Content Box styled to fill mobile viewport harmoniously */}
         <div className="w-full max-w-[380px] my-auto flex flex-col items-center py-2">
@@ -225,7 +231,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               }`}
             >
               <LogIn size={15} />
-              <span>账号登录</span>
+              <span>{t('screen.loginTab')}</span>
             </button>
             <button
               type="button"
@@ -237,7 +243,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               }`}
             >
               <UserPlus size={15} />
-              <span>注册账号</span>
+              <span>{t('screen.registerTab')}</span>
             </button>
           </div>
 
@@ -266,12 +272,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 1024 1024" fill="currentColor">
               <path d="M302.2 138.8c11.7-11.8 11.6-30.8-.2-42.5-11.8-11.7-30.8-11.6-42.5.2l-94.2 95.3c-11.7 11.8-11.6 30.8.2 42.5 11.8 11.7 30.8 11.6 42.5-.2l94.2-95.3zM722 138.8l94.2 95.3c11.8 11.8 30.8 11.9 42.5.2 11.8-11.7 11.9-30.7.2-42.5l-94.2-95.3c-11.7-11.8-30.7-11.9-42.5-.2-11.8 11.7-11.9 30.7-.2 42.5zM852 284H172c-55.2 0-100 44.8-100 100v412c0 55.2 44.8 100 100 100h680c55.2 0 100-44.8 100-100V384c0-55.2-44.8-100-100-100zM340 680c-33.1 0-60-26.9-60-60s26.9-60 60-60 60 26.9 60 60-26.9 60-60 60zm340 0c-33.1 0-60-26.9-60-60s26.9-60 60-60 60 26.9 60 60-26.9 60-60 60z" />
             </svg>
-            <span>哔哩哔哩账号一键登录</span>
+            <span>{t('bilibili.signIn')}</span>
           </button>
 
           <div className="w-full flex items-center gap-3 my-1.5">
             <div className="flex-1 h-[2px] bg-gray-800"></div>
-            <span className="text-[10px] text-gray-400 font-black uppercase tracking-wider">或</span>
+            <span className="text-[10px] text-gray-400 font-black uppercase tracking-wider">{t('screen.or')}</span>
             <div className="flex-1 h-[2px] bg-gray-800"></div>
           </div>
 
@@ -291,14 +297,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             {/* Display Name Input (Register Mode Only) */}
             {mode === 'register' && (
               <div className="space-y-1">
-                <label className="text-[11px] font-black text-gray-300 block">玩家角色名：</label>
+                <label className="text-[11px] font-black text-gray-300 block">{t('screen.displayNameLabel')}</label>
                 <div className="relative">
                   <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="请输入昵称"
+                    placeholder={t('screen.displayNamePlaceholder')}
                     className="w-full bg-[#12141c] text-white text-xs font-bold pl-9 pr-3 py-2.5 rounded-xl border-2 border-black focus:border-amber-400 focus:outline-none transition-all shadow-[0_2px_0_#000]"
                   />
                 </div>
@@ -306,13 +312,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             )}
 
             {mode === 'reset' && (
-              <div className="text-xs font-black text-amber-300 text-center pb-1">设置新密码</div>
+              <div className="text-xs font-black text-amber-300 text-center pb-1">{t('screen.resetTitle')}</div>
             )}
 
             {/* Email Input */}
             {mode !== 'reset' && (
             <div className="space-y-1">
-              <label className="text-[11px] font-black text-gray-300 block">电子邮箱：</label>
+              <label className="text-[11px] font-black text-gray-300 block">{t('screen.emailLabel')}</label>
               <div className="relative">
                 <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -331,14 +337,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             {mode !== 'forgot' && (
               <div className="space-y-1">
                 <div className="flex justify-between items-center">
-                  <label className="text-[11px] font-black text-gray-300">{mode === 'reset' ? '新密码：' : '密码：'}</label>
+                  <label className="text-[11px] font-black text-gray-300">{mode === 'reset' ? t('screen.newPasswordLabel') : t('screen.passwordLabel')}</label>
                   {mode === 'login' && (
                     <button
                       type="button"
                       onClick={() => switchMode('forgot')}
                       className="text-[10px] text-amber-400 font-bold hover:underline cursor-pointer"
                     >
-                      忘记密码？
+                      {t('forgotPassword')}
                     </button>
                   )}
                 </div>
@@ -359,7 +365,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             {/* Confirm Password (Register Mode Only) */}
             {(mode === 'register' || mode === 'reset') && (
               <div className="space-y-1">
-                <label className="text-[11px] font-black text-gray-300 block">确认密码：</label>
+                <label className="text-[11px] font-black text-gray-300 block">{t('confirmPassword')}</label>
                 <div className="relative">
                   <KeyRound size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
@@ -367,7 +373,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="再次确认密码"
+                    placeholder={t('screen.confirmPasswordPlaceholder')}
                     className="w-full bg-[#12141c] text-white text-xs font-bold pl-9 pr-3 py-2.5 rounded-xl border-2 border-black focus:border-amber-400 focus:outline-none transition-all shadow-[0_2px_0_#000]"
                   />
                 </div>
@@ -383,27 +389,27 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               {loading ? (
                 <>
                   <RefreshCw size={15} className="animate-spin" />
-                  <span>处理中...</span>
+                  <span>{t('screen.processing')}</span>
                 </>
               ) : mode === 'login' ? (
                 <>
                   <LogIn size={15} />
-                  <span>登录</span>
+                  <span>{t('screen.login')}</span>
                 </>
               ) : mode === 'register' ? (
                 <>
                   <UserPlus size={15} />
-                  <span>创建新账号</span>
+                  <span>{t('screen.register')}</span>
                 </>
               ) : mode === 'forgot' ? (
                 <>
                   <Mail size={15} />
-                  <span>发送重置密码邮件</span>
+                  <span>{t('sendResetMail')}</span>
                 </>
               ) : (
                 <>
                   <KeyRound size={15} />
-                  <span>保存新密码</span>
+                  <span>{t('screen.saveNewPassword')}</span>
                 </>
               )}
             </button>
@@ -414,7 +420,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                 onClick={() => switchMode('login')}
                 className="w-full text-center text-xs text-gray-400 font-bold hover:text-white pt-1.5 cursor-pointer block"
               >
-                返回登录界面
+                {t('screen.backToLogin')}
               </button>
             )}
           </form>

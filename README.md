@@ -81,6 +81,8 @@ npm test                         # 单元测试：前端规则库（happy-dom）
 └── src/
     ├── main.tsx / index.css          # 挂载入口与全局样式
     ├── version.ts                    # 游戏版本号
+    ├── i18n/                         # 界面多语言（i18next + react-i18next）：index.ts 初始化与语言切换，
+    │                                 #   locales/<语言代码>/ 下按命名空间存放语言包，i18next.d.ts 让 t() 的键名参与类型检查
     ├── App.tsx                       # 主应用：全局状态、各界面开关，调用每月结算与各功能 hook
     ├── hooks/                        # useGameState（统一游戏状态：useReducer、初始化与自动存档）；
     │                                 #   从 App 拆出的功能 hook：useCredits（致谢名单）、useAntibodies（抗体与疫苗）、
@@ -118,6 +120,7 @@ npm test                         # 单元测试：前端规则库（happy-dom）
     │   └── simpleMode.ts             # 简洁模式规则（推荐工作与住房、自动推演、一键炒股）
     └── components/
         ├── AuthScreen.tsx / AuthModal.tsx  # 登录首屏 / 游戏内账号管理
+        ├── LanguageSwitcher.tsx      # 登录首屏右上角的语言选择，选择保存在本机
         ├── EmailVerificationScreen.tsx     # 邮箱未验证拦截页
         ├── AvatarSelectModal.tsx           # 头像选择
         ├── RoleTab.tsx                     # 「角色」标签页

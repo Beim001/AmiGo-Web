@@ -13,6 +13,8 @@ export default defineConfig(async () => {
             name: 'web',
             include: ['src/**/*.test.ts'],
             environment: 'happy-dom',
+            // 组件测试直接渲染使用 useTranslation 的组件，需要先初始化语言包
+            setupFiles: ['./src/i18n/index.ts'],
           },
         },
         {

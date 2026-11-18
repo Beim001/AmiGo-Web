@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mail, CheckCircle2, RefreshCw, LogOut, Send, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { getMe, resendVerification, AuthError } from '../lib/authClient';
 import type { AppUser } from '../lib/bilibiliToy';
+import { Trans, useTranslation } from 'react-i18next';
 
 interface Props {
   user: AppUser;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export const EmailVerificationScreen: React.FC<Props> = ({ user, onVerified, onLogout }) => {
+  const { t } = useTranslation('auth');
   const [checking, setChecking] = useState(false);
   const [resending, setResending] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
@@ -20,15 +22,15 @@ export const EmailVerificationScreen: React.FC<Props> = ({ user, onVerified, onL
     try {
       const latest = await getMe();
       if (!latest) {
-        setMsg({ type: 'error', text: '登录已失效，请重新登录' });
+        setMsg({ type: 'error', text: t('verify.sessionExpired') });
       } else if (latest.emailVerified) {
-        setMsg({ type: 'success', text: '🎉 邮箱已成功验证！正在进入游戏...' });
+        setMsg({ type: 'success', text: t('verify.verified') });
         setTimeout(() => onVerified(latest), 800);
       } else {
-        setMsg({ type: 'error', text: '❌ 尚未检测到邮箱验证记录。请确认您已在接收到的邮件中点击了验证链接。' });
+        setMsg({ type: 'error', text: t('verify.notVerified') });
       }
     } catch {
-      setMsg({ type: 'error', text: '检查状态失败，请检查网络后重试' });
+      setMsg({ type: 'error', text: t('verify.checkFailed') });
     } finally {
       setChecking(false);
     }
@@ -40,15 +42,15 @@ export const EmailVerificationScreen: React.FC<Props> = ({ user, onVerified, onL
     try {
       const res = await resendVerification();
       if (res.alreadyVerified) {
-        setMsg({ type: 'success', text: '该邮箱已经验证过了，请点击「我已完成验证」进入游戏。' });
+        setMsg({ type: 'success', text: t('verify.alreadyVerified') });
       } else {
-        setMsg({ type: 'info', text: '✉️ 新的验证邮件已成功发送，请查收您的邮箱（含垃圾邮件箱）。' });
+        setMsg({ type: 'info', text: t('verify.resent') });
       }
     } catch (err) {
       if (err instanceof AuthError && err.code === 'TOO_MANY_REQUESTS') {
-        setMsg({ type: 'error', text: '⚠️ 发送请求过于频繁，请稍等几分钟后再试。' });
+        setMsg({ type: 'error', text: t('verify.resendTooFrequent') });
       } else {
-        setMsg({ type: 'error', text: '发送验证邮件失败，请检查网络后重试' });
+        setMsg({ type: 'error', text: t('verify.resendFailed') });
       }
     } finally {
       setResending(false);
@@ -72,21 +74,21 @@ export const EmailVerificationScreen: React.FC<Props> = ({ user, onVerified, onL
           </div>
 
           <h2 className="text-2xl font-black text-white tracking-wider drop-shadow-[0_2px_0_#000]">
-            请验证您的电子邮箱
+            {t('verify.title')}
           </h2>
           <p className="text-xs text-gray-300 font-bold leading-relaxed px-2">
-            为了保障您的资产与账号安全，需要验证邮箱后方可激活账号并进入游戏主页。
+            {t('verify.intro')}
           </p>
         </div>
 
         {/* Email Highlight Box */}
         <div className="bg-[#15161f] border-2 border-yellow-500/50 rounded-2xl p-4 text-center space-y-1 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]">
           <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest block">
-            验证链接已发送至邮箱
+            {t('verify.sentTo')}
           </span>
           <span className="text-yellow-400 font-mono font-black text-base break-all flex items-center justify-center gap-1.5">
             <Mail size={16} className="text-yellow-400 shrink-0" />
-            {user.email || '您的注册邮箱'}
+            {user.email || t('verify.yourEmail')}
           </span>
         </div>
 
@@ -109,13 +111,17 @@ export const EmailVerificationScreen: React.FC<Props> = ({ user, onVerified, onL
         {/* Instructions */}
         <div className="bg-[#181924] border-2 border-black rounded-2xl p-3.5 text-xs text-gray-300 font-bold space-y-2">
           <div className="text-yellow-400 font-black text-xs flex items-center gap-1">
-            <span>💡 简单验证步骤：</span>
+            <span>{t('verify.stepsTitle')}</span>
           </div>
           <ol className="list-decimal list-inside space-y-1 text-gray-400 text-[11px] leading-snug font-medium">
-            <li>进入您上面的电子邮箱收件箱；</li>
-            <li>找到来自 <span className="text-white font-bold">AmiGo</span> 的验证邮件；</li>
-            <li>点击邮件中的官方验证链接；</li>
-            <li>返回本页面，点击下方 <span className="text-yellow-300 font-bold">【我已完成邮箱验证】</span> 即可立即进入主页！</li>
+            <li>{t('verify.step1')}</li>
+            <li>
+              <Trans t={t} i18nKey="verify.step2" components={{ b: <span className="text-white font-bold" /> }} />
+            </li>
+            <li>{t('verify.step3')}</li>
+            <li>
+              <Trans t={t} i18nKey="verify.step4" components={{ em: <span className="text-yellow-300 font-bold" /> }} />
+            </li>
           </ol>
         </div>
 
@@ -127,7 +133,7 @@ export const EmailVerificationScreen: React.FC<Props> = ({ user, onVerified, onL
             className="w-full bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-black font-black text-sm py-3.5 rounded-2xl border-3 border-black shadow-[0_4px_0_#000] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
           >
             <RefreshCw size={18} className={checking ? 'animate-spin' : ''} />
-            <span>{checking ? '正在核对验证状态...' : '我已完成邮箱验证，进入主页'}</span>
+            <span>{checking ? t('verify.checking') : t('verify.check')}</span>
           </button>
 
           <div className="grid grid-cols-2 gap-2">
@@ -137,7 +143,7 @@ export const EmailVerificationScreen: React.FC<Props> = ({ user, onVerified, onL
               className="bg-[#2a2c3a] hover:bg-[#34374a] text-yellow-300 font-black text-xs py-2.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <Send size={14} className={resending ? 'animate-bounce' : ''} />
-              <span>{resending ? '发送中...' : '重新发送邮件'}</span>
+              <span>{resending ? t('verify.resending') : t('verify.resend')}</span>
             </button>
 
             <button
@@ -145,7 +151,7 @@ export const EmailVerificationScreen: React.FC<Props> = ({ user, onVerified, onL
               className="bg-[#2a2c3a] hover:bg-rose-950 text-rose-300 font-black text-xs py-2.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <LogOut size={14} />
-              <span>更换/退出账号</span>
+              <span>{t('verify.switchAccount')}</span>
             </button>
           </div>
         </div>
