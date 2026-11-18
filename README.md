@@ -135,7 +135,9 @@ npm test                         # 单元测试：前端规则库（happy-dom）
         ├── HistoricalFlag.tsx              # 19 世纪各国离线 SVG 国旗
         ├── TopBar.tsx / BottomNav.tsx      # 顶部栏、底部导航
         ├── ShopModal.tsx                   # 商城：抽卡、服饰、理发店
-        ├── ProfileModal.tsx                # 个人中心
+        ├── ProfileModal.tsx                # 个人中心（标签页切换与跨标签页状态）
+        ├── profile/                        # 个人中心各部分：名片头部、名片资料、排行榜、成就、系统设置、礼包兑换、改名冻结弹窗；
+        │                                   #   useNameChange（改名与敏感词冻结）、useRankBoard（B 站排行榜）、useCdkey（礼包码）
         ├── BankModal.tsx                   # 银行
         └── DevToolsPanel.tsx               # 开发测试工具（仅开发模式）
 ```
@@ -153,7 +155,7 @@ npm test                         # 单元测试：前端规则库（happy-dom）
 | `handleRegisterBirth()` | 出生登记：随机家族阶层与出身（起始资产、父母家、家人），名字中的姓换成家族姓，初始年龄 8 岁。 |
 | `handleSuccession()` | 角色去世后由继承人接续（未成年继承人进入监护），可选择把前任的大事写入家族大事记。 |
 | `handleResetLife()` / `handleLogout()` | 重置人生（保留账号级数据与成就）；退出登录（邮箱账号先同步云端再清除本地存档）。 |
-| `ProfileModal`（`components/ProfileModal.tsx`） | 个人中心：名片资料、帝国排行榜、成就（含致谢名单重播）、系统设置、礼包兑换、关于我们；改名敏感词校验与冻结、慈善捐款。 |
+| `ProfileModal`（`components/ProfileModal.tsx`，各标签页见 `components/profile/`） | 个人中心：名片资料、帝国排行榜、成就（含致谢名单重播）、系统设置、礼包兑换、关于我们；改名敏感词校验与冻结、慈善捐款。 |
 | `ShopModal` / `ChestAnimation`（`components/ShopModal.tsx`） | 服饰商城与宝箱抽奖（保底规则见 `gacha.ts`）、理发店。 |
 | `BankModal`（`components/BankModal.tsx`） | 多银行开户、存取款、贷款借还与流水。 |
 
