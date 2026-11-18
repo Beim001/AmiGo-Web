@@ -125,6 +125,8 @@ export interface FunctTabProps {
   onOpenStock?: () => void;
   onOpenHospital?: () => void;
   onOpenJob?: () => void;
+  /** 社会福利（帝国时期为教会救济，第 67.5 题） */
+  onOpenWelfare?: () => void;
   onOpenBirth?: () => void;
   onOpenGender?: () => void;
   onOpenHousing?: () => void;
@@ -138,6 +140,7 @@ export const FunctTab: React.FC<FunctTabProps> = ({
   onOpenStock,
   onOpenHospital,
   onOpenJob,
+  onOpenWelfare,
   onOpenBirth,
   onOpenGender,
   onOpenHousing,
@@ -159,6 +162,7 @@ export const FunctTab: React.FC<FunctTabProps> = ({
     housing: onOpenHousing,
     job: onOpenJob,
     hospital: onOpenHospital,
+    welfare: onOpenWelfare,
   };
 
   const showToast = (msg: string) => {

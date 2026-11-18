@@ -53,6 +53,7 @@ import {
 } from './lib/bank';
 import { loadMarket, saveMarket, findFinanceBackground } from './lib/stockMarket';
 import { HospitalModal } from './components/HospitalModal';
+import { WelfareModal } from './components/WelfareModal';
 import { JobModal, JOB_POSITIONS, readCurrentJobId, readJobHistoryIds } from './components/JobModal';
 import { BirthModal } from './components/BirthModal';
 import { WealthChartModal } from './components/WealthChartModal';
@@ -107,6 +108,7 @@ export default function App() {
   const [showWealthChart, setShowWealthChart] = useState(false);
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [showHospital, setShowHospital] = useState(false);
+  const [showWelfare, setShowWelfare] = useState(false);
   const [showJob, setShowJob] = useState(false);
   const [showHousing, setShowHousing] = useState(false);
   const [showVisa, setShowVisa] = useState(false);
@@ -823,6 +825,7 @@ export default function App() {
              onOpenStock={() => setShowStock(true)}
              onOpenHospital={() => setShowHospital(true)}
              onOpenJob={() => setShowJob(true)}
+             onOpenWelfare={() => setShowWelfare(true)}
              onOpenBirth={() => setShowBirthModal(true)}
              onOpenGender={() => setShowGenderModal(true)}
              onOpenHousing={() => setShowHousing(true)}
@@ -954,6 +957,21 @@ export default function App() {
              onMaintenance={handleMaintenance}
              hasSpouse={!!family.spouse}
              fertilityText={fertilityText}
+           />
+         )}
+
+         {/* 社会福利（教会救济） */}
+         {showWelfare && (
+           <WelfareModal
+             onClose={() => setShowWelfare(false)}
+             coins={coins}
+             setCoins={setCoins}
+             health={health}
+             setHealth={setHealth}
+             bankDeposit={bankDeposit}
+             isRegistered={isRegistered}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
            />
          )}
 
