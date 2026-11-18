@@ -71,6 +71,8 @@ import { BottomNav } from './components/BottomNav';
 import { ProfileModal } from './components/ProfileModal';
 import { BankModal } from './components/BankModal';
 import { loadStored, saveStored } from './lib/storage';
+import { CLOTHING } from './data/clothing';
+import { GACHA_PITY_KEY, PITY_LIMITED } from './lib/gacha';
 import { getMe, logout as logoutRequest, cacheUser, readCachedUser, isPasswordUser } from './lib/authClient';
 import { useCloudSave, clearLocalGameData } from './lib/cloudSave';
 import {
@@ -640,6 +642,11 @@ export default function App() {
     fastForwardRemaining,
     setFastForwardRemaining,
   });
+
+  // 成就「时装秀」：集齐商城内的全部服饰（抽卡或购买得到）
+  React.useEffect(() => {
+    if (CLOTHING.every((c) => ownedClothes.includes(c.id))) unlockAchievement('fashion_show');
+  }, [ownedClothes]);
 
   // 成就：解锁时弹出提示；集齐全部成就时自动播放一次致谢名单；状态类成就随数据变化自动检查
   React.useEffect(() => {
@@ -1384,6 +1391,11 @@ export default function App() {
                }
                setFamily((prev) => ({ ...prev, affinity: { ...prev.affinity, ...Object.fromEntries(parents.map((m) => [m.id, value])) } }));
                showToast(`🛠️ 已把 ${parents.length} 位父母的好感设为 ${value}%`);
+             }}
+             onSetLimitedPity={() => {
+               saveStored(GACHA_PITY_KEY, { sinceRare: 0, sinceLimited: PITY_LIMITED - 1 });
+               setShowShop(false);
+               showToast(`🛠️ 限定保底计数已设为 ${PITY_LIMITED - 1}，打开商城后下一抽必出限定`);
              }}
              onClearAchievements={() => {
                clearAchievementsForTesting();

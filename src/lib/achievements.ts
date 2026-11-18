@@ -8,7 +8,7 @@ export interface AchievementDef {
   id: string;
   title: string;
   desc: string;
-  icon: 'baby' | 'coins' | 'home' | 'heart' | 'users' | 'gift' | 'gem' | 'crown' | 'chart' | 'plane' | 'globe' | 'hospital' | 'cake' | 'tree' | 'trophy' | 'scroll' | 'handheart' | 'flower';
+  icon: 'baby' | 'coins' | 'home' | 'heart' | 'users' | 'gift' | 'gem' | 'crown' | 'chart' | 'plane' | 'globe' | 'hospital' | 'cake' | 'tree' | 'trophy' | 'scroll' | 'handheart' | 'flower' | 'frown' | 'shirt' | 'scissors';
 }
 
 export const ACHIEVEMENTS: AchievementDef[] = [
@@ -30,6 +30,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'witness', title: '时代见证者', desc: '经历一次历史大事件年份（如 1878 格纳提斯运动）', icon: 'scroll' },
   { id: 'gift_10', title: '兄友弟恭', desc: '累计向家人赠送 10 次礼物', icon: 'handheart' },
   { id: 'gift_100', title: '手有余香', desc: '累计向家人赠送 100 次礼物', icon: 'flower' },
+  { id: 'pity_limited', title: '大非酋', desc: '连抽 98 次都没出限定，第 99 次靠保底才抽到限定服饰', icon: 'frown' },
+  { id: 'fashion_show', title: '时装秀', desc: '集齐商城内的全部服饰', icon: 'shirt' },
+  { id: 'makeover', title: '变装', desc: '在理发店理一次发', icon: 'scissors' },
 ];
 
 /** 成就 id → 解锁时的现实时间（毫秒） */

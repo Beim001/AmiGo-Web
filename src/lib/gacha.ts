@@ -40,6 +40,8 @@ export interface PityState {
 }
 
 export const INITIAL_PITY: PityState = { sinceRare: 0, sinceLimited: 0 };
+/** 保底计数的存档键 */
+export const GACHA_PITY_KEY = 'amigo_gacha_pity';
 
 export interface GachaPoolItem {
   id: string;
@@ -52,6 +54,10 @@ export type DrawReward =
   | { type: 'clothing'; id: string; name: string; rarity: Rarity; isPity: boolean }
   | { type: 'coin'; amount: number; name: string; rarity?: Rarity; isPity: boolean }
   | { type: 'gift'; id: string; name: string; quality: GiftQuality; isPity: false };
+
+/** 本次抽卡是否靠限定保底出了限定（已全部拥有、按售价返还金币的也算），用于成就「大非酋」 */
+export const hitLimitedPity = (rewards: DrawReward[]): boolean =>
+  rewards.some((r) => r.isPity && r.rarity === 'limited');
 
 export const drawGacha = (
   times: number,

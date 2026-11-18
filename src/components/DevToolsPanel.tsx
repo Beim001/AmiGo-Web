@@ -43,6 +43,8 @@ interface DevToolsPanelProps {
   smartFastForward: boolean;
   onToggleSmartFastForward: () => void;
   onClearAchievements: () => void;
+  /** 把限定保底计数设为差一抽（测试成就「大非酋」） */
+  onSetLimitedPity: () => void;
   /** 礼物背包件数 */
   giftTotal: number;
   /** 累计赠礼次数（成就「兄友弟恭」「手有余香」） */
@@ -98,6 +100,7 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
   onToggleBeauty,
   onClearAntibodies,
   onClearAchievements,
+  onSetLimitedPity,
   giftTotal,
   giftsGiven,
   onAddGifts,
@@ -405,7 +408,10 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
               清空全部成就
             </button>
           </div>
-          <div className="text-[9px] text-gray-500 font-bold mt-1.5">可用于测试「集齐全部成就」后的致谢名单。</div>
+          <button onClick={onSetLimitedPity} className={`${btn} w-full mt-1.5`}>
+            限定保底差一抽（测试「大非酋」）
+          </button>
+          <div className="text-[9px] text-gray-500 font-bold mt-1.5">可用于测试「集齐全部成就」后的致谢名单。「大非酋」：点按钮后打开商城单抽一次；「变装」：去理发店理一次发；「时装秀」：集齐商城全部服饰。</div>
 
           <div className={`${label} mt-3`}>赛季排行防作弊</div>
           <button

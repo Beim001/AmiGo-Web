@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { drawGacha, GachaPoolItem, INITIAL_PITY, PITY_LIMITED, PITY_RARE, DUPLICATE_REFUND_RATIO } from './gacha';
+import { drawGacha, hitLimitedPity, GachaPoolItem, INITIAL_PITY, PITY_LIMITED, PITY_RARE, DUPLICATE_REFUND_RATIO } from './gacha';
 
 const POOL: GachaPoolItem[] = [
   { id: 'adv1', name: '高级一', price: 1000, rarity: 'advanced' },
@@ -52,5 +52,22 @@ describe('重复服饰', () => {
     const ids = rewards.filter((r) => r.type === 'clothing').map((r) => (r as { id: string }).id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toHaveLength(2);
+  });
+});
+
+describe('成就「大非酋」判定', () => {
+  it('靠限定保底抽到限定才算，自然抽到的限定与稀有保底都不算', () => {
+    const pityLimited = drawGacha(1, POOL, [], { sinceRare: 0, sinceLimited: PITY_LIMITED - 1 }, NOTHING).rewards;
+    const luckyLimited = drawGacha(1, POOL, [], INITIAL_PITY, () => 0).rewards;
+    const pityRare = drawGacha(1, POOL, [], { sinceRare: PITY_RARE - 1, sinceLimited: 0 }, NOTHING).rewards;
+    expect(hitLimitedPity(pityLimited)).toBe(true);
+    expect(hitLimitedPity(luckyLimited)).toBe(false);
+    expect(hitLimitedPity(pityRare)).toBe(false);
+  });
+
+  it('限定服饰已全部拥有、保底改为返还金币时也算', () => {
+    const refund = drawGacha(1, POOL, ['lim1'], { sinceRare: 0, sinceLimited: PITY_LIMITED - 1 }, NOTHING).rewards;
+    expect(refund[0].type).toBe('coin');
+    expect(hitLimitedPity(refund)).toBe(true);
   });
 });

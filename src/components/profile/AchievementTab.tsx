@@ -1,5 +1,5 @@
 import React from 'react';
-import { CircleDollarSign, Gem, Crown, Plane, Globe, Baby, Hospital, TrendingUp, Home, Heart, Users, Award, Scroll, GitFork, Gift, Trophy, Star, Flower2, HandHeart } from 'lucide-react';
+import { CircleDollarSign, Gem, Crown, Plane, Globe, Baby, Hospital, TrendingUp, Home, Heart, Users, Award, Scroll, GitFork, Gift, Trophy, Star, Flower2, HandHeart, Frown, Shirt, Scissors } from 'lucide-react';
 import { readAchievements, ACHIEVEMENTS, formatRealTime } from '../../lib/achievements';
 import type { ProfileModalProps } from '../ProfileModal';
 
@@ -10,7 +10,7 @@ export const AchievementTab = ({ onPlayCredits }: Pick<ProfileModalProps, 'onPla
   const icons: Record<string, React.ElementType> = {
     baby: Baby, coins: CircleDollarSign, home: Home, heart: Heart, users: Users, gift: Gift, gem: Gem, crown: Crown,
     chart: TrendingUp, plane: Plane, globe: Globe, hospital: Hospital, cake: Star, tree: GitFork, trophy: Trophy, scroll: Scroll,
-    handheart: HandHeart, flower: Flower2,
+    handheart: HandHeart, flower: Flower2, frown: Frown, shirt: Shirt, scissors: Scissors,
   };
   const done = ACHIEVEMENTS.filter((a) => record[a.id]).length;
   return (

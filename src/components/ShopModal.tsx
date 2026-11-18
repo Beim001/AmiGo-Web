@@ -4,7 +4,8 @@ import { CharacterAvatar } from './CharacterAvatar';
 import { CLOTHING } from '../data/clothing';
 import { Appearance, BARBER_PARTS, BARBER_COST, APPEARANCE_PARTS } from '../lib/appearance';
 import { GiftInventory, GIFT_QUALITY_STYLE, addGifts } from '../lib/gifts';
-import { drawGacha, INITIAL_PITY, PITY_RARE, PITY_LIMITED, RARITY_LABEL, PityState, Rarity } from '../lib/gacha';
+import { drawGacha, hitLimitedPity, GACHA_PITY_KEY, INITIAL_PITY, PITY_RARE, PITY_LIMITED, RARITY_LABEL, PityState, Rarity } from '../lib/gacha';
+import { unlockAchievement } from '../lib/achievements';
 import { loadStored, saveStored } from '../lib/storage';
 
 // 商城：抽卡（含保底与开箱动画，奖品为金币、家族礼物与服饰）、服饰购买与穿戴、理发店
@@ -180,8 +181,8 @@ export const ShopModal = ({
   const [isDrawing, setIsDrawing] = React.useState(false);
   const [drawResult, setDrawResult] = React.useState<any | null>(null);
   const [shopToast, setShopToast] = React.useState<string | null>(null);
-  const [pity, setPity] = React.useState<PityState>(() => loadStored('amigo_gacha_pity', INITIAL_PITY));
-  React.useEffect(() => saveStored('amigo_gacha_pity', pity), [pity]);
+  const [pity, setPity] = React.useState<PityState>(() => loadStored(GACHA_PITY_KEY, INITIAL_PITY));
+  React.useEffect(() => saveStored(GACHA_PITY_KEY, pity), [pity]);
 
   const showShopToast = (msg: string) => {
     setShopToast(msg);
@@ -232,6 +233,7 @@ export const ShopModal = ({
       }
 
       setDrawResult(rewards);
+      if (hitLimitedPity(rewards)) unlockAchievement('pity_limited');
     }, 1500);
   };
 
@@ -414,6 +416,7 @@ export const ShopModal = ({
                       setCoins((prev: number) => prev - BARBER_COST);
                       setAppearance({ ...appearance, hair: barberDraft.hair, hairColor: barberDraft.hairColor, beard: barberDraft.beard, preset: undefined });
                       showShopToast(`💇 理发完成（-${BARBER_COST} ₽）`);
+                      unlockAchievement('makeover');
                     }}
                     className="w-full bg-gradient-to-b from-[#ffe56c] to-[#f5b822] text-black text-xs font-black py-1.5 rounded-lg border-2 border-black shadow-[0_2px_0_#000] disabled:opacity-40 cursor-pointer"
                   >
