@@ -232,7 +232,7 @@ export const generateOrigin = (cls: SocialClass, rng: () => number = Math.random
 
   const siblingCount = between(0, 3, rng);
   const childStages: Array<[number, string]> = cls.id === 'beggar'
-    ? [[0, '流浪孩童'], [16, pick(cls.adultJobs, rng)]]
+    ? [[0, BEGGAR_CHILD_TITLE], [BEGGAR_CHILD_UNTIL, pick(cls.adultJobs, rng)]]
     : [[0, '学龄前'], [6, cls.childLabor ? '学童 / 帮工' : '学堂学生'], [18, pick(cls.adultJobs, rng)]];
   for (let i = 0; i < siblingCount; i++) {
     let offset = 0;
@@ -249,6 +249,16 @@ export const generateOrigin = (cls: SocialClass, rng: () => number = Math.random
 // ---------- 童工（第 19 题 A：乞丐、平民家庭 8–15 岁） ----------
 
 export const CHILD_LABOR_MAX_AGE = 15;
+
+/** 乞丐家庭的孩子在这个年龄之前显示为「流浪孩童」（与兄弟姐妹一致） */
+export const BEGGAR_CHILD_UNTIL = 16;
+export const BEGGAR_CHILD_TITLE = '流浪孩童';
+
+/** 当家人没有正式工作时的职业显示（第 71 题：乞丐家庭的孩子与兄弟姐妹一样显示「流浪孩童」） */
+export const idleOccupation = (classId: string, age: number): string => {
+  if (classId === 'beggar') return age < BEGGAR_CHILD_UNTIL ? BEGGAR_CHILD_TITLE : '待业';
+  return age < 18 ? '学堂学生' : '待业';
+};
 export const CHILD_JOB_KEY = 'amigo_child_job_id';
 
 export interface ChildJob {

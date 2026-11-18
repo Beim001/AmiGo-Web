@@ -79,7 +79,7 @@ export const BankModal = ({
         deposit: 0,
         loan: 0,
         transactions: [
-          { id: Date.now().toString(), type: 'deposit' as const, title: `在 [${bank.shortName}] 开立银航账户`, amount: 0, time: '刚才' }
+          { id: Date.now().toString(), type: 'deposit' as const, title: `在 [${bank.shortName}] 开立银行账户`, amount: 0, time: '刚才' }
         ],
       },
     };
@@ -290,7 +290,7 @@ export const BankModal = ({
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
                   <span className="bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded border border-black shadow-[0_1px_0_#000]">
-                    已开立 {openedBankCount} / {BANK_LIST.length} 家银航
+                    已开立 {openedBankCount} / {BANK_LIST.length} 家银行
                   </span>
                   {onOpenWealthChart && (
                     <button

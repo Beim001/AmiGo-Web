@@ -739,7 +739,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
               {totalLoan > 0 ? (
                 <div className="bg-[#2a1b1e] border-2 border-red-900/60 rounded-xl p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-red-200 text-xs font-bold">银航商业借贷</span>
+                    <span className="text-red-200 text-xs font-bold">银行商业借贷</span>
                     <span className="text-red-400 font-black font-mono text-sm">{totalLoan.toLocaleString()} {CURRENCY.symbol}</span>
                   </div>
                   <div className="text-[10px] text-red-300/80">

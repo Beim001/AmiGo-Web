@@ -26,7 +26,7 @@ import { SIMPLE_MODE_KEY } from './lib/simpleMode';
 import { addGifts, giftCount } from './lib/gifts';
 import { submitSeasonScore } from './lib/authClient';
 import { rankFamilies, familyNetWorth } from './lib/familyRank';
-import { rollClass, generateOrigin, classById, readChildJob, CHILD_JOB_KEY, rollPlayerLifespan } from './lib/lineage';
+import { rollClass, generateOrigin, classById, readChildJob, CHILD_JOB_KEY, rollPlayerLifespan, idleOccupation } from './lib/lineage';
 import { applySurname } from './lib/names';
 import { TICKET_PRICE, generateAuction, raiseBid, buyoutLot, passLot, normalizeLot, isInvited, heirloomById, heirloomsValue } from './lib/heirlooms';
 import { AuctionModal } from './components/AuctionModal';
@@ -576,7 +576,7 @@ export default function App() {
     const id = readCurrentJobId();
     const job = id ? JOB_POSITIONS.find((j) => j.id === id) : null;
     if (job) return job.title;
-    return currentAge < 18 ? '学堂学生' : '待业';
+    return idleOccupation(familyClass.id, currentAge);
   })();
 
   // 父母给的零花（第 36 题）：按当前族谱中在世父母的职业收入、好感度计算
