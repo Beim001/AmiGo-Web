@@ -291,6 +291,8 @@ export const ProfileModal = ({
             reputation={reputation}
             onDonate={onDonate}
             showToast={showToast}
+            couponLeft={cdkey.couponLeft}
+            couponRedeemed={cdkey.couponRedeemed}
           />
         )}
 

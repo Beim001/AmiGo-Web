@@ -1,11 +1,13 @@
-import { Shield, Award, Sparkles, Flame } from 'lucide-react';
+import { Shield, Award, Sparkles, Ticket } from 'lucide-react';
 import { traitNames, traitById } from '../../lib/traits';
 import { reputationLevel } from '../../lib/reputation';
 import { JOB_POSITIONS } from '../JobModal';
 import type { ProfileModalProps } from '../ProfileModal';
 import { CURRENCY } from '../../data/seasons';
+import { CLOTHING_COUPON_USES } from '../../lib/clothingCoupon';
 
 // 「名片资料」标签页：身份履历、特质与声望（含慈善捐款）、特权光环
+// 特权光环只列出实际生效的特权（原先写死的「贵族礼遇 9 折」「天才推演 战斗爆伤」都没有实际效果，已移除）
 
 export type JobPosition = (typeof JOB_POSITIONS)[number];
 
@@ -13,9 +15,12 @@ interface InfoTabProps extends Pick<ProfileModalProps, 'originLabel' | 'playerTr
   currentJob: JobPosition | null;
   propertySummary: string | null;
   showToast: (msg: string) => void;
+  /** Aminoac2026 服饰 7 折剩余次数 */
+  couponLeft: number;
+  couponRedeemed: boolean;
 }
 
-export const InfoTab = ({ originLabel, currentJob, propertySummary, playerTraits, reputation, onDonate, showToast }: InfoTabProps) => {
+export const InfoTab = ({ originLabel, currentJob, propertySummary, playerTraits, reputation, onDonate, showToast, couponLeft, couponRedeemed }: InfoTabProps) => {
   return (
     <div className="space-y-3">
       <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000]">
@@ -87,22 +92,19 @@ export const InfoTab = ({ originLabel, currentJob, propertySummary, playerTraits
         <h3 className="text-white font-black text-sm mb-3 flex items-center gap-2 border-b border-gray-700/80 pb-2">
           <Award size={16} className="text-purple-400" /> 特权光环
         </h3>
-        <div className="grid grid-cols-2 gap-2">
+        {couponRedeemed || couponLeft > 0 ? (
           <div className="bg-[#21232e] p-2.5 rounded-xl border border-black flex items-center gap-2">
-            <Sparkles size={20} className="text-yellow-400 flex-shrink-0" />
+            <Ticket size={20} className={`${couponLeft > 0 ? 'text-yellow-400' : 'text-gray-600'} flex-shrink-0`} />
             <div>
-              <div className="text-white font-black text-xs">贵族礼遇</div>
-              <div className="text-gray-400 text-[10px]">购买服装享 9 折</div>
+              <div className={`${couponLeft > 0 ? 'text-white' : 'text-gray-500'} font-black text-xs`}>Aminoac2026 服饰礼遇</div>
+              <div className="text-gray-400 text-[10px]">
+                {couponLeft > 0 ? `购买服饰享 7 折 · 还剩 ${couponLeft} / ${CLOTHING_COUPON_USES} 次` : `${CLOTHING_COUPON_USES} 次 7 折已用完`}
+              </div>
             </div>
           </div>
-          <div className="bg-[#21232e] p-2.5 rounded-xl border border-black flex items-center gap-2">
-            <Flame size={20} className="text-rose-400 flex-shrink-0" />
-            <div>
-              <div className="text-white font-black text-xs">天才推演</div>
-              <div className="text-gray-400 text-[10px]">战斗爆伤 +15%</div>
-            </div>
-          </div>
-        </div>
+        ) : (
+          <div className="text-gray-500 text-xs font-bold">暂无特权，可在「礼包兑换」输入礼包码获得</div>
+        )}
       </div>
     </div>
   );

@@ -53,6 +53,7 @@ import {
 } from './lib/bank';
 import { loadMarket, saveMarket, findFinanceBackground } from './lib/stockMarket';
 import { HospitalModal } from './components/HospitalModal';
+import { CLOTHING_COUPON_KEY } from './lib/clothingCoupon';
 import { WelfareModal } from './components/WelfareModal';
 import { JobModal, JOB_POSITIONS, readCurrentJobId, readJobHistoryIds } from './components/JobModal';
 import { BirthModal } from './components/BirthModal';
@@ -96,8 +97,8 @@ const DEV_MOCK_USER: AppUser = {
 };
 
 // 重置人生时保留的存档键（账号级数据，不属于某一段人生）
-// 赛季进度与成就一样跨人生保留（第 55 题）
-const KEYS_KEPT_ON_RESET = new Set(['amigo_simple_mode', 'amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements', 'amigo_credits_seen', 'amigo_credits_rank', 'amigo_gifts_given', 'amigo_season_id', 'amigo_season_joined_at', 'amigo_season_sim_points', 'amigo_season_lazy', 'amigo_season_cheat']);
+// 赛季进度与成就一样跨人生保留（第 55 题）；服饰与服饰 7 折券属于账号，重置人生不清空
+const KEYS_KEPT_ON_RESET = new Set(['amigo_owned_clothes', 'amigo_equipped_clothing', CLOTHING_COUPON_KEY, 'amigo_simple_mode', 'amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements', 'amigo_credits_seen', 'amigo_credits_rank', 'amigo_gifts_given', 'amigo_season_id', 'amigo_season_joined_at', 'amigo_season_sim_points', 'amigo_season_lazy', 'amigo_season_cheat']);
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('role');
@@ -375,9 +376,7 @@ export default function App() {
     setBirthRegisteredYear(1870);
     setPlayerName('阿米诺斯市民');
 
-    // 2. 重置角色形象与服装
-    setEquippedClothing('default');
-    setOwnedClothes(['default']);
+    // 2. 重置角色形象（服饰跟随账号，保留已拥有与已穿戴的服饰）
     setAvatarSource('cartoon');
     setBilibiliAvatar(null);
 
@@ -421,8 +420,6 @@ export default function App() {
     // 显式写入重置后的初始值：若数值本来就等于初始值，持久化 effect 不会再次触发
     saveStored('amigo_coins', 10000);
     saveStored('amigo_health', 100);
-    saveStored('amigo_equipped_clothing', 'default');
-    saveStored('amigo_owned_clothes', ['default']);
     saveStored('amigo_free_draw_used', false);
     saveStored('amigo_family', INITIAL_FAMILY_STATE);
 

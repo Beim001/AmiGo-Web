@@ -9,6 +9,7 @@ import { drawGacha, hitLimitedPity, GACHA_PITY_KEY, INITIAL_PITY, PITY_RARE, PIT
 import { unlockAchievement } from '../lib/achievements';
 import { loadStored, saveStored } from '../lib/storage';
 import { CURRENCY } from '../data/seasons';
+import { couponPrice, loadCouponLeft, saveCouponLeft } from '../lib/clothingCoupon';
 
 // 商城：抽卡（含保底与开箱动画，奖品为卢布、家族礼物与服饰）、服饰购买与穿戴、理发店
 
@@ -208,6 +209,8 @@ export const ShopModal = ({
   const [shopToast, setShopToast] = React.useState<string | null>(null);
   const [pity, setPity] = React.useState<PityState>(() => loadStored(GACHA_PITY_KEY, INITIAL_PITY));
   React.useEffect(() => saveStored(GACHA_PITY_KEY, pity), [pity]);
+  // Aminoac2026 服饰 7 折剩余次数（账号级，重置人生保留）
+  const [couponLeft, setCouponLeft] = React.useState(loadCouponLeft);
 
   const showShopToast = (msg: string) => {
     setShopToast(msg);
@@ -347,23 +350,35 @@ export const ShopModal = ({
               服饰商城
             </div>
           </div>
+          {couponLeft > 0 && (
+            <div className="text-center text-yellow-300 text-[11px] font-black mt-2">🎟️ Aminoac2026 礼遇：购买服饰享 7 折，还剩 {couponLeft} 次</div>
+          )}
 
           <div className="grid grid-cols-3 gap-3 mt-4">
             {SHOP_ITEMS.map(item => {
               const isOwned = ownedClothes.includes(item.id);
               const isEquipped = equippedClothing === item.id;
 
+              const price = couponPrice(item.price, couponLeft);
+              const discounted = price !== item.price;
+
               const handleAction = () => {
                 if (isEquipped) return;
                 if (isOwned) {
                   setEquippedClothing(item.id);
                 } else {
-                  if (item.currency === 'coin' && coins >= item.price) {
-                    setCoins((prev: number) => prev - item.price);
+                  if (item.currency === 'coin' && coins >= price) {
+                    setCoins((prev: number) => prev - price);
                     setOwnedClothes((prev: string[]) => [...prev, item.id]);
                     setEquippedClothing(item.id);
+                    if (discounted) {
+                      const left = couponLeft - 1;
+                      setCouponLeft(left);
+                      saveCouponLeft(left);
+                      showShopToast(`🎟️ 7 折购入，省下 ${(item.price - price).toLocaleString()} ${CURRENCY.symbol}${left > 0 ? `，折扣还剩 ${left} 次` : '，折扣已用完'}`);
+                    }
                   } else {
-                    showShopToast(`余额不足！需要 ${item.price.toLocaleString()} ${CURRENCY.symbol}`);
+                    showShopToast(`余额不足！需要 ${price.toLocaleString()} ${CURRENCY.symbol}`);
                   }
                 }
               };
@@ -386,7 +401,8 @@ export const ShopModal = ({
                      {isEquipped ? '已穿戴' : isOwned ? '穿戴' : (
                        <>
                          <CurrencyIcon size={12} className="text-yellow-700 mr-0.5 stroke-[3]"/>
-                         {item.price}
+                         {discounted && <span className="line-through opacity-50 mr-1">{item.price}</span>}
+                         {price}
                        </>
                      )}
                   </button>

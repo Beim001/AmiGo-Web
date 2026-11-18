@@ -4,6 +4,7 @@ import { CurrencyIcon } from './CurrencyIcon';
 import { GIFTS, GIFT_QUALITY_STYLE } from '../lib/gifts';
 import { formatDuration } from '../lib/season';
 import { propertyUpkeep, REPOSSESS_AFTER_MONTHS, UpkeepProperty } from '../lib/homeUpkeep';
+import { CLOTHING_COUPON_CODE, saveCouponLeft } from '../lib/clothingCoupon';
 
 // 开发测试工具：仅在 `npm run dev` 下由 App 渲染（import.meta.env.DEV），生产构建中不存在。
 // 悬浮在所有界面之上：调整现金、一键快进月份、编辑年龄、新增子嗣、发放礼物、成就与赛季上报测试。
@@ -437,6 +438,22 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
           </div>
           <button onClick={onSetLimitedPity} className={`${btn} w-full mt-1.5`}>
             限定保底差一抽（测试「大非酋」）
+          </button>
+          <button
+            onClick={() => {
+              // 测试服饰 7 折券：清空剩余次数，并允许再次兑换 Aminoac2026（需重新打开个人中心）
+              try {
+                const codes = JSON.parse(localStorage.getItem('amigo_redeemed_codes') || '[]');
+                localStorage.setItem('amigo_redeemed_codes', JSON.stringify(Array.isArray(codes) ? codes.filter((c) => c !== CLOTHING_COUPON_CODE) : []));
+                saveCouponLeft(0);
+                setError(null);
+              } catch (e) {
+                setError('兑换记录读取失败');
+              }
+            }}
+            className={`${btn} w-full mt-1.5`}
+          >
+            重置 Aminoac2026（可再次兑换 7 折券）
           </button>
           <div className="text-[9px] text-gray-500 font-bold mt-1.5">可用于测试「集齐全部成就」后的致谢名单。「大非酋」：点按钮后打开商城单抽一次；「变装」：去理发店理一次发；「时装秀」：集齐商城全部服饰。</div>
 
