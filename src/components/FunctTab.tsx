@@ -57,7 +57,7 @@ const FUNC_BENTO = [
   // Block 6: 社区与文娱 (Cols 1-4, Rows 11-12)
   { id: 'movement', label: '公民运动', sub: '示威游行', icon: Megaphone, color: '#a84c38', span: 'col-span-2' },
   { id: 'map_srv', label: '社区地图', sub: '公共设施', icon: MapIcon, color: '#487a48', span: 'col-span-2' },
-  { id: 'entertainment', label: '文娱休闲', sub: '剧院、博彩与社交圈', icon: Gamepad2, color: '#7a4285', span: 'col-span-4' },
+  { id: 'entertainment', label: '文娱休闲', sub: '剧院、赛马、斗鸡与摔跤', icon: Gamepad2, color: '#7a4285', span: 'col-span-4' },
 ];
 
 const renderBentoContent = (item: any) => {
@@ -129,6 +129,8 @@ export interface FunctTabProps {
   onOpenWelfare?: () => void;
   /** 驾照管理（马车 / 汽车执照，第 67.4 题） */
   onOpenLicense?: () => void;
+  /** 文娱休闲（剧院、赌场、赛马、斗鸡、斗牛、摔跤，第 67.10 题） */
+  onOpenLeisure?: () => void;
   onOpenBirth?: () => void;
   onOpenGender?: () => void;
   onOpenHousing?: () => void;
@@ -144,6 +146,7 @@ export const FunctTab: React.FC<FunctTabProps> = ({
   onOpenJob,
   onOpenWelfare,
   onOpenLicense,
+  onOpenLeisure,
   onOpenBirth,
   onOpenGender,
   onOpenHousing,
@@ -167,6 +170,7 @@ export const FunctTab: React.FC<FunctTabProps> = ({
     hospital: onOpenHospital,
     welfare: onOpenWelfare,
     license: onOpenLicense,
+    entertainment: onOpenLeisure,
   };
 
   const showToast = (msg: string) => {

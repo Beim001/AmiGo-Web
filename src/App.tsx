@@ -56,6 +56,7 @@ import { HospitalModal } from './components/HospitalModal';
 import { CLOTHING_COUPON_KEY } from './lib/clothingCoupon';
 import { WelfareModal } from './components/WelfareModal';
 import { LicenseModal } from './components/LicenseModal';
+import { LeisureModal } from './components/LeisureModal';
 import { loadLicenses, loadVehicles, loadCoachman, saveCoachman } from './lib/vehicles';
 import { JobModal, JOB_POSITIONS, readCurrentJobId, readJobHistoryIds } from './components/JobModal';
 import { BirthModal } from './components/BirthModal';
@@ -113,6 +114,7 @@ export default function App() {
   const [showHospital, setShowHospital] = useState(false);
   const [showWelfare, setShowWelfare] = useState(false);
   const [showLicense, setShowLicense] = useState(false);
+  const [showLeisure, setShowLeisure] = useState(false);
   const [showJob, setShowJob] = useState(false);
   const [showHousing, setShowHousing] = useState(false);
   const [showVisa, setShowVisa] = useState(false);
@@ -839,6 +841,7 @@ export default function App() {
              onOpenJob={() => setShowJob(true)}
              onOpenWelfare={() => setShowWelfare(true)}
              onOpenLicense={() => setShowLicense(true)}
+             onOpenLeisure={() => setShowLeisure(true)}
              onOpenBirth={() => setShowBirthModal(true)}
              onOpenGender={() => setShowGenderModal(true)}
              onOpenHousing={() => setShowHousing(true)}
@@ -970,6 +973,22 @@ export default function App() {
              onMaintenance={handleMaintenance}
              hasSpouse={!!family.spouse}
              fertilityText={fertilityText}
+           />
+         )}
+
+         {/* 文娱休闲（剧院、赌场、赛马、斗鸡、斗牛、摔跤） */}
+         {showLeisure && (
+           <LeisureModal
+             onClose={() => setShowLeisure(false)}
+             coins={coins}
+             setCoins={setCoins}
+             health={health}
+             setHealth={setHealth}
+             changeReputation={changeReputation}
+             isRegistered={isRegistered}
+             age={currentAge}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
            />
          )}
 

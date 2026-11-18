@@ -6,6 +6,7 @@ import { formatDuration } from '../lib/season';
 import { propertyUpkeep, REPOSSESS_AFTER_MONTHS, UpkeepProperty } from '../lib/homeUpkeep';
 import { CLOTHING_COUPON_CODE, saveCouponLeft } from '../lib/clothingCoupon';
 import { saveLicenses, saveVehicles, saveCoachman } from '../lib/vehicles';
+import { saveLeisureRecord } from '../lib/leisure';
 
 // 开发测试工具：仅在 `npm run dev` 下由 App 渲染（import.meta.env.DEV），生产构建中不存在。
 // 悬浮在所有界面之上：调整现金、一键快进月份、编辑年龄、新增子嗣、发放礼物、成就与赛季上报测试。
@@ -332,6 +333,16 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
                   清空执照、车马与车夫
                 </button>
               </div>
+              <button
+                onClick={() => {
+                  // 测试第 67.10 题：清空文娱休闲每月一次的记录（需重新打开文娱休闲）
+                  saveLeisureRecord({});
+                  setError(null);
+                }}
+                className={`${btn} w-full mt-1.5`}
+              >
+                清空本月文娱记录（可再去一次）
+              </button>
               <button onClick={onToggleSimpleMode} className={`${btn} w-full mt-1.5`}>
                 {simpleMode ? '切回完整模式' : '切到简洁模式'}
               </button>
