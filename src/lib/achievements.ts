@@ -1,3 +1,4 @@
+import { CURRENCY } from '../data/seasons';
 // 成就（undefined.md 第 26 题）：完成时间记录现实时间；跨人生保留（重置人生不清除）
 
 export const ACHIEVEMENTS_KEY = 'amigo_achievements';
@@ -18,8 +19,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'married', title: '喜结连理', desc: '结婚', icon: 'heart' },
   { id: 'big_family', title: '儿孙满堂', desc: '子嗣达到 4 人', icon: 'users' },
   { id: 'twins', title: '双喜临门', desc: '生下双胞胎', icon: 'gift' },
-  { id: 'rich', title: '腰缠万贯', desc: '现金 + 存款 ≥ 1,000,000 ₽', icon: 'gem' },
-  { id: 'tycoon', title: '富可敌国', desc: '现金 + 存款 ≥ 100,000,000 ₽', icon: 'crown' },
+  { id: 'rich', title: '腰缠万贯', desc: `现金 + 存款 ≥ 1,000,000 ${CURRENCY.symbol}`, icon: 'gem' },
+  { id: 'tycoon', title: '富可敌国', desc: `现金 + 存款 ≥ 100,000,000 ${CURRENCY.symbol}`, icon: 'crown' },
   { id: 'stock', title: '证券入市', desc: '开立证券账户', icon: 'chart' },
   { id: 'traveler', title: '周游列国', desc: '完成 3 次出国旅行', icon: 'plane' },
   { id: 'resident', title: '落地生根', desc: '获得一项海外永久居留', icon: 'globe' },

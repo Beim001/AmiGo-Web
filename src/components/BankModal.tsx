@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronLeft, Landmark, Wallet, Building, TrendingUp, ChevronRight, AlertTriangle } from 'lucide-react';
 import { addLifeLog } from '../lib/lifeLog';
 import { BANK_LIST, BankAccounts, loadAccounts, saveAccounts as persistBankAccounts, currentRateEvent, loanRateFor, formatRate } from '../lib/bank';
+import { CURRENCY } from '../data/seasons';
 
 // 银行：各银行账户存取款、贷款与利率
 
@@ -60,7 +61,7 @@ export const BankModal = ({
   // 开立新银行账户
   const handleOpenAccount = (bank: typeof BANK_LIST[0]) => {
     if (coins < bank.openFee) {
-      showToast(`身上现金不足以支付开户费 (${bank.openFee.toLocaleString()} ₽)！`);
+      showToast(`身上现金不足以支付开户费 (${bank.openFee.toLocaleString()} ${CURRENCY.symbol})！`);
       return;
     }
 
@@ -139,7 +140,7 @@ export const BankModal = ({
     };
     saveAccounts(updated);
     setAmountInput('');
-    showToast(`成功存入 ${val.toLocaleString()} ₽ 储蓄金！`);
+    showToast(`成功存入 ${val.toLocaleString()} ${CURRENCY.symbol} 储蓄金！`);
   };
 
   // 取款处理
@@ -169,14 +170,14 @@ export const BankModal = ({
     saveAccounts(updated);
     setCoins(prev => prev + val);
     setAmountInput('');
-    showToast(`成功支取 ${val.toLocaleString()} ₽ 现金！`);
+    showToast(`成功支取 ${val.toLocaleString()} ${CURRENCY.symbol} 现金！`);
   };
 
   // 申请贷款
   const handleApplyLoan = (loanAmount: number) => {
     if (!selectedBankId || !currentAccount || !currentBank) return;
     if (currentAccount.loan + loanAmount > currentBank.maxLoan) {
-      showToast(`超出本行最高信贷额度 (${currentBank.maxLoan.toLocaleString()} ₽)！`);
+      showToast(`超出本行最高信贷额度 (${currentBank.maxLoan.toLocaleString()} ${CURRENCY.symbol})！`);
       return;
     }
 
@@ -193,8 +194,8 @@ export const BankModal = ({
     };
     saveAccounts(updated);
     setCoins(prev => prev + loanAmount);
-    if (loanAmount >= 100000) addLifeLog('财富', `向${currentBank.shortName}贷款`, `借入 ${loanAmount.toLocaleString()} ₽。`);
-    showToast(`成功贷款 ${loanAmount.toLocaleString()} ₽，资金已入账！`);
+    if (loanAmount >= 100000) addLifeLog('财富', `向${currentBank.shortName}贷款`, `借入 ${loanAmount.toLocaleString()} ${CURRENCY.symbol}。`);
+    showToast(`成功贷款 ${loanAmount.toLocaleString()} ${CURRENCY.symbol}，资金已入账！`);
   };
 
   // 归还贷款
@@ -229,7 +230,7 @@ export const BankModal = ({
     };
     saveAccounts(updated);
     setAmountInput('');
-    showToast(`成功归还贷款 ${repayVal.toLocaleString()} ₽！`);
+    showToast(`成功归还贷款 ${repayVal.toLocaleString()} ${CURRENCY.symbol}！`);
   };
 
   // 计算多账户总资产
@@ -284,7 +285,7 @@ export const BankModal = ({
                     <Wallet size={14} /> 全域银行资产 (储蓄总额 + 现金)
                   </div>
                   <div className="text-white font-black text-2xl mt-1 tracking-wider font-mono">
-                    {(coins + totalDepositAll).toLocaleString()} <span className="text-sm font-bold text-yellow-400">₽</span>
+                    {(coins + totalDepositAll).toLocaleString()} <span className="text-sm font-bold text-yellow-400">{CURRENCY.symbol}</span>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
@@ -305,15 +306,15 @@ export const BankModal = ({
               <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-700/80 text-xs">
                 <div className="bg-[#21232e] p-2 rounded-xl border border-black">
                   <span className="text-gray-400 text-[10px] block font-bold">身上现金</span>
-                  <span className="text-yellow-400 font-black font-mono text-xs">{coins.toLocaleString()} ₽</span>
+                  <span className="text-yellow-400 font-black font-mono text-xs">{coins.toLocaleString()} {CURRENCY.symbol}</span>
                 </div>
                 <div className="bg-[#21232e] p-2 rounded-xl border border-black">
                   <span className="text-gray-400 text-[10px] block font-bold">存款总额</span>
-                  <span className="text-emerald-400 font-black font-mono text-xs">{totalDepositAll.toLocaleString()} ₽</span>
+                  <span className="text-emerald-400 font-black font-mono text-xs">{totalDepositAll.toLocaleString()} {CURRENCY.symbol}</span>
                 </div>
                 <div className="bg-[#21232e] p-2 rounded-xl border border-black">
                   <span className="text-gray-400 text-[10px] block font-bold">贷款总欠款</span>
-                  <span className="text-red-400 font-black font-mono text-xs">{totalLoanAll.toLocaleString()} ₽</span>
+                  <span className="text-red-400 font-black font-mono text-xs">{totalLoanAll.toLocaleString()} {CURRENCY.symbol}</span>
                 </div>
               </div>
             </div>
@@ -388,7 +389,7 @@ export const BankModal = ({
                           onClick={() => handleOpenAccount(bank)}
                           className="bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs px-3.5 py-1.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer active:translate-y-0.5"
                         >
-                          {bank.openFee === 0 ? '免费开立账户' : `开立账户 (${(bank.openFee/1000).toFixed(0)}k ₽)`}
+                          {bank.openFee === 0 ? '免费开立账户' : `开立账户 (${(bank.openFee/1000).toFixed(0)}k ${CURRENCY.symbol})`}
                         </button>
                       )}
                     </div>
@@ -396,10 +397,10 @@ export const BankModal = ({
                     {isOpened && (
                       <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] bg-[#21232e] p-2 rounded-xl border border-black">
                         <div className="text-gray-300">
-                          存款余额: <span className="text-emerald-400 font-mono font-bold">{acc.deposit.toLocaleString()} ₽</span>
+                          存款余额: <span className="text-emerald-400 font-mono font-bold">{acc.deposit.toLocaleString()} {CURRENCY.symbol}</span>
                         </div>
                         <div className="text-gray-300">
-                          信贷欠款: <span className="text-red-400 font-mono font-bold">{acc.loan.toLocaleString()} ₽</span>
+                          信贷欠款: <span className="text-red-400 font-mono font-bold">{acc.loan.toLocaleString()} {CURRENCY.symbol}</span>
                         </div>
                       </div>
                     )}
@@ -434,13 +435,13 @@ export const BankModal = ({
                 <div className="bg-[#21232e] p-2 rounded-xl border border-black">
                   <span className="text-gray-300 text-[10px] block font-bold">本行定期储蓄</span>
                   <span className="text-emerald-400 font-black font-mono text-sm">
-                    {currentAccount?.deposit.toLocaleString()} ₽
+                    {currentAccount?.deposit.toLocaleString()} {CURRENCY.symbol}
                   </span>
                 </div>
                 <div className="bg-[#21232e] p-2 rounded-xl border border-black">
                   <span className="text-gray-300 text-[10px] block font-bold">本行信贷欠款</span>
                   <span className="text-red-400 font-black font-mono text-sm">
-                    {currentAccount?.loan.toLocaleString()} ₽
+                    {currentAccount?.loan.toLocaleString()} {CURRENCY.symbol}
                   </span>
                 </div>
               </div>
@@ -495,7 +496,7 @@ export const BankModal = ({
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs text-gray-300 font-bold">
                     <span>办理金额：</span>
-                    <span className="text-amber-300">身上现金: {coins.toLocaleString()} ₽</span>
+                    <span className="text-amber-300">身上现金: {coins.toLocaleString()} {CURRENCY.symbol}</span>
                   </div>
                   <div className="flex gap-2">
                     <input
@@ -549,7 +550,7 @@ export const BankModal = ({
                 <div className="bg-[#21232e] p-3 rounded-xl border border-black space-y-1">
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-400 font-bold">本行已借贷款：</span>
-                    <span className="text-red-400 font-black font-mono">{currentAccount?.loan.toLocaleString()} ₽</span>
+                    <span className="text-red-400 font-black font-mono">{currentAccount?.loan.toLocaleString()} {CURRENCY.symbol}</span>
                   </div>
                   {currentBank && (
                     <div className="flex justify-between text-xs">
@@ -566,7 +567,7 @@ export const BankModal = ({
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-400 font-bold">本行剩余可用额度：</span>
                     <span className="text-emerald-400 font-black font-mono">
-                      {Math.max(0, (currentBank?.maxLoan || 1000000) - (currentAccount?.loan || 0)).toLocaleString()} ₽
+                      {Math.max(0, (currentBank?.maxLoan || 1000000) - (currentAccount?.loan || 0)).toLocaleString()} {CURRENCY.symbol}
                     </span>
                   </div>
                 </div>
@@ -580,7 +581,7 @@ export const BankModal = ({
                         onClick={() => handleApplyLoan(amt)}
                         className="bg-amber-400 hover:bg-amber-300 text-black font-black text-xs py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer"
                       >
-                        贷款 {(amt / 10000)}万 ₽
+                        贷款 {(amt / 10000)}万 {CURRENCY.symbol}
                       </button>
                     ))}
                   </div>
@@ -624,7 +625,7 @@ export const BankModal = ({
                         <div className="text-gray-400 text-[10px] font-mono mt-0.5">{tx.time}</div>
                       </div>
                       <div className={`font-black font-mono text-xs ${tx.amount >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {tx.amount >= 0 ? `+${tx.amount.toLocaleString()}` : tx.amount.toLocaleString()} ₽
+                        {tx.amount >= 0 ? `+${tx.amount.toLocaleString()}` : tx.amount.toLocaleString()} {CURRENCY.symbol}
                       </div>
                     </div>
                   ))}

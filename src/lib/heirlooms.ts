@@ -1,3 +1,4 @@
+import { CURRENCY } from '../data/seasons';
 // 传家宝（undefined.md 第 33、34 题，默认值）
 // - 获得途径：拍卖会（随机开办，需门票或受邀）、「机遇」推演事件（如参军获得勋章）
 // - 传家宝只作展示与收藏，不提供数值加成；估价计入家族资产（排行榜财力）
@@ -182,7 +183,7 @@ export const raiseBid = (lot: AuctionLot, bid: number): RaiseResult => {
   if (l.status !== 'open') return { lot, outcome: 'error', error: '这件拍品已经结束竞拍' };
   if (l.leader === 'player') return { lot, outcome: 'error', error: '你已经是最高出价者' };
   const min = minNextBid(l);
-  if (!Number.isFinite(bid) || bid < min) return { lot, outcome: 'error', error: `出价不能低于 ${min.toLocaleString()} ₽` };
+  if (!Number.isFinite(bid) || bid < min) return { lot, outcome: 'error', error: `出价不能低于 ${min.toLocaleString()} ${CURRENCY.symbol}` };
   if (bid >= l.buyout) return buyoutLot(l);
   if (l.rivalMax > bid) {
     // 其他竞买人跟价：在玩家出价上加一档，但不超过心理价位
@@ -205,7 +206,7 @@ export const passLot = (lot: AuctionLot): AuctionLot => ({ ...normalizeLot(lot),
 /** 封闭式出价（旧规则，保留给旧代码与测试）：出价不低于起拍价；不低于其他竞买人的最高出价即拍得 */
 export const placeBid = (lot: AuctionLot, bid: number): { lot: AuctionLot; won: boolean; error?: string } => {
   if (lot.status !== 'open') return { lot, won: false, error: '这件拍品已经结束竞拍' };
-  if (!Number.isFinite(bid) || bid < lot.startPrice) return { lot, won: false, error: `出价不能低于起拍价 ${lot.startPrice.toLocaleString()} ₽` };
+  if (!Number.isFinite(bid) || bid < lot.startPrice) return { lot, won: false, error: `出价不能低于起拍价 ${lot.startPrice.toLocaleString()} ${CURRENCY.symbol}` };
   const won = bid >= lot.rivalMax;
   return { lot: { ...lot, status: won ? 'won' : 'lost', paid: won ? bid : undefined }, won };
 };

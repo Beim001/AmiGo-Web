@@ -1,5 +1,9 @@
-import { addLifeLog } from '../lib/lifeLog';
-import React, { useState, useEffect, useMemo } from 'react';
+import {
+  addLifeLog } from '../lib/lifeLog';
+import React,
+  { useState,
+  useEffect,
+  useMemo } from 'react';
 import {
   ChevronLeft,
   Plane,
@@ -8,7 +12,6 @@ import {
   BookOpen,
   Stamp,
   ShieldCheck,
-  RussianRuble,
   Sparkles,
   CheckCircle2,
   AlertCircle,
@@ -40,7 +43,9 @@ import {
   ChevronDown,
   Layers,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
 import { HistoricalFlag } from './HistoricalFlag';
+import { CURRENCY } from '../data/seasons';
 
 export interface VisaItem {
   id: string;
@@ -132,7 +137,7 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 4000,
     durationMonths: 36,
     expediteFee: 500,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 4,000 ₽', '无外交豁免阻却事由'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 4,000 ${CURRENCY.symbol}`, '无外交豁免阻却事由'],
     benefits: ['前往伦敦金融城、牛津大学与皇家学会交流', '游历归来大幅增加学术声誉与阅历见闻', '有机会获得日不落帝国工业专利授权'],
     description: '日不落帝国官方公文签证，准许通行伦敦金融城、泰晤士河各大港口与皇家科学院。',
     color: '#8b5cf6',
@@ -150,8 +155,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 2000,
     durationMonths: 24,
     expediteFee: 400,
-    requirements: ['持有效帝国护照', '个人资金储备 ≥ 2,000 ₽', '体魄状态良好健康'],
-    benefits: ['派驻柏林机械厂与鲁尔重工业冶金基地', '每次出境技术派遣可斩获高额技师津贴 +2,800 ~ 5,200 ₽', '获取德意志先进车床采买配额'],
+    requirements: ['持有效帝国护照', `个人资金储备 ≥ 2,000 ${CURRENCY.symbol}`, '体魄状态良好健康'],
+    benefits: ['派驻柏林机械厂与鲁尔重工业冶金基地', `每次出境技术派遣可斩获高额技师津贴 +2,800 ~ 5,200 ${CURRENCY.symbol}`, '获取德意志先进车床采买配额'],
     description: '北德意志联邦与普鲁士重工招募准入文书，技术工程师与机械工匠的海外发展通道。',
     color: '#06b6d4',
     accentBg: 'rgba(6, 182, 212, 0.15)',
@@ -168,7 +173,7 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 1200,
     durationMonths: 12,
     expediteFee: 200,
-    requirements: ['持有效帝国护照', '基础差旅资金 ≥ 1,200 ₽'],
+    requirements: ['持有效帝国护照', `基础差旅资金 ≥ 1,200 ${CURRENCY.symbol}`],
     benefits: ['漫步香榭丽舍大街、卢浮宫与左岸艺术沙龙', '极速恢复体魄与精力（健康度 +30）', '收集欧陆古典印象派油画与精致奢侈藏品'],
     description: '欧陆艺术与时尚之都旅游准证，畅游塞纳河畔、巴黎歌剧院与名流沙龙。',
     color: '#ec4899',
@@ -186,7 +191,7 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 20000,
     durationMonths: 60,
     expediteFee: 2000,
-    requirements: ['持有效帝国护照', '验资净资产 ≥ 20,000 ₽', '认购美洲铁路建设公债'],
+    requirements: ['持有效帝国护照', `验资净资产 ≥ 20,000 ${CURRENCY.symbol}`, '认购美洲铁路建设公债'],
     benefits: ['获得纽约与旧金山长期居留特权与无限次出入境', '出境游历可参与华尔街铁路证券与西海岸黄金对冲大赚', '专属领事级绿色快速通关通道'],
     description: '镀金时代资本通行证，太平洋铁路连通后的淘金与工商业投资热土。',
     color: '#eab308',
@@ -204,8 +209,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 2500,
     durationMonths: 24,
     expediteFee: 300,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 2,500 ₽', '无通缉或未结案记录'],
-    benefits: ['前往圣彼得堡与莫斯科进行跨国大宗贸易', '每次考察可斩获 2,000 ~ 4,500 ₽ 毛皮与贵金属订单', '提升沙皇宫廷贵族商贸声誉'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 2,500 ${CURRENCY.symbol}`, '无通缉或未结案记录'],
+    benefits: ['前往圣彼得堡与莫斯科进行跨国大宗贸易', `每次考察可斩获 2,000 ~ 4,500 ${CURRENCY.symbol} 毛皮与贵金属订单`, '提升沙皇宫廷贵族商贸声誉'],
     description: '罗曼诺夫王朝官方商签，连接欧亚大陆的珍贵皮草、木材与大宗商贸干线。',
     color: '#3b82f6',
     accentBg: 'rgba(59, 130, 246, 0.15)',
@@ -222,7 +227,7 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 5000,
     durationMonths: 24,
     expediteFee: 600,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 5,000 ₽'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 5,000 ${CURRENCY.symbol}`],
     benefits: ['前往开埠之横滨港、东京与京都探秘', '极高几率发掘传世浮世绘、古名刀与东洋珍宝', '在箱根温泉中大幅洗涤体魄（健康度 +35）'],
     description: '明治维新文明开化时期的涉外通商许可，古老幕府余韵与近代浪潮交汇之地。',
     color: '#f43f5e',
@@ -240,8 +245,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 3000,
     durationMonths: 24,
     expediteFee: 350,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 3,000 ₽'],
-    benefits: ['进驻维也纳金色大厅聆听圆舞曲与宫廷歌剧', '签订中欧多瑙河流域粮食与工芸品贸易契约（收益 +2,500 ~ 4,200 ₽）', '获得哈布斯堡王朝宫廷赞誉'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 3,000 ${CURRENCY.symbol}`],
+    benefits: ['进驻维也纳金色大厅聆听圆舞曲与宫廷歌剧', `签订中欧多瑙河流域粮食与工芸品贸易契约（收益 +2,500 ~ 4,200 ${CURRENCY.symbol}）`, '获得哈布斯堡王朝宫廷赞誉'],
     description: '哈布斯堡双元帝国皇家通关文牒，古典艺术、歌剧与中欧多瑙河航运枢纽。',
     color: '#10b981',
     accentBg: 'rgba(16, 185, 129, 0.15)',
@@ -258,8 +263,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 3500,
     durationMonths: 24,
     expediteFee: 400,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 3,500 ₽'],
-    benefits: ['考察上海公共租界江海关与广州十三行外贸口岸', '采购优质生丝、名贵瓷器与武夷贡茶销往欧陆（收益 +3,000 ~ 6,000 ₽）', '获清廷总理各国事务衙门通商关防'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 3,500 ${CURRENCY.symbol}`],
+    benefits: ['考察上海公共租界江海关与广州十三行外贸口岸', `采购优质生丝、名贵瓷器与武夷贡茶销往欧陆（收益 +3,000 ~ 6,000 ${CURRENCY.symbol}）`, '获清廷总理各国事务衙门通商关防'],
     description: '洋务运动蓬勃兴起时期的通商准照，开埠口岸与东方大宗丝茶贸易黄金通道。',
     color: '#d97706',
     accentBg: 'rgba(217, 119, 6, 0.15)',
@@ -276,8 +281,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 2800,
     durationMonths: 24,
     expediteFee: 300,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 2,800 ₽'],
-    benefits: ['游历罗马斗兽场、威尼斯水城与佛罗伦萨文艺复兴殿堂', '采购托斯卡纳顶级橄榄油与古典大理石雕塑（收益 +2,400 ~ 4,000 ₽）', '健康度 +25'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 2,800 ${CURRENCY.symbol}`],
+    benefits: ['游历罗马斗兽场、威尼斯水城与佛罗伦萨文艺复兴殿堂', `采购托斯卡纳顶级橄榄油与古典大理石雕塑（收益 +2,400 ~ 4,000 ${CURRENCY.symbol}）`, '健康度 +25'],
     description: '意大利王国收复罗马完成统一时期的涉外文牒，地中海贸易枢纽与艺术复兴重镇。',
     color: '#059669',
     accentBg: 'rgba(5, 150, 105, 0.15)',
@@ -294,8 +299,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 2200,
     durationMonths: 18,
     expediteFee: 250,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 2,200 ₽'],
-    benefits: ['涉足直布罗陀海峡与加的斯跨洋海运干线', '签订伊比利亚半岛软木、柑橘与雪莉酒贸易契约（收益 +2,200 ~ 3,800 ₽）'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 2,200 ${CURRENCY.symbol}`],
+    benefits: ['涉足直布罗陀海峡与加的斯跨洋海运干线', `签订伊比利亚半岛软木、柑橘与雪莉酒贸易契约（收益 +2,200 ~ 3,800 ${CURRENCY.symbol}）`],
     description: '伊比利亚半岛通商公文，连结地中海与大西洋贸易的古老航海大国。',
     color: '#ea580c',
     accentBg: 'rgba(234, 88, 12, 0.15)',
@@ -312,8 +317,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 3800,
     durationMonths: 24,
     expediteFee: 450,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 3,800 ₽'],
-    benefits: ['深入鹿特丹港口与阿姆斯特丹钻石交易所', '承接远东肉豆蔻、丁香与郁金香大宗期货清算（收益 +3,200 ~ 5,500 ₽）'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 3,800 ${CURRENCY.symbol}`],
+    benefits: ['深入鹿特丹港口与阿姆斯特丹钻石交易所', `承接远东肉豆蔻、丁香与郁金香大宗期货清算（收益 +3,200 ~ 5,500 ${CURRENCY.symbol}）`],
     description: '低地国家老牌金融商贸签，全球航运保险与远洋香料集散核心。',
     color: '#2563eb',
     accentBg: 'rgba(37, 99, 235, 0.15)',
@@ -330,8 +335,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 4500,
     durationMonths: 36,
     expediteFee: 500,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 4,500 ₽'],
-    benefits: ['在阿尔卑斯雪山圣地静修，体魄与健康度极速回满 (+40)', '获得日内瓦独立制表大师专属机芯制造配额（收益 +3,500 ~ 6,000 ₽）'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 4,500 ${CURRENCY.symbol}`],
+    benefits: ['在阿尔卑斯雪山圣地静修，体魄与健康度极速回满 (+40)', `获得日内瓦独立制表大师专属机芯制造配额（收益 +3,500 ~ 6,000 ${CURRENCY.symbol}）`],
     description: '中立国专属通行函，精密机械工坊、永久中立金融与高山疗养胜地。',
     color: '#dc2626',
     accentBg: 'rgba(220, 38, 38, 0.15)',
@@ -348,8 +353,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 2600,
     durationMonths: 24,
     expediteFee: 350,
-    requirements: ['持有效帝国护照', '个人资金储备 ≥ 2,600 ₽'],
-    benefits: ['考察基律纳特级优质铁矿与波罗的海造船木料', '与阿尔弗雷德·诺贝尔火药工坊合作获取安全炸药专利授权（收益 +2,900 ~ 4,800 ₽）'],
+    requirements: ['持有效帝国护照', `个人资金储备 ≥ 2,600 ${CURRENCY.symbol}`],
+    benefits: ['考察基律纳特级优质铁矿与波罗的海造船木料', `与阿尔弗雷德·诺贝尔火药工坊合作获取安全炸药专利授权（收益 +2,900 ~ 4,800 ${CURRENCY.symbol}）`],
     description: '北欧联合王国工矿准照，优质铁矿石、耐寒木材与近代工程化学前沿。',
     color: '#0284c7',
     accentBg: 'rgba(2, 132, 199, 0.15)',
@@ -366,8 +371,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 2600,
     durationMonths: 24,
     expediteFee: 320,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 2,600 ₽'],
-    benefits: ['横跨欧亚博斯普鲁斯海峡，掌控近东商道', '采购大马士革名刀、波斯织毯与叙利亚香精（收益 +2,600 ~ 4,600 ₽）'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 2,600 ${CURRENCY.symbol}`],
+    benefits: ['横跨欧亚博斯普鲁斯海峡，掌控近东商道', `采购大马士革名刀、波斯织毯与叙利亚香精（收益 +2,600 ~ 4,600 ${CURRENCY.symbol}）`],
     description: '坦志麦特改革时期的崇高门商照，连结欧亚非三大洲的大巴扎枢纽。',
     color: '#b91c1c',
     accentBg: 'rgba(185, 28, 28, 0.15)',
@@ -384,8 +389,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 12000,
     durationMonths: 48,
     expediteFee: 1200,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 12,000 ₽'],
-    benefits: ['入股圣保罗咖啡种植园与亚马逊野生天然橡胶贸易', '每次出境可获得南美大宗热带经济作物分红 +5,500 ~ 9,000 ₽'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 12,000 ${CURRENCY.symbol}`],
+    benefits: ['入股圣保罗咖啡种植园与亚马逊野生天然橡胶贸易', `每次出境可获得南美大宗热带经济作物分红 +5,500 ~ 9,000 ${CURRENCY.symbol}`],
     description: '佩德罗二世统治下的南美帝国，热带咖啡、蔗糖与热带雨林宝藏的投资乐园。',
     color: '#15803d',
     accentBg: 'rgba(21, 128, 61, 0.15)',
@@ -549,7 +554,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
     }
     const PASSPORT_FEE = 300;
     if (coins < PASSPORT_FEE) {
-      showToast(`现金不足！办理帝国出入境护照需 ${PASSPORT_FEE} ₽ 工本费`, 'error');
+      showToast(`现金不足！办理帝国出入境护照需 ${PASSPORT_FEE} ${CURRENCY.symbol} 工本费`, 'error');
       return;
     }
 
@@ -585,12 +590,12 @@ export const VisaModal: React.FC<VisaModalProps> = ({
 
     const totalCost = visa.cost + (isExpedited ? visa.expediteFee : 0);
     if (coins < totalCost) {
-      showToast(`资金不足！申办该签证共需 ${totalCost} ₽（工本规费 ${visa.cost} ₽ + 领事加急 ${isExpedited ? visa.expediteFee : 0} ₽）`, 'error');
+      showToast(`资金不足！申办该签证共需 ${totalCost} ${CURRENCY.symbol}（工本规费 ${visa.cost} ${CURRENCY.symbol} + 领事加急 ${isExpedited ? visa.expediteFee : 0} ${CURRENCY.symbol}）`, 'error');
       return;
     }
 
     if (coins < visa.minAssets) {
-      showToast(`验资未通过！该签证要求个人资产达到 ${visa.minAssets.toLocaleString()} ₽`, 'error');
+      showToast(`验资未通过！该签证要求个人资产达到 ${visa.minAssets.toLocaleString()} ${CURRENCY.symbol}`, 'error');
       return;
     }
 
@@ -655,7 +660,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
 
     const TRAVEL_EXPENSE = 400; // 远洋客轮差旅基础开销
     if (coins < TRAVEL_EXPENSE) {
-      showToast(`差旅费不足！出境登船需支付 ${TRAVEL_EXPENSE} ₽ 跨洋远洋客轮头等舱票`, 'error');
+      showToast(`差旅费不足！出境登船需支付 ${TRAVEL_EXPENSE} ${CURRENCY.symbol} 跨洋远洋客轮头等舱票`, 'error');
       return;
     }
 
@@ -694,7 +699,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `贸易与学术酬金 +${gainCoins} ₽，见闻广博，体魄 +${gainHealth}`;
+        rewardText = `贸易与学术酬金 +${gainCoins} ${CURRENCY.symbol}，见闻广博，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'PRU') {
         const outcomes = [
           { s: '在埃森克虏伯重工铸造厂指导蒸汽钻机调试，矿业督察官签发了丰厚的特别技术酬劳。', c: 3800, h: 10 },
@@ -704,7 +709,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `重工技术津贴 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `重工技术津贴 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'FRA') {
         const outcomes = [
           { s: '漫步巴黎香榭丽舍大街与杜乐丽花园，品尝波尔多名庄红酒，结识贵族艺术家，身心得到充分调养。', c: 600, h: 30 },
@@ -714,7 +719,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `度假圆满，体魄大满 +${gainHealth}，艺术收益 +${gainCoins} ₽`;
+        rewardText = `度假圆满，体魄大满 +${gainHealth}，艺术收益 +${gainCoins} ${CURRENCY.symbol}`;
       } else if (issued.countryCode === 'USA') {
         const outcomes = [
           { s: '在纽约华尔街联合交易所参与联合太平洋铁路股票发行，斩获巨额资本红利。', c: 7500, h: 15 },
@@ -724,7 +729,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `美洲资本红利 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `美洲资本红利 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'RUS') {
         const outcomes = [
           { s: '在圣彼得堡涅瓦大街与皇室供货商达成西伯利亚顶级紫貂皮草采购契约，获利颇丰。', c: 3600, h: 10 },
@@ -734,7 +739,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `欧亚贸易收益 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `欧亚贸易收益 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'JPN') {
         const outcomes = [
           { s: '在横滨开埠口岸与商行达成生丝贸易契约，并在箱根温泉中洗尽铅华，身心全面焕发。', c: 2200, h: 35 },
@@ -744,7 +749,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `体魄大涨 +${gainHealth}，东洋奇珍收益 +${gainCoins} ₽`;
+        rewardText = `体魄大涨 +${gainHealth}，东洋奇珍收益 +${gainCoins} ${CURRENCY.symbol}`;
       } else if (issued.countryCode === 'AUT') {
         const outcomes = [
           { s: '在维也纳金色大厅聆听施特劳斯圆舞曲，与哈布斯堡贵族敲定多瑙河航运谷物期货合同。', c: 3300, h: 15 },
@@ -754,7 +759,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `多瑙河商贸收益 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `多瑙河商贸收益 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'ITA') {
         const outcomes = [
           { s: '漫步罗马斗兽场与万神殿，并与佛罗伦萨商行达成大理石雕塑采购订单。', c: 3400, h: 25 },
@@ -764,7 +769,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `地中海贸易收益 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `地中海贸易收益 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'ESP') {
         const outcomes = [
           { s: '在马德里皇家商会签订安达卢西亚特产雪莉酒与橄榄油采购总约，销路极佳。', c: 3100, h: 15 },
@@ -774,7 +779,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `西班牙商贸收益 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `西班牙商贸收益 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'NLD') {
         const outcomes = [
           { s: '在阿姆斯特丹证券交易所精准交割东印度香料期票，斩获巨额投机收益。', c: 4600, h: 15 },
@@ -784,7 +789,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `低地金融收益 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `低地金融收益 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'CHE') {
         const outcomes = [
           { s: '在日内瓦钟表大师工坊订购专属陀飞轮天文台怀表，并于阿尔卑斯峰峦间尽情呼吸，体魄焕新。', c: 4200, h: 40 },
@@ -794,7 +799,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `瑞士钟表与银行收益 +${gainCoins} ₽，体魄暴增 +${gainHealth}`;
+        rewardText = `瑞士钟表与银行收益 +${gainCoins} ${CURRENCY.symbol}，体魄暴增 +${gainHealth}`;
       } else if (issued.countryCode === 'SWE') {
         const outcomes = [
           { s: '在斯德哥尔摩与诺贝尔实验室工程师共同改进安全雷管，获得技术转让分红。', c: 4100, h: 15 },
@@ -804,7 +809,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `北欧工矿分红 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `北欧工矿分红 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'TUR') {
         const outcomes = [
           { s: '穿行于伊斯坦布尔大巴扎，采购名贵波斯毛毯与大马士革手工刀剑，返程大获全胜。', c: 3700, h: 20 },
@@ -814,7 +819,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `近东丝路大单 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `近东丝路大单 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'BRA') {
         const outcomes = [
           { s: '在里约热内卢港口交割整船优质热带咖啡豆与橡胶原料，赚取丰厚外汇。', c: 7200, h: 20 },
@@ -824,7 +829,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `南美热带大宗分红 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `南美热带大宗分红 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else {
         const outcomes = [
           { s: '在上海公共租界江海关采购优质湖丝与景德镇青花瓷，转运返航大受追捧，获利丰厚。', c: 4800, h: 15 },
@@ -834,7 +839,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `洋务丝茶贸易收益 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `洋务丝茶贸易收益 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       }
 
       if (gainCoins > 0) setCoins((prev) => prev + gainCoins);
@@ -890,8 +895,8 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         </div>
 
         <div className="flex items-center bg-[#11131c] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black z-10 shadow-[0_2px_0_#000]">
-          <RussianRuble size={14} className="text-yellow-400 mr-1" />
-          <span className="text-amber-300">{coins.toLocaleString()} ₽</span>
+          <CurrencyIcon size={14} className="text-yellow-400 mr-1" />
+          <span className="text-amber-300">{coins.toLocaleString()} {CURRENCY.symbol}</span>
         </div>
       </div>
 
@@ -1195,10 +1200,10 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                           <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-black/40">
                             <div className="text-left sm:text-right">
                               <div className="text-amber-300 font-mono font-black text-xs sm:text-sm">
-                                {visa.cost.toLocaleString()} ₽
+                                {visa.cost.toLocaleString()} {CURRENCY.symbol}
                               </div>
                               <div className="text-[10px] text-gray-400 font-mono">
-                                有效 {visa.durationMonths}月 · 需验资 {visa.minAssets.toLocaleString()} ₽
+                                有效 {visa.durationMonths}月 · 需验资 {visa.minAssets.toLocaleString()} {CURRENCY.symbol}
                               </div>
                             </div>
 
@@ -1265,7 +1270,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
 
                             <div className="text-right">
                               <div className="text-amber-300 font-mono font-black text-sm">
-                                {visa.cost.toLocaleString()} ₽
+                                {visa.cost.toLocaleString()} {CURRENCY.symbol}
                               </div>
                               <div className="text-[10px] text-gray-400 font-mono">
                                 有效期 {visa.durationMonths} 个月
@@ -1444,7 +1449,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                   <Compass size={16} className="text-sky-400" />
                   <span className="text-white font-black text-xs">帝国远洋客轮港口口岸 (Departures)</span>
                 </div>
-                <span className="text-[10px] text-gray-400 font-mono">客舱票: 400 ₽ / 次</span>
+                <span className="text-[10px] text-gray-400 font-mono">客舱票: 400 {CURRENCY.symbol} / 次</span>
               </div>
 
               <div className="bg-[#14161f] p-3 rounded-xl border border-black/60 flex items-center gap-3">
@@ -1504,7 +1509,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                           className="bg-sky-500 hover:bg-sky-400 text-black text-xs font-black py-2 px-3.5 rounded-xl border-2 border-black active:translate-y-0.5 cursor-pointer shadow-[0_2px_0_#000] flex items-center gap-1.5 flex-shrink-0"
                         >
                           <Ship size={14} />
-                          <span>即刻登船 (400 ₽)</span>
+                          <span>即刻登船 (400 {CURRENCY.symbol})</span>
                         </button>
                       </div>
                     ))
@@ -1582,7 +1587,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                 <div className="text-[11px] text-[#a88a54]">
                   {passport.issued
                     ? `签发日期: ${passport.issueYear}.${passport.issueMonth} · 防伪钢印已激活`
-                    : '申领需缴纳工本费 300 ₽'}
+                    : `申领需缴纳工本费 300 ${CURRENCY.symbol}`}
                 </div>
 
                 {!passport.issued ? (
@@ -1591,7 +1596,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                     className="bg-[#d4a359] hover:bg-[#e6b56b] text-black text-xs font-black py-2 px-4 rounded-xl border-2 border-black active:translate-y-0.5 cursor-pointer shadow-[0_2px_0_#000] flex items-center gap-1.5"
                   >
                     <BookOpen size={14} />
-                    <span>即刻申领护照 (300 ₽)</span>
+                    <span>即刻申领护照 (300 {CURRENCY.symbol})</span>
                   </button>
                 ) : (
                   <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-bold">
@@ -1707,7 +1712,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="bg-[#14161f] p-2.5 rounded-xl border border-black/60">
                 <span className="text-gray-400 text-[10px]">官方规费：</span>
-                <div className="text-amber-300 font-mono font-black">{selectedVisaDetail.cost.toLocaleString()} ₽</div>
+                <div className="text-amber-300 font-mono font-black">{selectedVisaDetail.cost.toLocaleString()} {CURRENCY.symbol}</div>
               </div>
               <div className="bg-[#14161f] p-2.5 rounded-xl border border-black/60">
                 <span className="text-gray-400 text-[10px]">有效期限：</span>
@@ -1715,11 +1720,11 @@ export const VisaModal: React.FC<VisaModalProps> = ({
               </div>
               <div className="bg-[#14161f] p-2.5 rounded-xl border border-black/60">
                 <span className="text-gray-400 text-[10px]">验资门槛：</span>
-                <div className="text-emerald-400 font-mono font-bold">≥ {selectedVisaDetail.minAssets.toLocaleString()} ₽</div>
+                <div className="text-emerald-400 font-mono font-bold">≥ {selectedVisaDetail.minAssets.toLocaleString()} {CURRENCY.symbol}</div>
               </div>
               <div className="bg-[#14161f] p-2.5 rounded-xl border border-black/60">
                 <span className="text-gray-400 text-[10px]">领事特急费：</span>
-                <div className="text-amber-400 font-mono font-bold">+{selectedVisaDetail.expediteFee} ₽</div>
+                <div className="text-amber-400 font-mono font-bold">+{selectedVisaDetail.expediteFee} {CURRENCY.symbol}</div>
               </div>
             </div>
 
@@ -1751,7 +1756,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                     }`}
                   >
                     <Stamp size={14} />
-                    <span>{isHeld ? '名下已持有此签证' : `常规申办 (${selectedVisaDetail.cost} ₽)`}</span>
+                    <span>{isHeld ? '名下已持有此签证' : `常规申办 (${selectedVisaDetail.cost} ${CURRENCY.symbol})`}</span>
                   </button>
 
                   {!isHeld && (
@@ -1761,7 +1766,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                       className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-2 border-amber-500/60 py-2.5 px-3 rounded-xl font-bold text-xs active:translate-y-0.5 cursor-pointer flex items-center gap-1 shadow-[0_2px_0_#000]"
                     >
                       <Flame size={14} className="text-amber-400" />
-                      <span>加急 (+{selectedVisaDetail.expediteFee} ₽)</span>
+                      <span>加急 (+{selectedVisaDetail.expediteFee} {CURRENCY.symbol})</span>
                     </button>
                   )}
                 </div>
@@ -1814,7 +1819,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                   <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border-2 border-amber-400/40 flex items-center justify-center text-amber-400">
                     <ShieldCheck size={26} className="animate-pulse" />
                   </div>
-                  <div className="text-amber-200 text-xs font-bold">② 领事官审核资信额度 (≥ {applyingVisaInfo.visa.minAssets.toLocaleString()} ₽)...</div>
+                  <div className="text-amber-200 text-xs font-bold">② 领事官审核资信额度 (≥ {applyingVisaInfo.visa.minAssets.toLocaleString()} {CURRENCY.symbol})...</div>
                 </div>
               )}
 

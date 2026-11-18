@@ -1,16 +1,19 @@
-import { addLifeLog } from '../lib/lifeLog';
-import React, { useState } from 'react';
+import {
+  addLifeLog } from '../lib/lifeLog';
+import React,
+  { useState } from 'react';
 import {
   ChevronLeft,
   UserCog,
   CheckCircle2,
   AlertCircle,
   Sparkles,
-  RussianRuble,
   BadgeCheck,
   RefreshCw,
   User,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
+import { CURRENCY } from '../data/seasons';
 
 export interface GenderRightsModalProps {
   onClose: () => void;
@@ -62,7 +65,7 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
     }
 
     if (coins < CHANGE_FEE) {
-      showToast(`❌ 现金不足！更正规费需 ${CHANGE_FEE} ₽，当前拥有 ${coins.toLocaleString()} ₽`);
+      showToast(`❌ 现金不足！更正规费需 ${CHANGE_FEE} ${CURRENCY.symbol}，当前拥有 ${coins.toLocaleString()} ${CURRENCY.symbol}`);
       return;
     }
 
@@ -74,7 +77,7 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
     } catch {}
 
     addLifeLog('成长', '变更法定性别', `法定性别由「${currentGender}」更正为「${selectedGender}」。`);
-    showToast(`法定性别已更正为【${selectedGender}】！扣除规费 ${CHANGE_FEE} ₽`);
+    showToast(`法定性别已更正为【${selectedGender}】！扣除规费 ${CHANGE_FEE} ${CURRENCY.symbol}`);
   };
 
   return (
@@ -105,8 +108,8 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
         </div>
 
         <div className="flex items-center bg-[#151722] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black z-10 shadow-[0_2px_0_#000]">
-          <RussianRuble size={14} className="text-yellow-400 mr-1" />
-          <span className="text-amber-300">{coins.toLocaleString()} ₽</span>
+          <CurrencyIcon size={14} className="text-yellow-400 mr-1" />
+          <span className="text-amber-300">{coins.toLocaleString()} {CURRENCY.symbol}</span>
         </div>
       </div>
 
@@ -182,7 +185,7 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
 
                 <div className="bg-[#181a24] border border-black rounded-xl p-3 flex items-center justify-between">
                   <span className="text-gray-400 font-bold">更正规费</span>
-                  <span className="text-amber-300 font-mono font-bold">{CHANGE_FEE} ₽</span>
+                  <span className="text-amber-300 font-mono font-bold">{CHANGE_FEE} {CURRENCY.symbol}</span>
                 </div>
               </div>
             </div>
@@ -258,7 +261,7 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
                 <span>
                   {selectedGender === currentGender
                     ? `当前法定性别已是【${currentGender}】`
-                    : `确认更正为【${selectedGender}】 (支付 ${CHANGE_FEE} ₽)`}
+                    : `确认更正为【${selectedGender}】 (支付 ${CHANGE_FEE} ${CURRENCY.symbol})`}
                 </span>
               </button>
             </div>

@@ -3,7 +3,7 @@ import { childLifespan, ageAt, generateSpouseCandidates, marry, MARRIAGE_FEE, MA
 import { affinityBonus, rollMaintenance, fertileMaxAge, MAINTENANCE_COST, FERTILITY_TRAITS, SIMPLE_MAINTENANCE_CHANCE, SIMPLE_MAINTENANCE_RESERVE, traitNames, traitById } from '../lib/traits';
 import { REP } from '../lib/reputation';
 import { unlockAchievement, recordGiftsGiven } from '../lib/achievements';
-import { currentSeason } from '../data/seasons';
+import { currentSeason, CURRENCY } from '../data/seasons';
 import { VACCINE_SUCCESS, vaccinesAvailable } from '../lib/disease';
 import { SimpleCard } from '../components/SimpleModeView';
 import { autoOptionIndex, recommendJobs, recommendHome, shouldSuggestHome, buyRecommended, sellAll } from '../lib/simpleMode';
@@ -114,9 +114,9 @@ export const useSimpleMode = ({
         unlockAchievement('cured');
         addLifeLog('健康', `治愈${currentDisease.name}`, '简洁模式自动就医。');
         if (gainRecoveryImmunity(currentDisease.id)) out.push(`🛡️ 获得${currentDisease.name}抗体`);
-        out.push(`🩺 治好了${currentDisease.name}${cost > 0 ? `（-${cost.toLocaleString()} ₽）` : '（爸妈付钱）'}`);
+        out.push(`🩺 治好了${currentDisease.name}${cost > 0 ? `（-${cost.toLocaleString()} ${CURRENCY.symbol}）` : '（爸妈付钱）'}`);
       } else {
-        out.push(`🤒 钱不够，治不了${currentDisease.name}（要 ${cost.toLocaleString()} ₽）`);
+        out.push(`🤒 钱不够，治不了${currentDisease.name}（要 ${cost.toLocaleString()} ${CURRENCY.symbol}）`);
       }
     }
     // 每月自动给自己接种一种还没有抗体的疫苗（钱够时）
@@ -185,7 +185,7 @@ export const useSimpleMode = ({
       } else if (cash >= GIFT_COST + 2000) {
         cash -= GIFT_COST;
         fam = applyInteraction(fam, m, 'gift', gameYear, gameMonth, affinityBonus(playerTraits));
-        out.push(`🎁 给${m.relation}买了礼物（-${GIFT_COST} ₽）`);
+        out.push(`🎁 给${m.relation}买了礼物（-${GIFT_COST} ${CURRENCY.symbol}）`);
       } else continue;
       given++;
     }
@@ -234,7 +234,7 @@ export const useSimpleMode = ({
       }),
     };
     if (maintainCount > 0) {
-      out.push(`💆 为 ${maintainCount} 位家人做了保养（-${(maintainCount * MAINTENANCE_COST).toLocaleString()} ₽）`);
+      out.push(`💆 为 ${maintainCount} 位家人做了保养（-${(maintainCount * MAINTENANCE_COST).toLocaleString()} ${CURRENCY.symbol}）`);
       setMaintenanceLog((prev) => ({ ...prev, ...maintained }));
     }
     if (fam !== family) setFamily(fam);
@@ -289,7 +289,7 @@ export const useSimpleMode = ({
         question: '要去工作吗？',
         hint: '有工作才能领俸禄，还能拿到月薪',
         laterLabel: '以后再说',
-        choices: recommendJobs(JOB_POSITIONS, familyClass.id, seededRng(`simple_jobs_${gameYear}_${gameMonth}`)).map((j) => ({ id: j.id, title: j.title, detail: `${j.department} · 每月约 ${(j.dailySalary * 22).toLocaleString()} ₽` })),
+        choices: recommendJobs(JOB_POSITIONS, familyClass.id, seededRng(`simple_jobs_${gameYear}_${gameMonth}`)).map((j) => ({ id: j.id, title: j.title, detail: `${j.department} · 每月约 ${(j.dailySalary * 22).toLocaleString()} ${CURRENCY.symbol}` })),
       };
     }
     if (currentAge >= 8 && currentAge <= CHILD_LABOR_MAX_AGE && familyClass.childLabor && !childJob && !snoozed('child')) {
@@ -299,7 +299,7 @@ export const useSimpleMode = ({
         question: '家里穷，要去打零工吗？',
         hint: '每月有工钱，但会累坏身体',
         laterLabel: '先不去',
-        choices: [...CHILD_JOBS].sort((a, b) => a.healthCost - b.healthCost || b.salary - a.salary).slice(0, 3).map((j) => ({ id: `child:${j.id}`, title: j.title, detail: `每月 ${j.salary} ₽ · 健康 -${j.healthCost}` })),
+        choices: [...CHILD_JOBS].sort((a, b) => a.healthCost - b.healthCost || b.salary - a.salary).slice(0, 3).map((j) => ({ id: `child:${j.id}`, title: j.title, detail: `每月 ${j.salary} ${CURRENCY.symbol} · 健康 -${j.healthCost}` })),
       };
     }
     if (currentAge >= MARRIAGE_MIN_AGE && currentAge < 45 && !family.spouse && !snoozed('marriage')) {
@@ -307,7 +307,7 @@ export const useSimpleMode = ({
         kind: 'marriage',
         emoji: '💍',
         question: '想结婚吗？',
-        hint: `结婚要交 ${MARRIAGE_FEE.toLocaleString()} ₽ 登记费`,
+        hint: `结婚要交 ${MARRIAGE_FEE.toLocaleString()} ${CURRENCY.symbol} 登记费`,
         laterLabel: '以后再说',
         choices: simpleSpouseCandidates.map((c, i) => ({ id: String(i), title: c.name, detail: `${c.age} 岁 · ${c.occupation}${c.traits?.length ? ` · ${traitNames(c.traits).join('、')}` : ''}` })),
       };
@@ -330,7 +330,7 @@ export const useSimpleMode = ({
           question: '买一套自己的房子吗？',
           hint: '住得舒服，每个月都能恢复健康',
           laterLabel: '以后再说',
-          choices: [{ id: home.id, title: home.title, detail: `${home.price.toLocaleString()} ₽ · 每月健康 +${home.comfortBonus}` }],
+          choices: [{ id: home.id, title: home.title, detail: `${home.price.toLocaleString()} ${CURRENCY.symbol} · 每月健康 +${home.comfortBonus}` }],
         };
       }
     }
@@ -351,7 +351,7 @@ export const useSimpleMode = ({
           localStorage.setItem(CHILD_JOB_KEY, j.id);
         } catch (e) {}
         addLifeLog('事业', `开始做童工「${j.title}」`, j.desc);
-        showToast(`🧹 开始做「${j.title}」，每月 ${j.salary} ₽`);
+        showToast(`🧹 开始做「${j.title}」，每月 ${j.salary} ${CURRENCY.symbol}`);
         setSimpleSnooze((s) => ({ ...s }));
         return;
       }
@@ -362,7 +362,7 @@ export const useSimpleMode = ({
         const history = readJobHistoryIds();
         if (!history.includes(job.id)) localStorage.setItem(JOB_HISTORY_KEY, JSON.stringify([job.id, ...history]));
       } catch (e) {}
-      addLifeLog('事业', `入职「${job.title}」`, `进入${job.department}任职，日薪 ${job.dailySalary} ₽。`);
+      addLifeLog('事业', `入职「${job.title}」`, `进入${job.department}任职，日薪 ${job.dailySalary} ${CURRENCY.symbol}。`);
       showToast(`💼 开始在「${job.department}」做${job.title}`);
       setSimpleSnooze((s) => ({ ...s }));
       return;
@@ -371,7 +371,7 @@ export const useSimpleMode = ({
       const c = simpleSpouseCandidates[Number(choiceId)];
       if (!c) return;
       if (coins < MARRIAGE_FEE) {
-        showToast(`钱不够，结婚登记要 ${MARRIAGE_FEE.toLocaleString()} ₽`);
+        showToast(`钱不够，结婚登记要 ${MARRIAGE_FEE.toLocaleString()} ${CURRENCY.symbol}`);
         return;
       }
       setCoins((prev) => prev - MARRIAGE_FEE);
@@ -407,7 +407,7 @@ export const useSimpleMode = ({
         if (list.length === 0) localStorage.removeItem('amigo_current_rental');
       } catch (e) {}
       setCoins((prev) => prev - home.price);
-      addLifeLog('财富', `购入房产「${home.title}」`, `位于${home.district}，花费 ${home.price.toLocaleString()} ₽。`);
+      addLifeLog('财富', `购入房产「${home.title}」`, `位于${home.district}，花费 ${home.price.toLocaleString()} ${CURRENCY.symbol}。`);
       unlockAchievement('home');
       showToast(`🏠 买下了「${home.title}」`);
     }
@@ -463,14 +463,14 @@ export const useSimpleMode = ({
     const current = target === 'self' ? playerTraits : spouse?.traits ?? [];
     if (FERTILITY_TRAITS.every((id) => current.includes(id))) return '已经同时拥有「精力旺盛」和「富养」，不需要再保养';
     if ((maintenanceLog[target] ?? 0) === gameYear * 12 + gameMonth) return `${target === 'self' ? '你' : spouse!.name}这个月已经保养过了，下个月再来吧`;
-    if (coins < MAINTENANCE_COST) return `钱不够，保养一次要 ${MAINTENANCE_COST.toLocaleString()} ₽`;
+    if (coins < MAINTENANCE_COST) return `钱不够，保养一次要 ${MAINTENANCE_COST.toLocaleString()} ${CURRENCY.symbol}`;
     setCoins((prev) => prev - MAINTENANCE_COST);
     setMaintenanceLog((prev) => ({ ...prev, [target]: gameYear * 12 + gameMonth }));
     const who = target === 'self' ? '你' : spouse!.name;
     const r = rollMaintenance(current);
     if (!r.gained) {
       addLifeLog('健康', '保养调理', `为${who}做了一次保养，这次没有明显效果。`);
-      return `💆 为${who}做了保养（-${MAINTENANCE_COST.toLocaleString()} ₽），这次没有明显效果`;
+      return `💆 为${who}做了保养（-${MAINTENANCE_COST.toLocaleString()} ${CURRENCY.symbol}），这次没有明显效果`;
     }
     if (target === 'self') setPlayerTraits(r.traits);
     else setFamily((prev) => (prev.spouse ? { ...prev, spouse: { ...prev.spouse, traits: r.traits } } : prev));
@@ -509,7 +509,7 @@ export const useSimpleMode = ({
     }
     saveTrade(r.holdings, r.logs);
     setCoins((prev) => prev + r.cashDelta);
-    addLifeLog('财富', '一键买入股票', `${r.summary.join('、')}，共 ${(-r.cashDelta).toLocaleString()} ₽。`);
+    addLifeLog('财富', '一键买入股票', `${r.summary.join('、')}，共 ${(-r.cashDelta).toLocaleString()} ${CURRENCY.symbol}。`);
     showToast(`📈 买入 ${r.summary.join('、')}`);
   };
   const handleSimpleSellStocks = () => {
@@ -517,8 +517,8 @@ export const useSimpleMode = ({
     if (r.cashDelta === 0) return;
     saveTrade(r.holdings, r.logs);
     setCoins((prev) => prev + r.cashDelta);
-    addLifeLog('财富', '一键卖出全部股票', `收回 ${r.cashDelta.toLocaleString()} ₽，${r.profit >= 0 ? '赚了' : '亏了'} ${Math.abs(r.profit).toLocaleString()} ₽。`);
-    showToast(`📉 全部卖出，${r.profit >= 0 ? '赚了' : '亏了'} ${Math.abs(r.profit).toLocaleString()} ₽`);
+    addLifeLog('财富', '一键卖出全部股票', `收回 ${r.cashDelta.toLocaleString()} ${CURRENCY.symbol}，${r.profit >= 0 ? '赚了' : '亏了'} ${Math.abs(r.profit).toLocaleString()} ${CURRENCY.symbol}。`);
+    showToast(`📉 全部卖出，${r.profit >= 0 ? '赚了' : '亏了'} ${Math.abs(r.profit).toLocaleString()} ${CURRENCY.symbol}`);
   };
 
   return {

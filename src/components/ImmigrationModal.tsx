@@ -1,11 +1,12 @@
-import { addLifeLog } from '../lib/lifeLog';
-import React, { useState } from 'react';
+import {
+  addLifeLog } from '../lib/lifeLog';
+import React,
+  { useState } from 'react';
 import {
   ChevronLeft,
   Globe,
   Award,
   ShieldCheck,
-  RussianRuble,
   Sparkles,
   CheckCircle2,
   AlertCircle,
@@ -19,7 +20,9 @@ import {
   BookOpen,
   ArrowRight,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
 import { HistoricalFlag } from './HistoricalFlag';
+import { CURRENCY } from '../data/seasons';
 
 export interface ResidencyProgram {
   id: string;
@@ -101,7 +104,7 @@ const IMMIGRATION_COUNTRIES: CountryImmigrationGroup[] = [
         processingMonths: 1,
         requirements: [
           '持有阿米诺斯合法公民身份',
-          '认购英国国家统合国债 ≥ 15,000 ₽',
+          `认购英国国家统合国债 ≥ 15,000 ${CURRENCY.symbol}`,
           '无皇家海事法庭通缉罪责',
         ],
         benefits: [
@@ -136,7 +139,7 @@ const IMMIGRATION_COUNTRIES: CountryImmigrationGroup[] = [
         processingMonths: 1,
         requirements: [
           '持有阿米诺斯合法公民身份',
-          '个人流动或银行储蓄 ≥ 8,000 ₽',
+          `个人流动或银行储蓄 ≥ 8,000 ${CURRENCY.symbol}`,
           '体魄健康度 ≥ 60 点（适应新大陆开拓环境）',
         ],
         benefits: [
@@ -171,7 +174,7 @@ const IMMIGRATION_COUNTRIES: CountryImmigrationGroup[] = [
         processingMonths: 1,
         requirements: [
           '持有阿米诺斯合法公民身份',
-          '个人储备资产 ≥ 12,000 ₽',
+          `个人储备资产 ≥ 12,000 ${CURRENCY.symbol}`,
           '认可法兰西民法典之契约自由原则',
         ],
         benefits: [
@@ -206,7 +209,7 @@ const IMMIGRATION_COUNTRIES: CountryImmigrationGroup[] = [
         processingMonths: 1,
         requirements: [
           '持有阿米诺斯合法公民身份',
-          '在瑞士联合银行或苏黎世储备资产 ≥ 30,000 ₽',
+          `在瑞士联合银行或苏黎世储备资产 ≥ 30,000 ${CURRENCY.symbol}`,
           '无交战国军役履职与违法前科记录',
         ],
         benefits: [
@@ -241,7 +244,7 @@ const IMMIGRATION_COUNTRIES: CountryImmigrationGroup[] = [
         processingMonths: 1,
         requirements: [
           '持有阿米诺斯合法公民身份',
-          '个人流动储备 ≥ 10,000 ₽',
+          `个人流动储备 ≥ 10,000 ${CURRENCY.symbol}`,
           '体魄健康度 ≥ 70 点（符合重工业制造体检标准）',
         ],
         benefits: [
@@ -276,7 +279,7 @@ const IMMIGRATION_COUNTRIES: CountryImmigrationGroup[] = [
         processingMonths: 1,
         requirements: [
           '持有阿米诺斯合法公民身份',
-          '全额缴纳圣彼得堡皇家公会入会保证金 ≥ 18,000 ₽',
+          `全额缴纳圣彼得堡皇家公会入会保证金 ≥ 18,000 ${CURRENCY.symbol}`,
           '恪守帝国冬宫商业法度与关税公约',
         ],
         benefits: [
@@ -355,12 +358,12 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
     }
 
     if (coins < prog.cost) {
-      showToast(`❌ 申请规费不足！需要 ${prog.cost.toLocaleString()} ₽，当前拥有 ${coins.toLocaleString()} ₽`);
+      showToast(`❌ 申请规费不足！需要 ${prog.cost.toLocaleString()} ${CURRENCY.symbol}，当前拥有 ${coins.toLocaleString()} ${CURRENCY.symbol}`);
       return;
     }
 
     if (coins < prog.minAssets) {
-      showToast(`❌ 资产储备不达标！【${prog.country}】要求个人储备资金 ≥ ${prog.minAssets.toLocaleString()} ₽`);
+      showToast(`❌ 资产储备不达标！【${prog.country}】要求个人储备资金 ≥ ${prog.minAssets.toLocaleString()} ${CURRENCY.symbol}`);
       return;
     }
 
@@ -393,7 +396,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
 
     setSelectedProgram(null);
     addLifeLog('出行', `获得${prog.country}永久居留`, `${prog.cardName}，卡号 ${randomCardNo}。`);
-    showToast(`🎉 恭喜！已获发【${prog.country}】永久居留绿卡！扣除规费 ${prog.cost.toLocaleString()} ₽`);
+    showToast(`🎉 恭喜！已获发【${prog.country}】永久居留绿卡！扣除规费 ${prog.cost.toLocaleString()} ${CURRENCY.symbol}`);
     setActiveSubTab('dossier');
   };
 
@@ -401,7 +404,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
   const handlePerformOath = (res: OwnedResidency) => {
     const NATURALIZE_FEE = 3000;
     if (coins < NATURALIZE_FEE) {
-      showToast(`❌ 归化入籍国籍公证书规费需 ${NATURALIZE_FEE.toLocaleString()} ₽`);
+      showToast(`❌ 归化入籍国籍公证书规费需 ${NATURALIZE_FEE.toLocaleString()} ${CURRENCY.symbol}`);
       return;
     }
 
@@ -462,8 +465,8 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
         </div>
 
         <div className="flex items-center bg-[#151722] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black z-10 shadow-[0_2px_0_#000]">
-          <RussianRuble size={14} className="text-yellow-400 mr-1" />
-          <span className="text-amber-300">{coins.toLocaleString()} ₽</span>
+          <CurrencyIcon size={14} className="text-yellow-400 mr-1" />
+          <span className="text-amber-300">{coins.toLocaleString()} {CURRENCY.symbol}</span>
         </div>
       </div>
 
@@ -673,7 +676,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                                 <div className="text-right flex-shrink-0">
                                   <span className="text-[10px] text-gray-400 block font-bold">规费</span>
                                   <span className="text-amber-300 font-mono font-black text-sm">
-                                    {prog.cost.toLocaleString()} ₽
+                                    {prog.cost.toLocaleString()} {CURRENCY.symbol}
                                   </span>
                                 </div>
                               )}
@@ -684,7 +687,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                               <div className="flex items-center gap-1">
                                 <span className="text-gray-400">资产要求:</span>
                                 <span className={coins >= prog.minAssets ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                                  ≥{prog.minAssets.toLocaleString()} ₽
+                                  ≥{prog.minAssets.toLocaleString()} {CURRENCY.symbol}
                                 </span>
                               </div>
                               <span className="text-gray-600">|</span>
@@ -717,7 +720,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                                   }`}
                                 >
                                   <Award size={14} />
-                                  <span>申领居留 ({prog.cost.toLocaleString()} ₽)</span>
+                                  <span>申领居留 ({prog.cost.toLocaleString()} {CURRENCY.symbol})</span>
                                 </button>
                               )}
                             </div>
@@ -974,7 +977,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                 className="flex-1 bg-purple-700 hover:bg-purple-600 text-white font-black text-xs py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Award size={14} />
-                <span>立即递交居留申请 ({selectedProgram.cost.toLocaleString()} ₽)</span>
+                <span>立即递交居留申请 ({selectedProgram.cost.toLocaleString()} {CURRENCY.symbol})</span>
               </button>
             </div>
           </div>
@@ -1018,7 +1021,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                 </div>
                 <div className="flex justify-between text-gray-300">
                   <span>国籍公证规费：</span>
-                  <span className="text-amber-300 font-mono font-bold">3,000 ₽</span>
+                  <span className="text-amber-300 font-mono font-bold">3,000 {CURRENCY.symbol}</span>
                 </div>
               </div>
             </div>
@@ -1035,7 +1038,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                 className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Stamp size={15} />
-                <span>签署盟誓并盖印归化 (支付 3,000 ₽)</span>
+                <span>签署盟誓并盖印归化 (支付 3,000 {CURRENCY.symbol})</span>
               </button>
             </div>
           </div>

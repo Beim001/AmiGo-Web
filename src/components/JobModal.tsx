@@ -1,13 +1,18 @@
-import { addLifeLog } from '../lib/lifeLog';
-import { MIN_WORK_AGE, WORK_DAYS_PER_MONTH } from '../lib/monthly';
-import { CHILD_JOBS, CHILD_JOB_KEY, readChildJob } from '../lib/lineage';
-import React, { useState, useMemo } from 'react';
+import {
+  addLifeLog } from '../lib/lifeLog';
+import { MIN_WORK_AGE,
+  WORK_DAYS_PER_MONTH } from '../lib/monthly';
+import { CHILD_JOBS,
+  CHILD_JOB_KEY,
+  readChildJob } from '../lib/lineage';
+import React,
+  { useState,
+  useMemo } from 'react';
 import {
   ChevronLeft,
   Briefcase,
   Search,
   CheckCircle2,
-  RussianRuble,
   Building2,
   Zap,
   Award,
@@ -34,6 +39,8 @@ import {
   Medal,
   Layers,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
+import { CURRENCY } from '../data/seasons';
 
 export interface JobModalProps {
   onClose: () => void;
@@ -340,7 +347,7 @@ export const COMPANY_DATA: Record<string, CompanyInfo> = {
     established: '1862年',
     scale: '800 - 1500人',
     location: '首都布津外务大街18号领事馆区',
-    registeredCapital: '1,800万 ₽',
+    registeredCapital: `1,800万 ${CURRENCY.symbol}`,
     desc: '阿米诺斯帝国专理涉外通商、外交领事事务及对俄边境贸易提单核验的核心行政机关。下设领事司、通商司与涉外同文翻译处，掌控远东多国边境贸易准入权。',
     benefits: ['享帝国公职津贴', '包午餐膳食', '年度出境考察', '配发官定制服'],
   },
@@ -350,7 +357,7 @@ export const COMPANY_DATA: Record<string, CompanyInfo> = {
     established: '1875年',
     scale: '2000 - 5000人',
     location: '首都布津中央大街1号法政大楼',
-    registeredCapital: '2,500万 ₽',
+    registeredCapital: `2,500万 ${CURRENCY.symbol}`,
     desc: '负责首都布津及各商埠租界治安秩序维持、突发治安事件处置与市容盘查的核心警察执法部门，配备骑警队、突击巡捕队与治安侦缉科。',
     benefits: ['高额执勤风险补贴', '医疗全额报销', '住房官邸分配', '勋章绩效奖励'],
   },
@@ -360,7 +367,7 @@ export const COMPANY_DATA: Record<string, CompanyInfo> = {
     established: '1880年',
     scale: '1000 - 3000人',
     location: '阿穆尔口岸海关大楼',
-    registeredCapital: '3,000万 ₽',
+    registeredCapital: `3,000万 ${CURRENCY.symbol}`,
     desc: '掌控帝国远东边境口岸与海港货物进出口关税征收、验放凭单签发与缉私抽检，是帝国财政收入的重要支柱部门。',
     benefits: ['关口绩效高额奖金', '包吃住宿营', '退伍优先提拔', '专业关务培训'],
   },
@@ -370,7 +377,7 @@ export const COMPANY_DATA: Record<string, CompanyInfo> = {
     established: '1892年',
     scale: '300 - 800人',
     location: '金融街金融大厦交易大厅',
-    registeredCapital: '8,000万 ₽',
+    registeredCapital: `8,000万 ${CURRENCY.symbol}`,
     desc: '帝国规模最大、交易最活跃的证券集中交易场所，涵盖铁路、矿业、航运与银行等数百家上市公司的股票与债券搓合交易。',
     benefits: ['行业顶尖薪资分红', '午间高档自助', '内幕研报优先获取', '年终巨额奖金'],
   },
@@ -380,7 +387,7 @@ export const COMPANY_DATA: Record<string, CompanyInfo> = {
     established: '1888年',
     scale: '10000+人',
     location: '远东铁路枢纽总站工务大楼',
-    registeredCapital: '1.2亿 ₽',
+    registeredCapital: `1.2亿 ${CURRENCY.symbol}`,
     desc: '横跨远东大平原的蒸汽机车与铁路线路运营维护总枢纽，下辖机务段、车辆段、电务段与调度中心，保障交通动脉畅通。',
     benefits: ['铁路职工免费乘车', '高温寒暑专项补贴', '家属医疗保障', '退休养老金待遇'],
   },
@@ -390,7 +397,7 @@ export const COMPANY_DATA: Record<string, CompanyInfo> = {
     established: '1885年',
     scale: '3000 - 8000人',
     location: '阿穆尔黑山矿区1号采场',
-    registeredCapital: '5,000万 ₽',
+    registeredCapital: `5,000万 ${CURRENCY.symbol}`,
     desc: '阿米诺斯帝国远东最大的铁矿石与稀有金属采掘基业，拥有深井开采设备与重型拖车运输队，为帝国军工与铁路提供原材料。',
     benefits: ['硬核采矿高日薪', '井下特别津贴', '免费高热量膳食', '工伤全额保险'],
   },
@@ -400,7 +407,7 @@ export const COMPANY_DATA: Record<string, CompanyInfo> = {
     established: '1890年',
     scale: '500 - 1200人',
     location: '公卫路99号医疗园区',
-    registeredCapital: '1,500万 ₽',
+    registeredCapital: `1,500万 ${CURRENCY.symbol}`,
     desc: '拥有现代西医外科、急诊科与药剂研究室的综合性三级医院，承担首都布津医疗救治、公卫防疫与医药教学重任。',
     benefits: ['医疗专家指导', '家属就医折扣', '舒适工作环境', '定期体检津贴'],
   },
@@ -410,7 +417,7 @@ export const COMPANY_DATA: Record<string, CompanyInfo> = {
     established: '1898年',
     scale: '600 - 1500人',
     location: '松花江水利枢纽大坝区',
-    registeredCapital: '4,500万 ₽',
+    registeredCapital: `4,500万 ${CURRENCY.symbol}`,
     desc: '利用松花江丰沛水力资源建立的巨型水电枢纽，拥有大口径水轮发电机组，为周边工业区与居民区提供稳定电力。',
     benefits: ['电力员工优惠用电', '高技术岗位津贴', '包宿包餐', '职业技能提升补助'],
   },
@@ -420,7 +427,7 @@ export const COMPANY_DATA: Record<string, CompanyInfo> = {
     established: '1870年',
     scale: '200 - 500人',
     location: '文化区同文路88号',
-    registeredCapital: '1,000万 ₽',
+    registeredCapital: `1,000万 ${CURRENCY.symbol}`,
     desc: '帝国专门培养外交、通商、边政与公文翻译人才的皇家名校，拥有数十名俄语、德语与法文教习大师。',
     benefits: ['学术名望加成', '寒暑假带薪休假', '藏书馆免费借阅', '名门社会地位'],
   },
@@ -436,7 +443,7 @@ export const getCompanyInfo = (deptName: string): CompanyInfo => {
     established: '1885年',
     scale: '500 - 2000人',
     location: '阿米诺斯首都布津 · 行业产业园区',
-    registeredCapital: '2,000万 ₽',
+    registeredCapital: `2,000万 ${CURRENCY.symbol}`,
     desc: `${deptName}是阿米诺斯帝国在该行业领头设立的核心企事业单位，承担着帝国经济建设、社会保障与产业运营的重要职责。`,
     benefits: ['行业标准薪酬待遇', '包午餐与工作服', '定期工效奖金', '职业晋升通道'],
   };
@@ -571,7 +578,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
     });
 
     setSelectedJobDetail(null);
-    addLifeLog('事业', `入职「${job.title}」`, `进入${job.department}任职，日薪 ${job.dailySalary} ₽。`);
+    addLifeLog('事业', `入职「${job.title}」`, `进入${job.department}任职，日薪 ${job.dailySalary} ${CURRENCY.symbol}。`);
     showToast(`恭喜！顺利签署用工合同，入职「${job.department}」的【${job.title}】！`);
   };
 
@@ -634,9 +641,9 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
         </div>
 
         <div className="bg-[#12141c] border-2 border-black px-2.5 py-1 rounded-xl flex items-center gap-1 shadow-[0_2px_0_#000] flex-shrink-0">
-          <RussianRuble size={14} className="text-amber-400" />
+          <CurrencyIcon size={14} className="text-amber-400" />
           <span className="text-amber-300 font-mono font-black text-xs">
-            {coins.toLocaleString()} ₽
+            {coins.toLocaleString()} {CURRENCY.symbol}
           </span>
         </div>
       </div>
@@ -810,7 +817,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
 
                       <div className="flex items-center gap-3 flex-shrink-0">
                         <div className="text-right">
-                          <div className="text-amber-400 font-mono font-black text-base">{job.dailySalary} ₽</div>
+                          <div className="text-amber-400 font-mono font-black text-base">{job.dailySalary} {CURRENCY.symbol}</div>
                           <div className="text-gray-400 text-[9px] font-mono">×22 天 = 月薪</div>
                         </div>
                         <button
@@ -868,7 +875,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
 
                 <div className="text-right flex-shrink-0">
                   <div className="text-amber-400 font-mono font-black text-lg">
-                    {selectedJobDetail.dailySalary.toLocaleString()} ₽
+                    {selectedJobDetail.dailySalary.toLocaleString()} {CURRENCY.symbol}
                   </div>
                   <div className="text-gray-400 text-[10px] font-mono">基础日薪（每月按 22 个工作日自动发放）</div>
                 </div>
@@ -984,14 +991,14 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                                 <div className="text-gray-400 text-[10px] font-bold truncate">{j.desc}</div>
                               </div>
                               <div className="text-right shrink-0">
-                                <div className="text-amber-300 font-mono font-black text-[11px]">{j.salary} ₽/月</div>
+                                <div className="text-amber-300 font-mono font-black text-[11px]">{j.salary} {CURRENCY.symbol}/月</div>
                                 <div className="text-red-400 text-[10px] font-bold">健康 -{j.healthCost}/月</div>
                               </div>
                               <button
                                 onClick={() => {
                                   setChildJob(active ? null : j.id);
                                   if (!active) addLifeLog('事业', `开始做童工：${j.title}`, j.desc);
-                                  showToast(active ? `已辞去「${j.title}」` : `开始做「${j.title}」，每月 ${j.salary} ₽`);
+                                  showToast(active ? `已辞去「${j.title}」` : `开始做「${j.title}」，每月 ${j.salary} ${CURRENCY.symbol}`);
                                 }}
                                 className={`text-[10px] font-black px-2 py-1 rounded-lg border border-black shrink-0 cursor-pointer ${active ? 'bg-gray-600 text-white' : 'bg-amber-400 text-black'}`}
                               >
@@ -1015,13 +1022,13 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                         当前任职：<span className="text-white font-black">{currentJob.title}</span>
                       </span>
                       <span className="text-amber-400 font-mono font-bold text-xs flex-shrink-0">
-                        {currentJob.dailySalary} ₽/天
+                        {currentJob.dailySalary} {CURRENCY.symbol}/天
                       </span>
                     </div>
 
                     <span className="text-[10px] font-black text-emerald-300 bg-emerald-950/80 border border-emerald-500/50 px-2 py-1 rounded-lg flex-shrink-0">
                       {age >= MIN_WORK_AGE
-                        ? `月薪 ${(currentJob.dailySalary * WORK_DAYS_PER_MONTH).toLocaleString()} ₽ · 每月自动发放`
+                        ? `月薪 ${(currentJob.dailySalary * WORK_DAYS_PER_MONTH).toLocaleString()} ${CURRENCY.symbol} · 每月自动发放`
                         : `未满 ${MIN_WORK_AGE} 岁，暂不发薪`}
                     </span>
                   </div>
@@ -1156,7 +1163,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
 
                             <div className="text-right flex-shrink-0">
                               <div className="text-amber-400 font-mono font-black text-sm sm:text-base">
-                                {job.dailySalary.toLocaleString()} ₽
+                                {job.dailySalary.toLocaleString()} {CURRENCY.symbol}
                               </div>
                               <div className="text-gray-400 text-[9px] font-mono">×22 天 = 月薪</div>
                             </div>
@@ -1270,7 +1277,7 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
                             </div>
 
                             <div className="text-right flex-shrink-0">
-                              <div className="text-amber-400 font-mono font-black text-base">{job.dailySalary} ₽</div>
+                              <div className="text-amber-400 font-mono font-black text-base">{job.dailySalary} {CURRENCY.symbol}</div>
                               <div className="text-gray-400 text-[9px] font-mono">日薪</div>
                             </div>
                           </div>

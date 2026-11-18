@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type React from 'react';
 import { TEST_CODE, isBetaVersion } from '../../lib/testCode';
 import { loadStored, saveStored } from '../../lib/storage';
+import { CURRENCY } from '../../data/seasons';
 
 // 礼包码兑换：已兑换列表持久化；测试兑换码只在测试版本可用，可无限次兑换（第 57 题）
 
@@ -36,7 +37,7 @@ export const useCdkey = ({ setCoins, showToast, onRedeemTestCode }: {
       setRedeemedCodes(updatedCodes);
       saveStored('amigo_redeemed_codes', updatedCodes);
       setCdkeyInput('');
-      showToast('🎉 兑换成功！获得 50,000 卢布！');
+      showToast(`🎉 兑换成功！获得 50,000 ${CURRENCY.name}！`);
     } else {
       showToast('❌ 无效的兑换码，请输入 GIFT2026 或 666666 试用');
     }

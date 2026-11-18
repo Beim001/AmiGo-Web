@@ -1,6 +1,7 @@
 // 限定宝箱抽卡逻辑（纯函数，便于测试）
 //
 import { rollGift, type GiftQuality } from './gifts';
+import { CURRENCY } from '../data/seasons';
 
 // 规则：
 // - 每抽按概率出一个品质：限定 1%、稀有 6%、高级 13%（总出服饰概率 20%，与旧版一致）；
@@ -106,7 +107,7 @@ export const drawGacha = (
     }
 
     if (!tier) {
-      rewards.push({ type: 'coin', amount: COIN_REWARD, name: `${COIN_REWARD} 卢布`, isPity: false });
+      rewards.push({ type: 'coin', amount: COIN_REWARD, name: `${COIN_REWARD} ${CURRENCY.name}`, isPity: false });
       continue;
     }
 
@@ -120,9 +121,9 @@ export const drawGacha = (
     } else if (tierItems.length > 0) {
       const dup = tierItems[Math.floor(rng() * tierItems.length)];
       const refund = Math.round(dup.price * DUPLICATE_REFUND_RATIO);
-      rewards.push({ type: 'coin', amount: refund, name: `重复「${dup.name}」返还 ${refund.toLocaleString()} 卢布`, rarity: tier, isPity });
+      rewards.push({ type: 'coin', amount: refund, name: `重复「${dup.name}」返还 ${refund.toLocaleString()} ${CURRENCY.name}`, rarity: tier, isPity });
     } else {
-      rewards.push({ type: 'coin', amount: COIN_REWARD, name: `${COIN_REWARD} 卢布`, isPity: false });
+      rewards.push({ type: 'coin', amount: COIN_REWARD, name: `${COIN_REWARD} ${CURRENCY.name}`, isPity: false });
     }
   }
 

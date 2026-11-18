@@ -3,6 +3,7 @@ import { traitNames, traitById } from '../../lib/traits';
 import { reputationLevel } from '../../lib/reputation';
 import { JOB_POSITIONS } from '../JobModal';
 import type { ProfileModalProps } from '../ProfileModal';
+import { CURRENCY } from '../../data/seasons';
 
 // 「名片资料」标签页：身份履历、特质与声望（含慈善捐款）、特权光环
 
@@ -67,7 +68,7 @@ export const InfoTab = ({ originLabel, currentJob, propertySummary, playerTraits
             <span className="text-gray-400">声望</span>
             <span className="text-yellow-400 font-black">{reputation} / 100 · {reputationLevel(reputation)}</span>
           </div>
-          <div className="text-[10px] text-gray-400">慈善捐款：每 10,000 ₽ 声望 +1，每个游戏月最多 +5</div>
+          <div className="text-[10px] text-gray-400">慈善捐款：每 10,000 {CURRENCY.symbol} 声望 +1，每个游戏月最多 +5</div>
           <div className="grid grid-cols-3 gap-1.5">
             {[10000, 50000, 100000].map((amt) => (
               <button

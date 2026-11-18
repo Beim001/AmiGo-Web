@@ -27,6 +27,7 @@ import {
   BIRTH_MAX_AGE,
   MAX_CHILDREN,
 } from '../lib/family';
+import { CURRENCY } from '../data/seasons';
 
 export interface MarriageModalProps {
   onClose: () => void;
@@ -99,7 +100,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
 
   const handleMarry = (c: SpouseCandidate) => {
     if (coins < MARRIAGE_FEE) {
-      showToast(`现金不足！结婚登记规费需 ${MARRIAGE_FEE.toLocaleString()} ₽`);
+      showToast(`现金不足！结婚登记规费需 ${MARRIAGE_FEE.toLocaleString()} ${CURRENCY.symbol}`);
       setConfirming(null);
       return;
     }
@@ -114,7 +115,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
   const handleDivorce = () => {
     const formerName = family.spouse?.name;
     if (coins < DIVORCE_FEE) {
-      showToast(`现金不足！离婚手续费需 ${DIVORCE_FEE.toLocaleString()} ₽`);
+      showToast(`现金不足！离婚手续费需 ${DIVORCE_FEE.toLocaleString()} ${CURRENCY.symbol}`);
       setConfirmDivorce(false);
       return;
     }
@@ -200,7 +201,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
                       return;
                     }
                     if (coins < ADOPTION_FEE) {
-                      showToast(`现金不足！领养手续费 ${ADOPTION_FEE.toLocaleString()} ₽`);
+                      showToast(`现金不足！领养手续费 ${ADOPTION_FEE.toLocaleString()} ${CURRENCY.symbol}`);
                       return;
                     }
                     const r = adoptChild(family, gameYear, gameMonth);
@@ -209,10 +210,10 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
                     addLifeLog('大事', `领养 ${r.child.name}`, `与 ${spouse.name} 婚后多年无子，领养了 ${gameYear - r.child.birthYear} 岁的${r.child.gender === '女' ? '女孩' : '男孩'}。`);
                     showToast(`🏠 领养了 ${r.child.name}（${gameYear - r.child.birthYear} 岁）`);
                   }}
-                  title={adoptReason ?? `手续费 ${ADOPTION_FEE.toLocaleString()} ₽`}
+                  title={adoptReason ?? `手续费 ${ADOPTION_FEE.toLocaleString()} ${CURRENCY.symbol}`}
                   className={`${adoptReason ? 'bg-gray-600 text-gray-300' : 'bg-sky-400 hover:bg-sky-300 text-black'} text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer`}
                 >
-                  🏠 领养（{ADOPTION_FEE.toLocaleString()} ₽）
+                  🏠 领养（{ADOPTION_FEE.toLocaleString()} {CURRENCY.symbol}）
                 </button>
                 <p className="col-span-2 text-[10px] text-gray-400 font-bold">
                   {adoptReason ? `领养：${adoptReason}` : `你们婚后 ${ADOPTION_MARRIED_YEARS} 年仍没有孩子，可以领养。`}
@@ -229,7 +230,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
           <div className={`${card} space-y-2`}>
             <div className="text-white font-black text-sm">🌹 {family.lover ? (family.lover.gender === '女' ? '情妇' : '情夫') : '结识情人'}</div>
             <p className="text-gray-400 text-[11px] font-bold leading-relaxed">
-              贵族圈的隐秘往来：每月供养 {(LOVER_UPKEEP[classId] ?? LOVER_UPKEEP.noble).toLocaleString()} ₽，有 {Math.round(ILLEGITIMATE_CHANCE * 100)}% 概率生下私生子女。同时最多 1 位，现金不足时关系自动结束。
+              贵族圈的隐秘往来：每月供养 {(LOVER_UPKEEP[classId] ?? LOVER_UPKEEP.noble).toLocaleString()} {CURRENCY.symbol}，有 {Math.round(ILLEGITIMATE_CHANCE * 100)}% 概率生下私生子女。同时最多 1 位，现金不足时关系自动结束。
             </p>
             {family.lover ? (
               <div className="bg-[#21232e] border border-black rounded-xl p-2.5 flex items-center justify-between gap-2">
@@ -279,7 +280,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
           onClick={() => setConfirmDivorce(true)}
           className="w-full bg-[#21232e] hover:bg-[#2b2e3c] text-gray-300 text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer"
         >
-          办理离婚（手续费 {DIVORCE_FEE.toLocaleString()} ₽）
+          办理离婚（手续费 {DIVORCE_FEE.toLocaleString()} {CURRENCY.symbol}）
         </button>
       </div>
     );
@@ -296,7 +297,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
         <div className={`${card} flex items-center justify-between`}>
           <div>
             <div className="text-white font-black text-sm">适婚对象</div>
-            <div className="text-gray-400 text-[11px] font-bold">登记规费 {MARRIAGE_FEE.toLocaleString()} ₽ · 当前现金 {coins.toLocaleString()} ₽</div>
+            <div className="text-gray-400 text-[11px] font-bold">登记规费 {MARRIAGE_FEE.toLocaleString()} {CURRENCY.symbol} · 当前现金 {coins.toLocaleString()} {CURRENCY.symbol}</div>
           </div>
           <button
             onClick={() => setCandidates(generateSpouseCandidates(age, Math.random, undefined, opposite))}
@@ -390,7 +391,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
             <p className="text-white font-black text-sm text-center">
               确定与 {confirming.name} 登记结婚吗？
             </p>
-            <p className="text-gray-400 text-xs font-bold text-center">将支付登记规费 {MARRIAGE_FEE.toLocaleString()} ₽。</p>
+            <p className="text-gray-400 text-xs font-bold text-center">将支付登记规费 {MARRIAGE_FEE.toLocaleString()} {CURRENCY.symbol}。</p>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setConfirming(null)} className="bg-gray-600 hover:bg-gray-500 text-white text-xs font-black py-2 rounded-xl border-2 border-black cursor-pointer">
                 再想想
@@ -405,7 +406,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[60]">
           <div className={`${card} max-w-sm w-full space-y-3`}>
             <p className="text-white font-black text-sm text-center">确定与 {confirmLover.name} 发展秘密关系吗？</p>
-            <p className="text-gray-400 text-xs font-bold text-center">每月供养 {(LOVER_UPKEEP[classId] ?? LOVER_UPKEEP.noble).toLocaleString()} ₽。</p>
+            <p className="text-gray-400 text-xs font-bold text-center">每月供养 {(LOVER_UPKEEP[classId] ?? LOVER_UPKEEP.noble).toLocaleString()} {CURRENCY.symbol}。</p>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setConfirmLover(null)} className="bg-gray-600 hover:bg-gray-500 text-white text-xs font-black py-2 rounded-xl border-2 border-black cursor-pointer">
                 再想想
@@ -430,7 +431,7 @@ export const MarriageModal: React.FC<MarriageModalProps> = ({
           <div className={`${card} max-w-sm w-full space-y-3`}>
             <p className="text-white font-black text-sm text-center">确定与 {spouse.name} 离婚吗？</p>
             <p className="text-gray-400 text-xs font-bold text-center leading-relaxed">
-              将支付手续费 {DIVORCE_FEE.toLocaleString()} ₽。{spouse.name} 将移出家族族谱，子嗣留在瓦伦丁家族；之后可以重新登记结婚。
+              将支付手续费 {DIVORCE_FEE.toLocaleString()} {CURRENCY.symbol}。{spouse.name} 将移出家族族谱，子嗣留在瓦伦丁家族；之后可以重新登记结婚。
             </p>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setConfirmDivorce(false)} className="bg-gray-600 hover:bg-gray-500 text-white text-xs font-black py-2 rounded-xl border-2 border-black cursor-pointer">

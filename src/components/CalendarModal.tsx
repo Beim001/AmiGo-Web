@@ -3,10 +3,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  RussianRuble,
   Clock,
   Bookmark,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
+import { CURRENCY } from '../data/seasons';
 
 export interface CalendarModalProps {
   onClose: () => void;
@@ -149,8 +150,8 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
             </div>
 
             <div className="flex items-center bg-[#1c1d25] rounded-xl px-2.5 py-1 border-2 border-black text-xs font-mono font-black shadow-[0_2px_0_#000] z-10">
-              <RussianRuble size={14} className="text-yellow-400 mr-1" />
-              <span>{coins.toLocaleString()} ₽</span>
+              <CurrencyIcon size={14} className="text-yellow-400 mr-1" />
+              <span>{coins.toLocaleString()} {CURRENCY.symbol}</span>
             </div>
           </div>
         </div>
@@ -296,11 +297,11 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
           <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3.5 flex flex-col gap-2.5 shadow-[0_4px_0_#000]">
             <div className="flex items-center justify-between text-xs px-1">
               <span className="text-gray-300 font-bold flex items-center gap-1.5">
-                <RussianRuble size={14} className="text-amber-400" />
-                月度薪水与利息收益: <span className="font-mono text-emerald-400 font-bold">+1,500 ₽</span>
+                <CurrencyIcon size={14} className="text-amber-400" />
+                月度薪水与利息收益: <span className="font-mono text-emerald-400 font-bold">+1,500 {CURRENCY.symbol}</span>
               </span>
               <span className="text-[11px] text-gray-400 font-mono">
-                现金: {coins.toLocaleString()} ₽
+                现金: {coins.toLocaleString()} {CURRENCY.symbol}
               </span>
             </div>
 
@@ -318,7 +319,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
               }}
               className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black text-sm py-3 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer active:translate-y-0.5 flex items-center justify-center gap-2 transition-transform"
             >
-              <Sparkles size={16} /> 推进至下一个月 (+1,500 ₽ 薪水)
+              <Sparkles size={16} /> 推进至下一个月 (+1,500 {CURRENCY.symbol} 薪水)
             </button>
           </div>
         </div>

@@ -1,11 +1,13 @@
-import { addLifeLog } from '../lib/lifeLog';
-import React, { useState, useEffect } from 'react';
+import {
+  addLifeLog } from '../lib/lifeLog';
+import React,
+  { useState,
+  useEffect } from 'react';
 import {
   ChevronLeft,
   Home,
   Building2,
   Key,
-  RussianRuble,
   CheckCircle2,
   AlertCircle,
   Sparkles,
@@ -31,6 +33,8 @@ import {
   ShieldAlert,
   Percent,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
+import { CURRENCY } from '../data/seasons';
 
 export interface PropertyItem {
   id: string;
@@ -296,7 +300,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
     }
 
     if (coins < item.price) {
-      showToast(`资金不足：需 ${item.price.toLocaleString()} ₽，当前可用 ${coins.toLocaleString()} ₽`);
+      showToast(`资金不足：需 ${item.price.toLocaleString()} ${CURRENCY.symbol}，当前可用 ${coins.toLocaleString()} ${CURRENCY.symbol}`);
       return;
     }
 
@@ -328,7 +332,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
       setCurrentRental(null);
     }
 
-    addLifeLog('财富', `购入房产「${item.title}」`, `位于${item.district}，花费 ${item.price.toLocaleString()} ₽。`);
+    addLifeLog('财富', `购入房产「${item.title}」`, `位于${item.district}，花费 ${item.price.toLocaleString()} ${CURRENCY.symbol}。`);
     showToast(`成功购入【${item.title}】，产权已录入系统`);
     setSelectedPropDetail(null);
     setActiveTab('owned');
@@ -346,8 +350,8 @@ export const HousingModal: React.FC<HousingModalProps> = ({
       return remaining.map((p) => (p.id === nextPrimaryId ? { ...p, isPrimaryResidence: true } : p));
     });
 
-    addLifeLog('财富', `出售房产「${owned.title}」`, `扣除交易税费后到账 ${refund.toLocaleString()} ₽。`);
-    showToast(`成功出售【${owned.title}】，扣除4%交易税费后到账 +${refund.toLocaleString()} ₽`);
+    addLifeLog('财富', `出售房产「${owned.title}」`, `扣除交易税费后到账 ${refund.toLocaleString()} ${CURRENCY.symbol}。`);
+    showToast(`成功出售【${owned.title}】，扣除4%交易税费后到账 +${refund.toLocaleString()} ${CURRENCY.symbol}`);
   };
 
   // 切换出租状态
@@ -370,7 +374,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
     showToast(
       owned.isRentedOut
         ? `【${owned.title}】已收回自用，停止出租`
-        : `【${owned.title}】已挂牌出租，预计每月租金 +${owned.rentPerMonth.toLocaleString()} ₽`
+        : `【${owned.title}】已挂牌出租，预计每月租金 +${owned.rentPerMonth.toLocaleString()} ${CURRENCY.symbol}`
     );
   };
 
@@ -407,7 +411,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
     const cost = Math.floor(owned.purchasePrice * RENOVATION_COST_RATIO[nextTier]);
 
     if (coins < cost) {
-      showToast(`装修资金不足：升级至【${RENOVATION_TIER_NAMES[nextTier]}】需 ${cost.toLocaleString()} ₽`);
+      showToast(`装修资金不足：升级至【${RENOVATION_TIER_NAMES[nextTier]}】需 ${cost.toLocaleString()} ${CURRENCY.symbol}`);
       return;
     }
 
@@ -443,7 +447,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
 
     const deposit = item.rentPerMonth * 2; // 押二付一 (首次预付押金)
     if (coins < deposit) {
-      showToast(`资金不足：签约需预付押金与租金共 ${deposit.toLocaleString()} ₽`);
+      showToast(`资金不足：签约需预付押金与租金共 ${deposit.toLocaleString()} ${CURRENCY.symbol}`);
       return;
     }
 
@@ -467,8 +471,8 @@ export const HousingModal: React.FC<HousingModalProps> = ({
       }))
     );
 
-    addLifeLog('财富', `租住「${item.title}」`, `位于${item.district}，月租 ${item.rentPerMonth.toLocaleString()} ₽。`);
-    showToast(`已签约租住【${item.title}】，已支付押金与首期租金 ${deposit.toLocaleString()} ₽`);
+    addLifeLog('财富', `租住「${item.title}」`, `位于${item.district}，月租 ${item.rentPerMonth.toLocaleString()} ${CURRENCY.symbol}。`);
+    showToast(`已签约租住【${item.title}】，已支付押金与首期租金 ${deposit.toLocaleString()} ${CURRENCY.symbol}`);
     setActiveTab('rent');
   };
 
@@ -477,7 +481,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
     if (!currentRental) return;
     const refund = Math.floor(currentRental.depositPaid * 0.5); // 退还一半押金
     setCoins((prev) => prev + refund);
-    showToast(`已办理退租手续，退还租房押金 +${refund.toLocaleString()} ₽`);
+    showToast(`已办理退租手续，退还租房押金 +${refund.toLocaleString()} ${CURRENCY.symbol}`);
     setCurrentRental(null);
   };
 
@@ -534,8 +538,8 @@ export const HousingModal: React.FC<HousingModalProps> = ({
         </div>
 
         <div className="flex items-center bg-[#141622] rounded-xl px-3.5 py-1.5 border-2 border-black text-xs font-mono font-black z-10 shadow-[0_2px_0_#000] gap-1.5">
-          <RussianRuble size={15} className="text-yellow-400" />
-          <span className="text-amber-300">{coins.toLocaleString()} ₽</span>
+          <CurrencyIcon size={15} className="text-yellow-400" />
+          <span className="text-amber-300">{coins.toLocaleString()} {CURRENCY.symbol}</span>
         </div>
       </div>
 
@@ -629,19 +633,19 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                     <div className="space-y-0.5">
                       <div className="text-gray-400 text-[10px] font-sans">挂牌总价</div>
                       <div className="text-amber-300 font-black text-base sm:text-lg truncate">
-                        {selectedPropDetail.price.toLocaleString()} ₽
+                        {selectedPropDetail.price.toLocaleString()} {CURRENCY.symbol}
                       </div>
                     </div>
                     <div className="space-y-0.5">
                       <div className="text-gray-400 text-[10px] font-sans">参考单价</div>
                       <div className="text-gray-200 font-bold text-sm sm:text-base">
-                        {unitPrice.toLocaleString()} ₽/㎡
+                        {unitPrice.toLocaleString()} {CURRENCY.symbol}/㎡
                       </div>
                     </div>
                     <div className="space-y-0.5">
                       <div className="text-gray-400 text-[10px] font-sans">基准月租预估</div>
                       <div className="text-emerald-400 font-bold text-sm sm:text-base">
-                        {selectedPropDetail.rentPerMonth.toLocaleString()} ₽/月
+                        {selectedPropDetail.rentPerMonth.toLocaleString()} {CURRENCY.symbol}/月
                       </div>
                     </div>
                     <div className="space-y-0.5">
@@ -767,7 +771,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                           }`}
                         >
                           <Key size={14} />
-                          <span>签约租房 ({(selectedPropDetail.rentPerMonth * 3).toLocaleString()}₽)</span>
+                          <span>签约租房 ({(selectedPropDetail.rentPerMonth * 3).toLocaleString()}{CURRENCY.symbol})</span>
                         </button>
 
                         <button
@@ -781,7 +785,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                           }`}
                         >
                           <Coins size={14} />
-                          <span>立即全款购买 ({selectedPropDetail.price.toLocaleString()} ₽)</span>
+                          <span>立即全款购买 ({selectedPropDetail.price.toLocaleString()} {CURRENCY.symbol})</span>
                         </button>
                       </>
                     )}
@@ -904,10 +908,10 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                       {/* Total & Unit Price */}
                       <div className="text-right flex-shrink-0">
                         <div className="text-amber-300 font-mono font-black text-base sm:text-lg">
-                          {item.price.toLocaleString()} ₽
+                          {item.price.toLocaleString()} {CURRENCY.symbol}
                         </div>
                         <div className="text-gray-400 text-[10px] font-mono mt-0.5">
-                          单价 {unitPrice.toLocaleString()} ₽/㎡
+                          单价 {unitPrice.toLocaleString()} {CURRENCY.symbol}/㎡
                         </div>
                       </div>
                     </div>
@@ -932,7 +936,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                       <div>
                         <span className="text-gray-400 text-[10px]">基准月租预估：</span>
                         <span className="text-emerald-400 font-bold ml-1">
-                          {item.rentPerMonth.toLocaleString()} ₽/月
+                          {item.rentPerMonth.toLocaleString()} {CURRENCY.symbol}/月
                         </span>
                       </div>
                       <div>
@@ -975,7 +979,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                               : 'bg-[#2b2f42] hover:bg-[#363c55] text-white cursor-pointer'
                           }`}
                         >
-                          租住 ({item.rentPerMonth}₽/月)
+                          租住 ({item.rentPerMonth}{CURRENCY.symbol}/月)
                         </button>
 
                         <button
@@ -1018,14 +1022,14 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                 <div className="bg-[#161823] p-3 rounded-xl border border-black shadow-inner space-y-0.5">
                   <div className="text-gray-400 text-[10px] font-sans">房产总估值</div>
                   <div className="text-amber-300 font-black text-base">
-                    {totalPropertyValue.toLocaleString()} ₽
+                    {totalPropertyValue.toLocaleString()} {CURRENCY.symbol}
                   </div>
                 </div>
 
                 <div className="bg-[#161823] p-3 rounded-xl border border-black shadow-inner space-y-0.5">
                   <div className="text-gray-400 text-[10px] font-sans">每月租金收入</div>
                   <div className="text-emerald-400 font-black text-base">
-                    +{totalMonthlyRentalIncome.toLocaleString()} ₽/月
+                    +{totalMonthlyRentalIncome.toLocaleString()} {CURRENCY.symbol}/月
                   </div>
                 </div>
               </div>
@@ -1098,10 +1102,10 @@ export const HousingModal: React.FC<HousingModalProps> = ({
 
                         <div className="text-right flex-shrink-0">
                           <div className="text-amber-300 font-mono font-black text-sm sm:text-base">
-                            {owned.currentValue.toLocaleString()} ₽
+                            {owned.currentValue.toLocaleString()} {CURRENCY.symbol}
                           </div>
                           <div className="text-gray-400 text-[10px] font-mono mt-0.5">
-                            购入价: {owned.purchasePrice.toLocaleString()} ₽
+                            购入价: {owned.purchasePrice.toLocaleString()} {CURRENCY.symbol}
                           </div>
                         </div>
                       </div>
@@ -1111,7 +1115,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                         <div className="bg-[#161823] p-2.5 rounded-xl border border-black shadow-inner space-y-0.5">
                           <div className="text-gray-400 text-[10px] font-sans">每月租金</div>
                           <div className="text-emerald-400 font-bold">
-                            {owned.rentPerMonth.toLocaleString()} ₽
+                            {owned.rentPerMonth.toLocaleString()} {CURRENCY.symbol}
                           </div>
                         </div>
                         <div className="bg-[#161823] p-2.5 rounded-xl border border-black shadow-inner space-y-0.5">
@@ -1160,7 +1164,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                               className="px-3 py-1.5 bg-purple-600/30 hover:bg-purple-600/40 text-purple-300 rounded-xl border border-purple-500/50 text-xs font-bold shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer flex items-center gap-1.5"
                             >
                               <Hammer size={13} />
-                              <span>装修 ({upgradeCost.toLocaleString()}₽)</span>
+                              <span>装修 ({upgradeCost.toLocaleString()}{CURRENCY.symbol})</span>
                             </button>
                           )}
                         </div>
@@ -1203,10 +1207,10 @@ export const HousingModal: React.FC<HousingModalProps> = ({
 
                   <div className="text-right flex-shrink-0">
                     <div className="text-amber-300 font-mono font-black text-sm sm:text-base">
-                      {currentRental.monthlyRent} ₽/月
+                      {currentRental.monthlyRent} {CURRENCY.symbol}/月
                     </div>
                     <div className="text-gray-400 text-[10px] font-mono mt-0.5">
-                      已托管押金: {currentRental.depositPaid} ₽
+                      已托管押金: {currentRental.depositPaid} {CURRENCY.symbol}
                     </div>
                   </div>
                 </div>
@@ -1270,7 +1274,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <div className="text-right">
                       <div className="text-amber-300 font-mono font-black text-xs sm:text-sm">
-                        {item.rentPerMonth} ₽/月
+                        {item.rentPerMonth} {CURRENCY.symbol}/月
                       </div>
                       <div className="text-gray-400 text-[9px] mt-0.5">押二付一</div>
                     </div>
@@ -1323,7 +1327,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                 <div className="bg-[#161823] p-3 rounded-xl border border-black shadow-inner space-y-0.5">
                   <div className="text-gray-400 text-[10px] font-sans">累计租金收益</div>
                   <div className="text-amber-300 font-black text-base">
-                    {totalRentCollectedAllTime.toLocaleString()} ₽
+                    {totalRentCollectedAllTime.toLocaleString()} {CURRENCY.symbol}
                   </div>
                 </div>
               </div>

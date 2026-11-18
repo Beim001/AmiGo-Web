@@ -1,3 +1,4 @@
+import { CURRENCY } from '../data/seasons';
 // 未成年继承的监护（undefined.md 第 25 题 A）
 // - 继承人未满 18 岁：现金与银行存款的一半交由监护人托管
 // - 年满 18 岁：托管资产一次性返还；此后每月上缴返还金额的 1% 赡养监护人，持续 5 年或直到监护人去世
@@ -56,7 +57,7 @@ export const monthlyGuardianship = (g: Guardianship | null, heirAge: number, gua
       guardianship: per > 0 && guardianAlive ? { ...g, phase: 'supporting', supportPerMonth: per, supportMonthsLeft: SUPPORT_MONTHS } : null,
       returned: g.held,
       support: 0,
-      note: `成年了！${g.guardianName}返还托管资产 ${g.held.toLocaleString()} ₽`,
+      note: `成年了！${g.guardianName}返还托管资产 ${g.held.toLocaleString()} ${CURRENCY.symbol}`,
     };
   }
   if (!guardianAlive || g.supportMonthsLeft <= 0) {

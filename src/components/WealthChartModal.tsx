@@ -10,7 +10,6 @@ import {
   Sparkles,
   Home,
   ShieldCheck,
-  RussianRuble,
   Layers,
   ArrowUpRight,
   ArrowDownRight,
@@ -24,7 +23,9 @@ import {
   BarChart3,
   Flame,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { CURRENCY } from '../data/seasons';
 
 export interface AssetBreakdown {
   name: string;
@@ -182,7 +183,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
       percentage: Number(((stockMarketValue / totalWealthForPct) * 100).toFixed(1)),
       icon: TrendingUp,
       desc: `持有 ${holdingStockCount} 只股票持仓市值`,
-      secondaryInfo: stockProfitLoss >= 0 ? `浮盈 +${stockProfitLoss.toFixed(0)} ₽` : `浮亏 ${stockProfitLoss.toFixed(0)} ₽`,
+      secondaryInfo: stockProfitLoss >= 0 ? `浮盈 +${stockProfitLoss.toFixed(0)} ${CURRENCY.symbol}` : `浮亏 ${stockProfitLoss.toFixed(0)} ${CURRENCY.symbol}`,
     },
     {
       name: '不动产估值',
@@ -192,7 +193,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
       percentage: Number(((housingMarketValue / totalWealthForPct) * 100).toFixed(1)),
       icon: Home,
       desc: `名下持有 ${propertyCount} 处不动产地契`,
-      secondaryInfo: rentedOutCount > 0 ? `放租中 ${rentedOutCount} 处 (月收 +${monthlyRentalIncome} ₽)` : '暂未放租',
+      secondaryInfo: rentedOutCount > 0 ? `放租中 ${rentedOutCount} 处 (月收 +${monthlyRentalIncome} ${CURRENCY.symbol})` : '暂未放租',
     },
   ];
 
@@ -240,7 +241,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
             <span>{data.name}</span>
           </div>
           <div className="text-amber-300 font-mono font-black text-sm">
-            {data.value.toLocaleString()} ₽
+            {data.value.toLocaleString()} {CURRENCY.symbol}
           </div>
           <div className="text-gray-400 text-[11px] font-bold">
             资产占比: <span className="text-white">{pct}%</span>
@@ -272,8 +273,8 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
         </div>
 
         <div className="flex items-center bg-[#151722] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black z-10 shadow-[0_2px_0_#000]">
-          <RussianRuble size={14} className="text-yellow-400 mr-1" />
-          <span className="text-amber-300">{coins.toLocaleString()} ₽</span>
+          <CurrencyIcon size={14} className="text-yellow-400 mr-1" />
+          <span className="text-amber-300">{coins.toLocaleString()} {CURRENCY.symbol}</span>
         </div>
       </div>
 
@@ -319,12 +320,12 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
             </div>
             <div className="text-2xl sm:text-3xl font-black font-mono text-amber-300 drop-shadow-md flex items-baseline gap-1.5">
               <span>{totalNetWorth.toLocaleString()}</span>
-              <span className="text-sm font-bold text-amber-400/80">₽</span>
+              <span className="text-sm font-bold text-amber-400/80">{CURRENCY.symbol}</span>
             </div>
             <div className="text-[11px] text-gray-400 font-bold flex items-center gap-3">
-              <span>总资产: <strong className="text-white font-mono">{grossAssets.toLocaleString()} ₽</strong></span>
+              <span>总资产: <strong className="text-white font-mono">{grossAssets.toLocaleString()} {CURRENCY.symbol}</strong></span>
               {totalLoan > 0 && (
-                <span>总负债: <strong className="text-red-400 font-mono">-{totalLoan.toLocaleString()} ₽</strong></span>
+                <span>总负债: <strong className="text-red-400 font-mono">-{totalLoan.toLocaleString()} {CURRENCY.symbol}</strong></span>
               )}
             </div>
           </div>
@@ -394,10 +395,10 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
                   </span>
                   <span className="text-sm font-black font-mono text-amber-300">
                     {selectedAssetKey
-                      ? (rawData.find(r => r.key === selectedAssetKey)?.value || 0).toLocaleString() + ' ₽'
+                      ? (rawData.find(r => r.key === selectedAssetKey)?.value || 0).toLocaleString() + ` ${CURRENCY.symbol}`
                       : totalNetWorth >= 1000000
                         ? (totalNetWorth / 10000).toFixed(1) + ' 万'
-                        : totalNetWorth.toLocaleString() + ' ₽'}
+                        : totalNetWorth.toLocaleString() + ` ${CURRENCY.symbol}`}
                   </span>
                 </div>
               </div>
@@ -468,7 +469,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
 
                   <div>
                     <div className="text-xl font-black font-mono text-amber-300">
-                      {coins.toLocaleString()} <span className="text-xs text-amber-400/80">₽</span>
+                      {coins.toLocaleString()} <span className="text-xs text-amber-400/80">{CURRENCY.symbol}</span>
                     </div>
                     <div className="text-[11px] text-gray-400 mt-0.5">{rawData[0].desc}</div>
                   </div>
@@ -519,7 +520,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
 
                   <div>
                     <div className="text-xl font-black font-mono text-blue-300">
-                      {totalDeposit.toLocaleString()} <span className="text-xs text-blue-400/80">₽</span>
+                      {totalDeposit.toLocaleString()} <span className="text-xs text-blue-400/80">{CURRENCY.symbol}</span>
                     </div>
                     <div className="text-[11px] text-gray-400 mt-0.5">{rawData[1].desc}</div>
                   </div>
@@ -570,7 +571,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
 
                   <div>
                     <div className="text-xl font-black font-mono text-emerald-300">
-                      {stockMarketValue.toLocaleString()} <span className="text-xs text-emerald-400/80">₽</span>
+                      {stockMarketValue.toLocaleString()} <span className="text-xs text-emerald-400/80">{CURRENCY.symbol}</span>
                     </div>
                     <div className="text-[11px] text-gray-400 mt-0.5">{rawData[2].desc}</div>
                   </div>
@@ -623,7 +624,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
 
                   <div>
                     <div className="text-xl font-black font-mono text-amber-300">
-                      {housingMarketValue.toLocaleString()} <span className="text-xs text-amber-400/80">₽</span>
+                      {housingMarketValue.toLocaleString()} <span className="text-xs text-amber-400/80">{CURRENCY.symbol}</span>
                     </div>
                     <div className="text-[11px] text-gray-400 mt-0.5">{rawData[3].desc}</div>
                   </div>
@@ -677,7 +678,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
 
                     <div className="text-right">
                       <div className="font-mono font-black text-sm" style={{ color: item.color }}>
-                        {item.value.toLocaleString()} ₽
+                        {item.value.toLocaleString()} {CURRENCY.symbol}
                       </div>
                       <div className="text-[10px] text-gray-400 font-mono">
                         占比 {item.percentage}%
@@ -731,7 +732,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
                   <span>负债与借贷账单</span>
                 </span>
                 <span className="text-[11px] font-mono text-red-400">
-                  {totalLoan > 0 ? `未清借款: ${totalLoan.toLocaleString()} ₽` : '无任何负债'}
+                  {totalLoan > 0 ? `未清借款: ${totalLoan.toLocaleString()} ${CURRENCY.symbol}` : '无任何负债'}
                 </span>
               </div>
 
@@ -739,10 +740,10 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
                 <div className="bg-[#2a1b1e] border-2 border-red-900/60 rounded-xl p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-red-200 text-xs font-bold">银航商业借贷</span>
-                    <span className="text-red-400 font-black font-mono text-sm">{totalLoan.toLocaleString()} ₽</span>
+                    <span className="text-red-400 font-black font-mono text-sm">{totalLoan.toLocaleString()} {CURRENCY.symbol}</span>
                   </div>
                   <div className="text-[10px] text-red-300/80">
-                    预估每月产生利息支出约 {estimatedLoanInterest} ₽，按时推演结算自动扣除。
+                    预估每月产生利息支出约 {estimatedLoanInterest} {CURRENCY.symbol}，按时推演结算自动扣除。
                   </div>
                 </div>
               ) : (
@@ -770,7 +771,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
                   <span>月度现金流预测</span>
                 </span>
                 <span className={`text-[11px] font-mono font-bold ${netMonthlyCashflow >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
-                  月度净结余: {netMonthlyCashflow >= 0 ? `+${netMonthlyCashflow.toLocaleString()}` : `${netMonthlyCashflow.toLocaleString()}`} ₽
+                  月度净结余: {netMonthlyCashflow >= 0 ? `+${netMonthlyCashflow.toLocaleString()}` : `${netMonthlyCashflow.toLocaleString()}`} {CURRENCY.symbol}
                 </span>
               </div>
 
@@ -778,23 +779,23 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
               <div className="space-y-2">
                 <div className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
                   <ArrowUpRight size={13} />
-                  <span>月度预期收入进账 (+{totalMonthlyInflow.toLocaleString()} ₽)</span>
+                  <span>月度预期收入进账 (+{totalMonthlyInflow.toLocaleString()} {CURRENCY.symbol})</span>
                 </div>
                 <div className="space-y-1.5">
                   <div className="bg-[#181a24] p-2.5 rounded-xl border border-black/60 flex items-center justify-between text-xs">
                     <span className="text-gray-300 font-bold">🏛️ 帝国月度基本俸禄/津贴</span>
-                    <span className="text-emerald-300 font-mono font-black">+{baseStipend.toLocaleString()} ₽</span>
+                    <span className="text-emerald-300 font-mono font-black">+{baseStipend.toLocaleString()} {CURRENCY.symbol}</span>
                   </div>
                   {monthlyRentalIncome > 0 && (
                     <div className="bg-[#181a24] p-2.5 rounded-xl border border-black/60 flex items-center justify-between text-xs">
                       <span className="text-gray-300 font-bold">🏠 名下出租房产租金净收入</span>
-                      <span className="text-emerald-300 font-mono font-black">+{monthlyRentalIncome.toLocaleString()} ₽</span>
+                      <span className="text-emerald-300 font-mono font-black">+{monthlyRentalIncome.toLocaleString()} {CURRENCY.symbol}</span>
                     </div>
                   )}
                   {estimatedBankInterest > 0 && (
                     <div className="bg-[#181a24] p-2.5 rounded-xl border border-black/60 flex items-center justify-between text-xs">
                       <span className="text-gray-300 font-bold">🏦 银行活期及定期存款利息预估</span>
-                      <span className="text-emerald-300 font-mono font-black">+{estimatedBankInterest.toLocaleString()} ₽</span>
+                      <span className="text-emerald-300 font-mono font-black">+{estimatedBankInterest.toLocaleString()} {CURRENCY.symbol}</span>
                     </div>
                   )}
                 </div>
@@ -804,24 +805,24 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
               <div className="space-y-2 pt-2 border-t border-black/40">
                 <div className="text-[11px] font-bold text-red-400 flex items-center gap-1">
                   <ArrowDownRight size={13} />
-                  <span>月度预期固定支出 (-{totalMonthlyOutflow.toLocaleString()} ₽)</span>
+                  <span>月度预期固定支出 (-{totalMonthlyOutflow.toLocaleString()} {CURRENCY.symbol})</span>
                 </div>
                 <div className="space-y-1.5">
                   {monthlyRentExpense > 0 ? (
                     <div className="bg-[#181a24] p-2.5 rounded-xl border border-black/60 flex items-center justify-between text-xs">
                       <span className="text-gray-300 font-bold">🔑 租赁住所每月应缴房租</span>
-                      <span className="text-red-400 font-mono font-black">-{monthlyRentExpense.toLocaleString()} ₽</span>
+                      <span className="text-red-400 font-mono font-black">-{monthlyRentExpense.toLocaleString()} {CURRENCY.symbol}</span>
                     </div>
                   ) : (
                     <div className="bg-[#181a24] p-2.5 rounded-xl border border-black/60 flex items-center justify-between text-xs">
                       <span className="text-gray-400">🔑 住所租金支出 (自住房产/无租金)</span>
-                      <span className="text-gray-400 font-mono font-bold">0 ₽</span>
+                      <span className="text-gray-400 font-mono font-bold">0 {CURRENCY.symbol}</span>
                     </div>
                   )}
                   {estimatedLoanInterest > 0 && (
                     <div className="bg-[#181a24] p-2.5 rounded-xl border border-black/60 flex items-center justify-between text-xs">
                       <span className="text-gray-300 font-bold">💳 银行借贷月度利息支出预估</span>
-                      <span className="text-red-400 font-mono font-black">-{estimatedLoanInterest.toLocaleString()} ₽</span>
+                      <span className="text-red-400 font-mono font-black">-{estimatedLoanInterest.toLocaleString()} {CURRENCY.symbol}</span>
                     </div>
                   )}
                 </div>
@@ -833,7 +834,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
                   每次步入下个月推演时净现金变动：
                 </div>
                 <div className={`text-sm font-mono font-black ${netMonthlyCashflow >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
-                  {netMonthlyCashflow >= 0 ? `+${netMonthlyCashflow.toLocaleString()} ₽ /月` : `${netMonthlyCashflow.toLocaleString()} ₽ /月`}
+                  {netMonthlyCashflow >= 0 ? `+${netMonthlyCashflow.toLocaleString()} ${CURRENCY.symbol} /月` : `${netMonthlyCashflow.toLocaleString()} ${CURRENCY.symbol} /月`}
                 </div>
               </div>
             </div>
@@ -887,7 +888,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
                   </div>
                   <p className="text-gray-400 text-[11px] leading-relaxed">
                     {propertyCount > 0
-                      ? `名下不动产具备稳定的租金抗通胀属性，每月可产生 +${monthlyRentalIncome} ₽ 租金收益并带来体魄恢复加成。`
+                      ? `名下不动产具备稳定的租金抗通胀属性，每月可产生 +${monthlyRentalIncome} ${CURRENCY.symbol} 租金收益并带来体魄恢复加成。`
                       : '目前尚未购买任何不动产，建议在资金充裕时前往住房地产购置首套地契，提升宜居度并获取租金收益。'}
                   </p>
                 </div>
@@ -905,7 +906,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
                   </div>
                   <p className="text-gray-400 text-[11px] leading-relaxed">
                     {stockMarketValue > 0
-                      ? `持仓总市值 ${stockMarketValue.toLocaleString()} ₽，${stockProfitLoss >= 0 ? `累计浮盈 +${stockProfitLoss.toFixed(0)} ₽` : `当前浮亏 ${stockProfitLoss.toFixed(0)} ₽`}。建议结合宏观周期逢低布局。`
+                      ? `持仓总市值 ${stockMarketValue.toLocaleString()} ${CURRENCY.symbol}，${stockProfitLoss >= 0 ? `累计浮盈 +${stockProfitLoss.toFixed(0)} ${CURRENCY.symbol}` : `当前浮亏 ${stockProfitLoss.toFixed(0)} ${CURRENCY.symbol}`}。建议结合宏观周期逢低布局。`
                       : '暂无股票持仓。可前往帝国证券交易所选购高分红蓝筹或高成长科技股票，参与产业红利。'}
                   </p>
                 </div>
@@ -919,7 +920,7 @@ export const WealthChartModal: React.FC<WealthChartModalProps> = ({
       <div className="bg-[#1f2230] border-t-2 border-black p-3 flex items-center justify-between gap-2 flex-shrink-0">
         <div className="text-gray-400 text-xs font-mono font-bold flex items-center gap-1">
           <span>总净值:</span>
-          <span className="text-amber-300 font-black">{totalNetWorth.toLocaleString()} ₽</span>
+          <span className="text-amber-300 font-black">{totalNetWorth.toLocaleString()} {CURRENCY.symbol}</span>
         </div>
 
         <div className="flex items-center gap-2">

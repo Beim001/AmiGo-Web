@@ -37,6 +37,7 @@ import { Auction, AUCTION_CHANCE, generateAuction, isInvited, heirloomsValue } f
 import { SimEventInstance, rollMonthlyEvent } from './simEvents';
 import { LogCategory } from './lifeLog';
 import type { Appearance } from './appearance';
+import { CURRENCY } from '../data/seasons';
 
 /** 名下房产（只用到结算相关字段，其余字段原样保留） */
 export interface OwnedProperty {
@@ -226,7 +227,7 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
   const interest = settleMonthlyInterest(input.bankAccounts, cashBeforeInterest, nextY, nextM, rng, depositInterestMultiplier(playerTraits));
   if (interest.depositInterest > 0) notes.push(`存款利息 +${interest.depositInterest.toLocaleString()}`);
   if (interest.loanInterest > 0) notes.push(`贷款利息 -${interest.loanInterest.toLocaleString()}`);
-  if (interest.capitalized > 0) notes.push(`⚠️ ${interest.capitalized.toLocaleString()} ₽ 利息计入本金`);
+  if (interest.capitalized > 0) notes.push(`⚠️ ${interest.capitalized.toLocaleString()} ${CURRENCY.symbol} 利息计入本金`);
   const bankTotals = totalsOf(interest.accounts);
 
   const netChange = baseIncome + propertyRentIncome - rentExpense + salary - interest.cashPaid;
@@ -359,8 +360,8 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
     drift.splits.forEach((b) => {
       const share = Math.round(Math.max(0, coins + netChange + familyCash) * SPLIT_CASH_SHARE);
       familyCash -= share;
-      notes.push(`⚠️ ${b.relation} ${b.name} 分家，分走 ${share.toLocaleString()} ₽`);
-      addLifeLog('大事', `${b.relation} ${b.name} 分家`, `长期对当家人不满，携一支族人分家出走，分走 ${share.toLocaleString()} ₽。`, logWhenFamily);
+      notes.push(`⚠️ ${b.relation} ${b.name} 分家，分走 ${share.toLocaleString()} ${CURRENCY.symbol}`);
+      addLifeLog('大事', `${b.relation} ${b.name} 分家`, `长期对当家人不满，携一支族人分家出走，分走 ${share.toLocaleString()} ${CURRENCY.symbol}。`, logWhenFamily);
     });
 
     // 未成年继承的监护：成年返还托管资产，之后赡养监护人

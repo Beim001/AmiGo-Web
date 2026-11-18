@@ -1,3 +1,4 @@
+import { CURRENCY } from '../data/seasons';
 // 推演系统（undefined.md 第 8–13、24 题）
 // - 每月 50% 概率出现一张事件卡；没抽到时显示「本月无事发生」
 // - 未处理的事件一直保留、不限数量
@@ -63,8 +64,8 @@ export const SIM_EVENTS: SimEventDef[] = [
     desc: '傍晚路过布津市集，你在石板路边捡到一只皮钱包，里面装着不少卢布，四下无人。',
     when: () => true,
     options: [
-      { label: '交给巡捕房', hint: '稳妥', kind: 'safe', result: { coins: 100, text: '失主登门道谢，送上 100 ₽ 酬谢。' } },
-      { label: '悄悄据为己有', hint: '高风险 · 可能大赚', kind: 'risky', chance: 0.7, success: { coins: 800, text: '没人发现，你多了 800 ₽。' }, failure: { coins: -300, text: '被巡捕抓个正着，罚款 300 ₽。' } },
+      { label: '交给巡捕房', hint: '稳妥', kind: 'safe', result: { coins: 100, text: `失主登门道谢，送上 100 ${CURRENCY.symbol} 酬谢。` } },
+      { label: '悄悄据为己有', hint: '高风险 · 可能大赚', kind: 'risky', chance: 0.7, success: { coins: 800, text: `没人发现，你多了 800 ${CURRENCY.symbol}。` }, failure: { coins: -300, text: `被巡捕抓个正着，罚款 300 ${CURRENCY.symbol}。` } },
     ],
   },
   {
@@ -109,7 +110,7 @@ export const SIM_EVENTS: SimEventDef[] = [
     when: (c) => c.age >= 8 && c.age <= 15,
     options: [
       { label: '推辞', hint: '稳妥', kind: 'safe', result: { text: '你婉言推辞了。' } },
-      { label: '帮忙送货', hint: '有风险 · 能挣钱', kind: 'risky', chance: 0.6, success: { coins: 200, text: '货送到了，老板给了 200 ₽。' }, failure: { health: -5, text: '路上摔了一跤，膝盖磕破了。' } },
+      { label: '帮忙送货', hint: '有风险 · 能挣钱', kind: 'risky', chance: 0.6, success: { coins: 200, text: `货送到了，老板给了 200 ${CURRENCY.symbol}。` }, failure: { health: -5, text: '路上摔了一跤，膝盖磕破了。' } },
     ],
   },
   {
@@ -118,16 +119,16 @@ export const SIM_EVENTS: SimEventDef[] = [
     when: (c) => c.classId === 'beggar',
     options: [
       { label: '排队领粥', hint: '稳妥 · 填饱肚子', kind: 'safe', result: { health: 3, text: '一碗热粥下肚，身上暖和多了。' } },
-      { label: '去码头抢活', hint: '有风险 · 能挣钱', kind: 'risky', chance: 0.6, success: { coins: 300, text: '扛了一天包，挣到 300 ₽。' }, failure: { health: -5, text: '被货箱砸伤了肩膀。' } },
+      { label: '去码头抢活', hint: '有风险 · 能挣钱', kind: 'risky', chance: 0.6, success: { coins: 300, text: `扛了一天包，挣到 300 ${CURRENCY.symbol}。` }, failure: { health: -5, text: '被货箱砸伤了肩膀。' } },
     ],
   },
   {
     id: 'lend', title: '人情', headline: '老朋友上门借钱', icon: 'hand',
-    desc: '多年的朋友说生意周转不开，想借 5,000 ₽，承诺三个月后连本带利归还。',
+    desc: `多年的朋友说生意周转不开，想借 5,000 ${CURRENCY.symbol}，承诺三个月后连本带利归还。`,
     when: (c) => c.age >= 16,
     options: [
       { label: '婉言拒绝', hint: '稳妥', kind: 'safe', result: { text: '朋友有些失望地走了。' } },
-      { label: '借给他', hint: '有风险 · 可能有利息', kind: 'risky', requires: 5000, chance: 0.6, success: { coins: 500, text: '朋友如约归还，还多给了 500 ₽ 利息。' }, failure: { coins: -5000, text: '朋友杳无音讯，5,000 ₽ 打了水漂。' } },
+      { label: '借给他', hint: '有风险 · 可能有利息', kind: 'risky', requires: 5000, chance: 0.6, success: { coins: 500, text: `朋友如约归还，还多给了 500 ${CURRENCY.symbol} 利息。` }, failure: { coins: -5000, text: `朋友杳无音讯，5,000 ${CURRENCY.symbol} 打了水漂。` } },
     ],
   },
   {
@@ -136,7 +137,7 @@ export const SIM_EVENTS: SimEventDef[] = [
     when: (c) => c.age >= 16,
     options: [
       { label: '不去', hint: '稳妥', kind: 'safe', result: { text: '你绕道回家了。' } },
-      { label: '下注 2,000 ₽', hint: '高风险 · 可能翻倍', kind: 'risky', requires: 2000, chance: 0.45, success: { coins: 4000, text: '手气正旺，赢了 4,000 ₽！' }, failure: { coins: -2000, text: '输得精光，2,000 ₽ 没了。' } },
+      { label: `下注 2,000 ${CURRENCY.symbol}`, hint: '高风险 · 可能翻倍', kind: 'risky', requires: 2000, chance: 0.45, success: { coins: 4000, text: `手气正旺，赢了 4,000 ${CURRENCY.symbol}！` }, failure: { coins: -2000, text: `输得精光，2,000 ${CURRENCY.symbol} 没了。` } },
     ],
   },
   {
@@ -145,7 +146,7 @@ export const SIM_EVENTS: SimEventDef[] = [
     when: (c) => c.age >= 16 && c.employed,
     options: [
       { label: '准时下班', hint: '稳妥', kind: 'safe', result: { text: '你按时回家休息。' } },
-      { label: '留下加班', hint: '有风险 · 多挣钱', kind: 'risky', chance: 0.7, success: { coins: 1500, text: '熬了几个通宵，多挣了 1,500 ₽。' }, failure: { coins: 1500, health: -6, text: '多挣了 1,500 ₽，但累倒在工位上。' } },
+      { label: '留下加班', hint: '有风险 · 多挣钱', kind: 'risky', chance: 0.7, success: { coins: 1500, text: `熬了几个通宵，多挣了 1,500 ${CURRENCY.symbol}。` }, failure: { coins: 1500, health: -6, text: `多挣了 1,500 ${CURRENCY.symbol}，但累倒在工位上。` } },
     ],
   },
   {
@@ -154,7 +155,7 @@ export const SIM_EVENTS: SimEventDef[] = [
     when: (c) => c.age >= 18 && c.coins >= 20000,
     options: [
       { label: '不投', hint: '稳妥', kind: 'safe', result: { text: '你决定把钱留在手里。' } },
-      { label: '投资 20,000 ₽', hint: '高风险 · 高回报', kind: 'risky', requires: 20000, chance: 0.55, success: { coins: 45000, text: '矿脉丰富，分红 45,000 ₽！' }, failure: { coins: -20000, text: '勘探失败，20,000 ₽ 血本无归。' } },
+      { label: `投资 20,000 ${CURRENCY.symbol}`, hint: '高风险 · 高回报', kind: 'risky', requires: 20000, chance: 0.55, success: { coins: 45000, text: `矿脉丰富，分红 45,000 ${CURRENCY.symbol}！` }, failure: { coins: -20000, text: `勘探失败，20,000 ${CURRENCY.symbol} 血本无归。` } },
     ],
   },
   {
@@ -163,7 +164,7 @@ export const SIM_EVENTS: SimEventDef[] = [
     when: (c) => c.age >= 18,
     options: [
       { label: '设宴款待', hint: '花点钱', kind: 'safe', requires: 1000, result: { coins: -1000, text: '宾主尽欢，亲戚满意而归。' } },
-      { label: '推说没空', hint: '有风险', kind: 'risky', chance: 0.6, success: { text: '亲戚识趣地走了。' }, failure: { coins: -2000, text: '亲戚赖着不走，临走还借走了 2,000 ₽。' } },
+      { label: '推说没空', hint: '有风险', kind: 'risky', chance: 0.6, success: { text: '亲戚识趣地走了。' }, failure: { coins: -2000, text: `亲戚赖着不走，临走还借走了 2,000 ${CURRENCY.symbol}。` } },
     ],
   },
   {
@@ -177,16 +178,16 @@ export const SIM_EVENTS: SimEventDef[] = [
   },
   {
     id: 'partner_shop', title: '投资', headline: '老相识邀你合伙开铺子', icon: 'store',
-    desc: '他看中了北城主街的一间铺面，想做皮货生意，还差 50,000 ₽ 本钱。',
+    desc: `他看中了北城主街的一间铺面，想做皮货生意，还差 50,000 ${CURRENCY.symbol} 本钱。`,
     when: (c) => c.age >= 35 && c.coins >= 50000,
     options: [
       { label: '不参与', hint: '稳妥', kind: 'safe', result: { text: '你婉拒了合伙的邀请。' } },
-      { label: '出资 50,000 ₽', hint: '高风险 · 高回报', kind: 'risky', requires: 50000, chance: 0.6, success: { coins: 90000, text: '生意兴隆，你分得 90,000 ₽。' }, failure: { coins: -50000, text: '铺子倒闭，50,000 ₽ 亏光。' } },
+      { label: `出资 50,000 ${CURRENCY.symbol}`, hint: '高风险 · 高回报', kind: 'risky', requires: 50000, chance: 0.6, success: { coins: 90000, text: `生意兴隆，你分得 90,000 ${CURRENCY.symbol}。` }, failure: { coins: -50000, text: `铺子倒闭，50,000 ${CURRENCY.symbol} 亏光。` } },
     ],
   },
   {
     id: 'elixir', title: '江湖', headline: '江湖郎中兜售「长寿丹」', icon: 'pill',
-    desc: '一位白须郎中声称他的丹药能延年益寿，一颗要价 5,000 ₽。',
+    desc: `一位白须郎中声称他的丹药能延年益寿，一颗要价 5,000 ${CURRENCY.symbol}。`,
     when: (c) => c.age >= 60,
     options: [
       { label: '不买', hint: '稳妥', kind: 'safe', result: { text: '你摇摇头走开了。' } },
@@ -200,7 +201,7 @@ export const SIM_EVENTS: SimEventDef[] = [
     when: (c) => c.age >= 18 && c.age <= 35 && !c.ownedHeirlooms?.includes('army_medal'),
     options: [
       { label: '不报名', hint: '稳妥', kind: 'safe', result: { text: '你继续过着平静的日子。' } },
-      { label: '应征入伍', hint: '高风险 · 可能获得勋章', kind: 'risky', chance: 0.6, success: { coins: 3000, heirloom: 'army_medal', text: '你在边境立下战功，荣获帝国军功勋章，退役时领到 3,000 ₽ 犒赏。' }, failure: { health: -20, text: '你在一次冲突中负伤，提前退役。' } },
+      { label: '应征入伍', hint: '高风险 · 可能获得勋章', kind: 'risky', chance: 0.6, success: { coins: 3000, heirloom: 'army_medal', text: `你在边境立下战功，荣获帝国军功勋章，退役时领到 3,000 ${CURRENCY.symbol} 犒赏。` }, failure: { health: -20, text: '你在一次冲突中负伤，提前退役。' } },
     ],
   },
   {
@@ -209,16 +210,16 @@ export const SIM_EVENTS: SimEventDef[] = [
     when: (c) => c.age >= 16 && !c.ownedHeirlooms?.includes('rescue_ring'),
     options: [
       { label: '大声呼救', hint: '稳妥', kind: 'safe', result: { text: '巡捕赶来把人救了上来。' } },
-      { label: '跳下去救人', hint: '有风险 · 可能结下贵人', kind: 'risky', chance: 0.5, success: { coins: 2000, heirloom: 'rescue_ring', text: '你把人救上了岸。她的家族登门道谢，赠予家徽戒指与 2,000 ₽。' }, failure: { health: -10, text: '水流太急，你被冲出好远才爬上岸，大病一场。' } },
+      { label: '跳下去救人', hint: '有风险 · 可能结下贵人', kind: 'risky', chance: 0.5, success: { coins: 2000, heirloom: 'rescue_ring', text: `你把人救上了岸。她的家族登门道谢，赠予家徽戒指与 2,000 ${CURRENCY.symbol}。` }, failure: { health: -10, text: '水流太急，你被冲出好远才爬上岸，大病一场。' } },
     ],
   },
   {
     id: 'antique', title: '机遇', headline: '旧货摊上有一只蒙尘的怀表', icon: 'watch',
-    desc: '摊主说这是从一位破落贵族家里收来的，要价 3,000 ₽，真假难辨。',
+    desc: `摊主说这是从一位破落贵族家里收来的，要价 3,000 ${CURRENCY.symbol}，真假难辨。`,
     when: (c) => c.age >= 16 && c.coins >= 3000 && !c.ownedHeirlooms?.includes('antique_watch'),
     options: [
       { label: '不买', hint: '稳妥', kind: 'safe', result: { text: '你摇摇头走开了。' } },
-      { label: '花 3,000 ₽ 买下', hint: '有风险 · 可能是真古董', kind: 'risky', requires: 3000, chance: 0.4, success: { coins: -3000, heirloom: 'antique_watch', text: '经鉴定是真正的古董航海怀表！' }, failure: { coins: -3000, text: '拿去一验，原来是仿品。' } },
+      { label: `花 3,000 ${CURRENCY.symbol} 买下`, hint: '有风险 · 可能是真古董', kind: 'risky', requires: 3000, chance: 0.4, success: { coins: -3000, heirloom: 'antique_watch', text: '经鉴定是真正的古董航海怀表！' }, failure: { coins: -3000, text: '拿去一验，原来是仿品。' } },
     ],
   },
   {
@@ -302,4 +303,4 @@ export const resolveOption = (option: SimOption, rng: () => number = Math.random
 
 /** 选项是否因现金不足而不可选 */
 export const optionBlocked = (option: SimOption, coins: number): string | null =>
-  option.requires && coins < option.requires ? `现金不足（需 ${option.requires.toLocaleString()} ₽）` : null;
+  option.requires && coins < option.requires ? `现金不足（需 ${option.requires.toLocaleString()} ${CURRENCY.symbol}）` : null;

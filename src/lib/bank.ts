@@ -1,3 +1,4 @@
+import { CURRENCY } from '../data/seasons';
 // 银行：银行列表、利率、历史大事件对贷款利率的影响，以及每月利息结算（纯函数，便于测试）
 //
 // 决定见 undefined.md 第 5 题：
@@ -261,7 +262,7 @@ export const settleMonthlyInterest = (
       txs.push({
         id: `loanint_${bank.id}_${time}`,
         type: 'repay',
-        title: remaining > 0 ? `贷款利息（${remaining.toLocaleString()} ₽ 无力支付，计入本金）` : '贷款利息扣款',
+        title: remaining > 0 ? `贷款利息（${remaining.toLocaleString()} ${CURRENCY.symbol} 无力支付，计入本金）` : '贷款利息扣款',
         amount: -lInt,
         time,
       });

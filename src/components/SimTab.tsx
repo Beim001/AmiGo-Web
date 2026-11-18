@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
-import { SimEventInstance, SimEventDef, eventDef, optionBlocked, Resolution } from '../lib/simEvents';
+import {
+  SimEventInstance,
+  SimEventDef,
+  eventDef,
+  optionBlocked,
+  Resolution } from '../lib/simEvents';
 import {
   Briefcase,
-  RussianRuble,
   BookOpen,
   ChevronLeft,
   CheckCircle,
@@ -32,6 +36,7 @@ import {
   Watch,
   Gavel,
 } from 'lucide-react';
+import { CURRENCY } from '../data/seasons';
 
 const EVENT_ICONS: Record<SimEventDef['icon'], React.ElementType> = {
   wallet: Wallet,
@@ -434,7 +439,7 @@ export const SimTab: React.FC<SimTabProps> = ({
             <div className="text-xs font-black flex flex-wrap gap-2">
               {lastResult.result.coins !== 0 && (
                 <span className={lastResult.result.coins > 0 ? 'text-emerald-700' : 'text-red-700'}>
-                  {lastResult.result.coins > 0 ? '+' : ''}{lastResult.result.coins.toLocaleString()} ₽
+                  {lastResult.result.coins > 0 ? '+' : ''}{lastResult.result.coins.toLocaleString()} {CURRENCY.symbol}
                 </span>
               )}
               {lastResult.result.health !== 0 && (

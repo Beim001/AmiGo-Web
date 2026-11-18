@@ -1,8 +1,13 @@
-import { addLifeLog } from '../lib/lifeLog';
-import React, { useState } from 'react';
+import {
+  addLifeLog } from '../lib/lifeLog';
+import React,
+  { useState } from 'react';
 import type { DiseaseInfo } from '../lib/disease';
-import { MAINTENANCE_COST, MAINTENANCE_CHANCE } from '../lib/traits';
-import { VACCINE_SUCCESS, RECOVERY_IMMUNITY, ANTIBODY_INHERIT } from '../lib/disease';
+import { MAINTENANCE_COST,
+  MAINTENANCE_CHANCE } from '../lib/traits';
+import { VACCINE_SUCCESS,
+  RECOVERY_IMMUNITY,
+  ANTIBODY_INHERIT } from '../lib/disease';
 import {
   ChevronLeft,
   Hospital,
@@ -11,12 +16,13 @@ import {
   Stethoscope,
   Zap,
   CheckCircle2,
-  RussianRuble,
   History,
   Building2,
   RefreshCw,
   ChevronRight,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
+import { CURRENCY } from '../data/seasons';
 
 export interface HospitalModalProps {
   onClose: () => void;
@@ -242,7 +248,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
     const finalRecover = Math.min(100, baseRecover + currentHospital.bonusRecover);
 
     if (coins < finalCost) {
-      showToast(`❌ 金钱不足！需要 ${finalCost.toLocaleString()} ₽，拥有 ${coins.toLocaleString()} ₽`);
+      showToast(`❌ 金钱不足！需要 ${finalCost.toLocaleString()} ${CURRENCY.symbol}，拥有 ${coins.toLocaleString()} ${CURRENCY.symbol}`);
       return;
     }
     if (health >= 100 && finalRecover > 0) {
@@ -269,7 +275,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
 
     // 只记录从危急状态（健康 < 30）恢复的就诊
     if (health < 30) addLifeLog('健康', '转危为安', `在${currentHospital.name}接受「${title}」，健康 ${health} → ${Math.min(100, health + finalRecover)}。`);
-    showToast(`🩺 在【${currentHospital.name}】成功进行【${title}】！健康度 +${finalRecover}%，${parentsPay ? '费用由父母承担' : `花费 ${finalCost.toLocaleString()} ₽`}`);
+    showToast(`🩺 在【${currentHospital.name}】成功进行【${title}】！健康度 +${finalRecover}%，${parentsPay ? '费用由父母承担' : `花费 ${finalCost.toLocaleString()} ${CURRENCY.symbol}`}`);
   };
 
   const getHealthStatus = (h: number) => {
@@ -316,8 +322,8 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
         </div>
 
         <div className="flex items-center bg-[#151722] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black z-10">
-          <RussianRuble size={14} className="text-yellow-400 mr-1" />
-          <span>{coins.toLocaleString()} ₽</span>
+          <CurrencyIcon size={14} className="text-yellow-400 mr-1" />
+          <span>{coins.toLocaleString()} {CURRENCY.symbol}</span>
         </div>
       </div>
 
@@ -341,17 +347,17 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                 onClick={() => {
                   const cost = costOf(disease.cost);
                   if (coins < cost) {
-                    showToast(`❌ 金钱不足！治疗${disease.name}需要 ${cost.toLocaleString()} ₽`);
+                    showToast(`❌ 金钱不足！治疗${disease.name}需要 ${cost.toLocaleString()} ${CURRENCY.symbol}`);
                     return;
                   }
                   setCoins((prev) => prev - cost);
                   onCureDisease?.();
                   addLifeLog('健康', `治愈${disease.name}`, `在${currentHospital.name}就医痊愈。`);
-                  showToast(`🩺 在【${currentHospital.name}】治愈了${disease.name}！${parentsPay ? '费用由父母承担' : `花费 ${cost.toLocaleString()} ₽`}`);
+                  showToast(`🩺 在【${currentHospital.name}】治愈了${disease.name}！${parentsPay ? '费用由父母承担' : `花费 ${cost.toLocaleString()} ${CURRENCY.symbol}`}`);
                 }}
                 className="bg-red-400 hover:bg-red-300 text-black text-xs font-black px-3 py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer shrink-0"
               >
-                治疗 {costOf(disease.cost).toLocaleString()} ₽
+                治疗 {costOf(disease.cost).toLocaleString()} {CURRENCY.symbol}
               </button>
             </div>
           </div>
@@ -369,7 +375,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                 {vaccines.map((v) => (
                   <div key={v.id} className="flex items-center gap-2 bg-black/20 rounded-xl px-2 py-1.5">
                     <span className="text-white text-xs font-black flex-1">
-                      {v.name}疫苗 <span className="text-sky-300/80 font-bold">{v.cost.toLocaleString()} ₽ / 人</span>
+                      {v.name}疫苗 <span className="text-sky-300/80 font-bold">{v.cost.toLocaleString()} {CURRENCY.symbol} / 人</span>
                     </span>
                     <button
                       onClick={() => showToast(onVaccinate(v.id, 'self'))}
@@ -392,7 +398,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
         )}
         {onMaintenance && (
           <div className="bg-violet-950/70 border-2 border-violet-500/60 rounded-2xl p-3 shadow-[0_3px_0_#000] space-y-2">
-            <div className="text-violet-200 font-black text-sm">💆 保养调理（{MAINTENANCE_COST.toLocaleString()} ₽ / 次）</div>
+            <div className="text-violet-200 font-black text-sm">💆 保养调理（{MAINTENANCE_COST.toLocaleString()} {CURRENCY.symbol} / 次）</div>
             <p className="text-violet-200/80 text-[11px] font-bold leading-relaxed">
               每次有 {Math.round(MAINTENANCE_CHANCE * 100)}% 的概率获得「精力旺盛」或「富养」，生育年龄上限延长到女 50 岁、男 65 岁。{fertilityText}
             </p>
@@ -632,7 +638,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                           </span>
                           <span className="text-gray-500 text-[10px]">|</span>
                           <span className="text-yellow-400 font-mono font-black text-xs">
-                            {finalCost.toLocaleString()} ₽
+                            {finalCost.toLocaleString()} {CURRENCY.symbol}
                           </span>
                         </div>
 
@@ -680,7 +686,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                         }
                         className="bg-amber-400 hover:bg-amber-300 text-black text-xs font-black px-3 py-1.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer flex-shrink-0 whitespace-nowrap"
                       >
-                        {finalCost.toLocaleString()} ₽
+                        {finalCost.toLocaleString()} {CURRENCY.symbol}
                       </button>
                     </div>
                   );
@@ -722,7 +728,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                             </div>
                           )}
                           <div className="text-gray-400 text-[10px] font-mono">
-                            -{log.cost.toLocaleString()} ₽
+                            -{log.cost.toLocaleString()} {CURRENCY.symbol}
                           </div>
                         </div>
                       </div>

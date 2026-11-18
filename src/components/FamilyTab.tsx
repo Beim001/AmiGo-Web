@@ -42,6 +42,7 @@ import {
   canDoInteraction,
   applyInteraction,
 } from '../lib/family';
+import { CURRENCY } from '../data/seasons';
 
 
 export interface FamilyTabProps {
@@ -138,7 +139,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
       return;
     }
     if (coins < MATCHMAKING_FEE) {
-      showToast(`钱不够，包办婚事要 ${MATCHMAKING_FEE.toLocaleString()} ₽`);
+      showToast(`钱不够，包办婚事要 ${MATCHMAKING_FEE.toLocaleString()} ${CURRENCY.symbol}`);
       return;
     }
     const r = arrangeMarriage(family, member.id, gameYear, gameMonth);
@@ -149,7 +150,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
     setCoins((prev) => prev - MATCHMAKING_FEE);
     setFamily(r.state);
     addLifeLog('大事', `为${member.name}包办婚事`, `${member.name}奉家主之命与 ${r.spouse.name}（${r.spouse.occupation}）成婚。`);
-    showToast(`💍 ${member.name} 奉命与 ${r.spouse.name} 成婚（-${MATCHMAKING_FEE.toLocaleString()} ₽，好感 -${MATCHMAKING_AFFINITY_PENALTY}）`);
+    showToast(`💍 ${member.name} 奉命与 ${r.spouse.name} 成婚（-${MATCHMAKING_FEE.toLocaleString()} ${CURRENCY.symbol}，好感 -${MATCHMAKING_AFFINITY_PENALTY}）`);
   };
 
   const showToast = (msg: string) => {
@@ -256,7 +257,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
 
     if (kind === 'gift') {
       if (coins < GIFT_COST) {
-        showToast(`现金不足！准备礼物需要 ${GIFT_COST.toLocaleString()} ₽`);
+        showToast(`现金不足！准备礼物需要 ${GIFT_COST.toLocaleString()} ${CURRENCY.symbol}`);
         return;
       }
       setCoins((prev) => prev - GIFT_COST);
@@ -272,9 +273,9 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
     } else if (kind === 'consult') {
       const reward = CONSULT_REWARD_MIN + Math.floor(Math.random() * (CONSULT_REWARD_MAX - CONSULT_REWARD_MIN + 1));
       setCoins((prev) => prev + reward);
-      showToast(`向 ${member.name} 请教，获得资助 +${reward.toLocaleString()} ₽，好感度 ${newAffinity}%`);
+      showToast(`向 ${member.name} 请教，获得资助 +${reward.toLocaleString()} ${CURRENCY.symbol}，好感度 ${newAffinity}%`);
     } else {
-      showToast(`送给 ${member.name} 一份礼物（-${GIFT_COST.toLocaleString()} ₽），好感度 ${newAffinity}%`);
+      showToast(`送给 ${member.name} 一份礼物（-${GIFT_COST.toLocaleString()} ${CURRENCY.symbol}），好感度 ${newAffinity}%`);
     }
     setSelectedId(null);
   };
@@ -392,8 +393,8 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
           {guardianship && (
             <div className="mt-3 bg-sky-950/70 border-2 border-sky-500/60 rounded-xl p-2.5 text-[11px] font-bold text-sky-100">
               {guardianship.phase === 'holding'
-                ? `👪 监护托管：${guardianship.guardianName}代管一半家产 ${guardianship.held.toLocaleString()} ₽，你年满 18 岁时返还。`
-                : `🙏 赡养${guardianship.guardianName}：每月上缴 ${guardianship.supportPerMonth.toLocaleString()} ₽，还剩 ${guardianship.supportMonthsLeft} 个月。`}
+                ? `👪 监护托管：${guardianship.guardianName}代管一半家产 ${guardianship.held.toLocaleString()} ${CURRENCY.symbol}，你年满 18 岁时返还。`
+                : `🙏 赡养${guardianship.guardianName}：每月上缴 ${guardianship.supportPerMonth.toLocaleString()} ${CURRENCY.symbol}，还剩 ${guardianship.supportMonthsLeft} 个月。`}
             </div>
           )}
           {(() => {
@@ -470,7 +471,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                 <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] space-y-1.5 text-xs font-bold">
                   <div className="text-white font-black">🎖️ 晋升为{toLabel}的条件（每月推进时自动检查）</div>
                   <div className={wealthOk ? 'text-emerald-300' : 'text-gray-400'}>
-                    {wealthOk ? '✔' : '✘'} 家族资产 ≥ {promo.minNetWorth.toLocaleString()} ₽（当前 {wealth.toLocaleString()} ₽）
+                    {wealthOk ? '✔' : '✘'} 家族资产 ≥ {promo.minNetWorth.toLocaleString()} {CURRENCY.symbol}（当前 {wealth.toLocaleString()} {CURRENCY.symbol}）
                   </div>
                   <div className={repOk ? 'text-emerald-300' : 'text-gray-400'}>
                     {repOk ? '✔' : '✘'} 当家人声望 ≥ {promo.minReputation}（当前 {reputation}）
@@ -487,7 +488,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
               <div className="bg-[#21232e] rounded-lg border border-black p-1.5">
                 <div className="text-[10px] text-gray-400 font-bold">财力</div>
                 <div className="text-amber-300 font-black text-sm">{Math.round(wealthScore(wealth))}</div>
-                <div className="text-[9px] text-gray-500 font-bold truncate">{wealth.toLocaleString()} ₽</div>
+                <div className="text-[9px] text-gray-500 font-bold truncate">{wealth.toLocaleString()} {CURRENCY.symbol}</div>
               </div>
               <div className="bg-[#21232e] rounded-lg border border-black p-1.5">
                 <div className="text-[10px] text-gray-400 font-bold">影响力</div>
@@ -570,7 +571,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                         <Sparkles size={12} /> {item.meaning}
                       </span>
                       <span className="text-[10px] text-gray-400 font-bold text-right">
-                        {owned.source} · {owned.year} 年 · 估价 {item.value.toLocaleString()} ₽
+                        {owned.source} · {owned.year} 年 · 估价 {item.value.toLocaleString()} {CURRENCY.symbol}
                       </span>
                     </div>
                   </div>
@@ -749,7 +750,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
             )}
             {selectedMember.income !== undefined && (
               <div className="text-[10px] text-emerald-300 font-bold mb-2">
-                💼 {selectedMember.occupation} · 月收入 {selectedMember.income.toLocaleString()} ₽（计入家族财力）
+                💼 {selectedMember.occupation} · 月收入 {selectedMember.income.toLocaleString()} {CURRENCY.symbol}（计入家族财力）
               </div>
             )}
             {selectedMember.arranged && (
@@ -762,7 +763,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                 onClick={() => handleArrange(selectedMember)}
                 className="w-full mb-3 bg-pink-400 hover:bg-pink-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
               >
-                💍 强制相亲（家主权限，-{MATCHMAKING_FEE.toLocaleString()} ₽，好感 -{MATCHMAKING_AFFINITY_PENALTY}）
+                💍 强制相亲（家主权限，-{MATCHMAKING_FEE.toLocaleString()} {CURRENCY.symbol}，好感 -{MATCHMAKING_AFFINITY_PENALTY}）
               </button>
             )}
             {!selectedMember.isPlayer && selectedMember.status !== '已故' && (
@@ -774,7 +775,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                 <div className="grid grid-cols-3 gap-2">
                   {actionBtn('spar', '切磋交流', 'bg-yellow-400 hover:bg-yellow-300')}
                   {actionBtn('consult', '家族请教', 'bg-sky-400 hover:bg-sky-300')}
-                  {actionBtn('gift', `赠礼 ${GIFT_COST}₽`, 'bg-rose-400 hover:bg-rose-300')}
+                  {actionBtn('gift', `赠礼 ${GIFT_COST}${CURRENCY.symbol}`, 'bg-rose-400 hover:bg-rose-300')}
                 </div>
                 <p className="text-[10px] text-gray-400 font-bold mt-2 text-center">
                   {blockedThisMonth || '每位家人每月可互动 1 次'}

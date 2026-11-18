@@ -1,5 +1,7 @@
-import { randomPlayerName } from '../lib/names';
-import React, { useState } from 'react';
+import {
+  randomPlayerName } from '../lib/names';
+import React,
+  { useState } from 'react';
 import {
   ChevronLeft,
   Baby,
@@ -7,7 +9,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
-  RussianRuble,
   User,
   RefreshCw,
   Edit3,
@@ -16,9 +17,11 @@ import {
   FileText,
   BadgeCheck,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
 import { validatePlayerName } from '../utils/sensitiveWords';
 import { CharacterAvatar } from './CharacterAvatar';
 import { Appearance, APPEARANCE_PARTS, randomAppearance } from '../lib/appearance';
+import { CURRENCY } from '../data/seasons';
 
 export interface BirthModalProps {
   onClose: () => void;
@@ -181,8 +184,8 @@ export const BirthModal: React.FC<BirthModalProps> = ({
         </div>
 
         <div className="flex items-center bg-[#151722] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black z-10 shadow-[0_2px_0_#000]">
-          <RussianRuble size={14} className="text-yellow-400 mr-1" />
-          <span className="text-amber-300">{coins.toLocaleString()} ₽</span>
+          <CurrencyIcon size={14} className="text-yellow-400 mr-1" />
+          <span className="text-amber-300">{coins.toLocaleString()} {CURRENCY.symbol}</span>
         </div>
       </div>
 

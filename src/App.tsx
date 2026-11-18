@@ -19,7 +19,7 @@ import { clampReputation, CHARITY_UNIT, charityRemaining } from './lib/reputatio
 import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, unlockAllForTesting, clearAchievementsForTesting, readGiftsGiven, recordGiftsGiven } from './lib/achievements';
 import { CreditsRoll } from './components/CreditsRoll';
 import { Appearance, randomAppearance, rollBeauty, applyBeauty, BEAUTY_TRAIT } from './lib/appearance';
-import { currentSeason } from './data/seasons';
+import { currentSeason, CURRENCY } from './data/seasons';
 import { antibodyNames, DISEASES } from './lib/disease';
 import { SimpleModeView } from './components/SimpleModeView';
 import { SIMPLE_MODE_KEY } from './lib/simpleMode';
@@ -483,13 +483,13 @@ export default function App() {
   /** 慈善捐款：每 10,000 ₽ 声望 +1，每个游戏月最多 +5 */
   const handleDonate = (amount: number): string => {
     if (!isRegistered) return '请先完成出生登记';
-    if (coins < amount) return `现金不足（需 ${amount.toLocaleString()} ₽）`;
+    if (coins < amount) return `现金不足（需 ${amount.toLocaleString()} ${CURRENCY.symbol}）`;
     const monthKey = `${gameYear}-${gameMonth}`;
     const gain = Math.min(Math.floor(amount / CHARITY_UNIT), charityRemaining(charity, monthKey));
     setCoins((c) => c - amount);
     changeReputation(gain);
     setCharity({ month: monthKey, gained: (charity?.month === monthKey ? charity.gained : 0) + gain });
-    if (amount >= 100000) addLifeLog('大事', '慷慨解囊', `向慈善会捐款 ${amount.toLocaleString()} ₽。`);
+    if (amount >= 100000) addLifeLog('大事', '慷慨解囊', `向慈善会捐款 ${amount.toLocaleString()} ${CURRENCY.symbol}。`);
     return gain > 0 ? `感谢你的善举！声望 +${gain}` : '已捐款（本月因慈善获得的声望已达上限）';
   };
 
@@ -1215,10 +1215,10 @@ export default function App() {
              onClose={() => setShowAuction(false)}
              onBuyTicket={() => {
                if (auction.admitted) return '你已经可以入场了';
-               if (coins < TICKET_PRICE) return `现金不足，门票需要 ${TICKET_PRICE.toLocaleString()} ₽`;
+               if (coins < TICKET_PRICE) return `现金不足，门票需要 ${TICKET_PRICE.toLocaleString()} ${CURRENCY.symbol}`;
                setCoins((c) => c - TICKET_PRICE);
                setAuction({ ...auction, admitted: true });
-               return `🎟️ 已购买门票（-${TICKET_PRICE.toLocaleString()} ₽），欢迎入场`;
+               return `🎟️ 已购买门票（-${TICKET_PRICE.toLocaleString()} ${CURRENCY.symbol}），欢迎入场`;
              }}
              onAction={(i, action) => {
                const lot = auction.lots[i];
@@ -1231,16 +1231,16 @@ export default function App() {
                }
                const want = action.type === 'buyout' ? normalizeLot(lot).buyout : action.amount;
                if (!Number.isFinite(want) || want <= 0) return '请输入出价';
-               if (want > coins) return `现金不足（需要 ${want.toLocaleString()} ₽，现金 ${coins.toLocaleString()} ₽）`;
+               if (want > coins) return `现金不足（需要 ${want.toLocaleString()} ${CURRENCY.symbol}，现金 ${coins.toLocaleString()} ${CURRENCY.symbol}）`;
                const res = action.type === 'buyout' ? buyoutLot(lot) : raiseBid(lot, want);
                if (res.outcome === 'error') return res.error ?? '出价无效';
                update(res.lot);
-               if (res.outcome === 'outbid') return `其他竞买人跟价到 ${(res.lot.currentPrice ?? 0).toLocaleString()} ₽，要继续加价吗？`;
+               if (res.outcome === 'outbid') return `其他竞买人跟价到 ${(res.lot.currentPrice ?? 0).toLocaleString()} ${CURRENCY.symbol}，要继续加价吗？`;
                const paid = res.lot.paid ?? want;
                setCoins((c) => c - paid);
                setFamily((prev) => addHeirloom(prev, { id: lot.heirloomId, source: '拍卖会', year: gameYear, month: gameMonth, keeper: '当家人' }));
-               addLifeLog('财富', `拍得传家宝：${h?.name ?? ''}`, `在北城拍卖会以 ${paid.toLocaleString()} ₽ ${action.type === 'buyout' ? '一口价买下' : '落槌拍得'}。`);
-               return `🎉 ${action.type === 'buyout' ? '一口价' : '落槌！'}以 ${paid.toLocaleString()} ₽ 拍得「${h?.name ?? ''}」`;
+               addLifeLog('财富', `拍得传家宝：${h?.name ?? ''}`, `在北城拍卖会以 ${paid.toLocaleString()} ${CURRENCY.symbol} ${action.type === 'buyout' ? '一口价买下' : '落槌拍得'}。`);
+               return `🎉 ${action.type === 'buyout' ? '一口价' : '落槌！'}以 ${paid.toLocaleString()} ${CURRENCY.symbol} 拍得「${h?.name ?? ''}」`;
              }}
            />
          )}
@@ -1379,7 +1379,7 @@ export default function App() {
                if (!isRegistered) return '未登记';
                const a = allowanceFor(currentAge);
                const detail = a.parts.map((p) => `${p.relation} ${p.reason ?? `+${p.amount.toLocaleString()}`}`).join('；');
-               return `${a.total.toLocaleString()} ₽${detail ? `（${detail}）` : '（父母都已故）'}`;
+               return `${a.total.toLocaleString()} ${CURRENCY.symbol}${detail ? `（${detail}）` : '（父母都已故）'}`;
              })()}
              onSetParentAffinity={(value) => {
                const parents = buildFamilyMembers(family, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth }).filter(

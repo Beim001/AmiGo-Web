@@ -10,6 +10,7 @@ import { addLifeLog, readLifeLog, clearLifeLog } from '../lib/lifeLog';
 import { loadAccounts, saveAccounts as persistBankAccounts, currentRateEvent } from '../lib/bank';
 import { CURRENT_JOB_KEY, JOB_HISTORY_KEY } from '../components/JobModal';
 import type { Game } from './useGameState';
+import { CURRENCY } from '../data/seasons';
 
 // 家族传承：角色去世后由子嗣或兄弟姐妹继承（第 21 题），50 岁后主动传位（第 58 题），子嗣逼宫（第 59 题）。
 // 未成年继承时一半家产交由监护人托管（第 25 题）。
@@ -103,7 +104,7 @@ export const useSuccession = ({ game, currentAge, playerOccupation, setShowSucce
       setBankDeposit(totals.deposit);
       setBankLoan(totals.loan);
       setGuardianship({ guardianName, held: custody.held, phase: 'holding', supportPerMonth: 0, supportMonthsLeft: 0 });
-      addLifeLog('财富', '监护托管', `${guardianName}代为管理一半家产 ${custody.held.toLocaleString()} ₽，成年后返还。`, { year: gameYear, month: gameMonth, age: heir.age });
+      addLifeLog('财富', '监护托管', `${guardianName}代为管理一半家产 ${custody.held.toLocaleString()} ${CURRENCY.symbol}，成年后返还。`, { year: gameYear, month: gameMonth, age: heir.age });
     } else {
       setGuardianship(null);
     }

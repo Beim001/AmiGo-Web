@@ -1,3 +1,4 @@
+import { CURRENCY } from '../data/seasons';
 import React from 'react';
 import { Store, Calendar, Sparkles } from 'lucide-react';
 import { CharacterAvatar, CharacterAvatarProps } from './CharacterAvatar';
@@ -325,7 +326,7 @@ export const RoleTab: React.FC<RoleTabProps> = ({
           <StatCard
             title="资产"
             value={!isRegistered ? '未激活' : isDeceased ? `遗产 ${coins.toLocaleString()}` : coins.toLocaleString()}
-            unit={!isRegistered ? '' : '₽'}
+            unit={!isRegistered ? '' : `${CURRENCY.symbol}`}
             color={!isRegistered ? 'bg-[#373b47]' : 'bg-[#ca8a04]'}
             icon={<WealthIcon />}
             onClick={isRegistered ? (onOpenWealthChart || onOpenBank) : undefined}

@@ -1,5 +1,9 @@
-import { addLifeLog } from '../lib/lifeLog';
-import React, { useState, useEffect, useMemo } from 'react';
+import {
+  addLifeLog } from '../lib/lifeLog';
+import React,
+  { useState,
+  useEffect,
+  useMemo } from 'react';
 import {
   TrendingUp,
   TrendingDown,
@@ -15,7 +19,6 @@ import {
   ArrowDownRight,
   Sparkles,
   Award,
-  RussianRuble,
   Search,
   CheckCircle2,
   AlertCircle,
@@ -39,6 +42,7 @@ import {
   STOCK_KEYS,
   TRADING_DAYS_PER_MONTH,
 } from '../lib/stockMarket';
+import { CURRENCY } from '../data/seasons';
 
 export type { StockItem, StockHolding, StockTradeLog, StockNewsItem } from '../lib/stockMarket';
 export { INITIAL_STOCKS, NEWS_TEMPLATES } from '../lib/stockMarket';
@@ -217,7 +221,7 @@ export const StockModal: React.FC<{
     }
     const cost = Math.round(shares * stock.price);
     if (coins < cost) {
-      showToast(`❌ 现金不足！购买 ${shares} 股需 ${cost.toLocaleString()} ₽，当前拥有 ${coins.toLocaleString()} ₽`);
+      showToast(`❌ 现金不足！购买 ${shares} 股需 ${cost.toLocaleString()} ${CURRENCY.symbol}，当前拥有 ${coins.toLocaleString()} ${CURRENCY.symbol}`);
       return;
     }
 
@@ -257,7 +261,7 @@ export const StockModal: React.FC<{
     setTradeLogs(updatedLogs);
     saveAllData(stocks, updatedHoldings, updatedLogs, newsFeed, tradingDay);
 
-    showToast(`🎉 成功买入【${stock.name}】${shares.toLocaleString()} 股！扣除 ${cost.toLocaleString()} ₽`);
+    showToast(`🎉 成功买入【${stock.name}】${shares.toLocaleString()} 股！扣除 ${cost.toLocaleString()} ${CURRENCY.symbol}`);
   };
 
   // Sell Stock
@@ -305,9 +309,9 @@ export const StockModal: React.FC<{
     // 单笔盈亏达 1 万 ₽ 才记入人生日志
     const realized = Math.round(revenue - shares * existing.avgCost);
     if (Math.abs(realized) >= 10000) {
-      addLifeLog('财富', realized > 0 ? `股票大赚：${stock.name}` : `股票重亏：${stock.name}`, `卖出 ${shares.toLocaleString()} 股，${realized > 0 ? '盈利' : '亏损'} ${Math.abs(realized).toLocaleString()} ₽。`);
+      addLifeLog('财富', realized > 0 ? `股票大赚：${stock.name}` : `股票重亏：${stock.name}`, `卖出 ${shares.toLocaleString()} 股，${realized > 0 ? '盈利' : '亏损'} ${Math.abs(realized).toLocaleString()} ${CURRENCY.symbol}。`);
     }
-    showToast(`💰 成功平仓卖出【${stock.name}】${shares.toLocaleString()} 股！资金回收 +${revenue.toLocaleString()} ₽`);
+    showToast(`💰 成功平仓卖出【${stock.name}】${shares.toLocaleString()} 股！资金回收 +${revenue.toLocaleString()} ${CURRENCY.symbol}`);
   };
 
   const filteredStocks = useMemo(() => {
@@ -581,9 +585,9 @@ export const StockModal: React.FC<{
               {/* Price & Metric Strip */}
               <div className="mt-3.5 pt-3 border-t border-gray-800 flex items-end justify-between">
                 <div>
-                  <span className="text-gray-400 text-[10px] font-bold block">现价 (RMB/₽)</span>
+                  <span className="text-gray-400 text-[10px] font-bold block">现价 (RMB/{CURRENCY.symbol})</span>
                   <div className="text-amber-300 text-2xl sm:text-3xl font-black font-mono tracking-tight mt-0.5">
-                    {selectedStock.price.toFixed(2)} ₽
+                    {selectedStock.price.toFixed(2)} {CURRENCY.symbol}
                   </div>
                 </div>
 
@@ -681,15 +685,15 @@ export const StockModal: React.FC<{
                     <div className="relative w-full h-full">
                       {/* Top / Bottom Price Guides */}
                       <div className="absolute top-1 right-2 text-[9px] font-mono text-gray-500">
-                        最高: {max.toFixed(1)} ₽
+                        最高: {max.toFixed(1)} {CURRENCY.symbol}
                       </div>
                       <div className="absolute bottom-1 right-2 text-[9px] font-mono text-gray-500">
-                        最低: {min.toFixed(1)} ₽
+                        最低: {min.toFixed(1)} {CURRENCY.symbol}
                       </div>
 
                       {hoveredDataPoint && (
                         <div className="absolute top-1 left-2 bg-[#23273a] text-amber-300 border border-amber-500/40 text-[10px] font-mono px-2 py-0.5 rounded shadow z-10">
-                          第 {hoveredDataPoint.day} 日 · 价格: {hoveredDataPoint.price.toFixed(2)} ₽
+                          第 {hoveredDataPoint.day} 日 · 价格: {hoveredDataPoint.price.toFixed(2)} {CURRENCY.symbol}
                         </div>
                       )}
 
@@ -818,7 +822,7 @@ export const StockModal: React.FC<{
                   {orderType === 'buy' ? '可用流动资金:' : '当前可用持仓:'}
                 </span>
                 <span className="text-amber-300 font-bold">
-                  {orderType === 'buy' ? `${coins.toLocaleString()} ₽` : `${currentHoldingShares.toLocaleString()} 股`}
+                  {orderType === 'buy' ? `${coins.toLocaleString()} ${CURRENCY.symbol}` : `${currentHoldingShares.toLocaleString()} 股`}
                 </span>
               </div>
 
@@ -894,11 +898,11 @@ export const StockModal: React.FC<{
                   <div className="bg-[#10121d] p-3 rounded-xl border border-black space-y-1.5 text-xs font-mono">
                     <div className="flex justify-between text-gray-300 font-bold font-sans">
                       <span>委托单价：</span>
-                      <span className="text-white font-black">{selectedStock.price.toFixed(2)} ₽</span>
+                      <span className="text-white font-black">{selectedStock.price.toFixed(2)} {CURRENCY.symbol}</span>
                     </div>
                     <div className="flex justify-between text-gray-300 font-bold font-sans">
                       <span>预计{orderType === 'buy' ? '发生金额' : '回收现金'}：</span>
-                      <span className="text-amber-400 font-black text-sm">{totalEstimated.toLocaleString()} ₽</span>
+                      <span className="text-amber-400 font-black text-sm">{totalEstimated.toLocaleString()} {CURRENCY.symbol}</span>
                     </div>
 
                     <button
@@ -921,7 +925,7 @@ export const StockModal: React.FC<{
                       {orderType === 'buy' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
                       <span>
                         确认{orderType === 'buy' ? '买入' : '平仓卖出'} (
-                        {totalEstimated.toLocaleString()} ₽)
+                        {totalEstimated.toLocaleString()} {CURRENCY.symbol})
                       </span>
                     </button>
                   </div>
@@ -971,7 +975,7 @@ export const StockModal: React.FC<{
                         </div>
 
                         <div className="text-right flex-shrink-0">
-                          <div className="text-white font-mono font-black text-xs">{stk.price.toFixed(2)} ₽</div>
+                          <div className="text-white font-mono font-black text-xs">{stk.price.toFixed(2)} {CURRENCY.symbol}</div>
                           <div className="text-red-400 font-mono font-black text-[10px] flex items-center justify-end">
                             +{pct.toFixed(2)}%
                           </div>
@@ -1018,7 +1022,7 @@ export const StockModal: React.FC<{
                         </div>
 
                         <div className="text-right flex-shrink-0">
-                          <div className="text-white font-mono font-black text-xs">{stk.price.toFixed(2)} ₽</div>
+                          <div className="text-white font-mono font-black text-xs">{stk.price.toFixed(2)} {CURRENCY.symbol}</div>
                           <div
                             className={`${
                               isUp ? 'text-red-400' : 'text-emerald-400'
@@ -1143,7 +1147,7 @@ export const StockModal: React.FC<{
                       <div className="text-right flex items-center gap-3 flex-shrink-0">
                         <div>
                           <div className="text-white font-black text-xs font-mono">
-                            {stock.price.toFixed(2)} ₽
+                            {stock.price.toFixed(2)} {CURRENCY.symbol}
                           </div>
                           <div className="text-[10px] text-gray-500 font-mono">
                             昨 {stock.prevPrice.toFixed(2)}
@@ -1186,7 +1190,7 @@ export const StockModal: React.FC<{
                 <div className="bg-[#10121d] p-3 rounded-xl border border-black">
                   <div className="text-gray-400 text-[10px] font-bold">持仓股票总市值</div>
                   <div className="text-white text-lg font-black font-mono mt-0.5">
-                    {totalMarketValue.toLocaleString()} ₽
+                    {totalMarketValue.toLocaleString()} {CURRENCY.symbol}
                   </div>
                 </div>
 
@@ -1197,7 +1201,7 @@ export const StockModal: React.FC<{
                       totalFloatProfit >= 0 ? 'text-red-400' : 'text-emerald-400'
                     }`}
                   >
-                    {totalFloatProfit >= 0 ? `+${totalFloatProfit.toLocaleString()}` : totalFloatProfit.toLocaleString()} ₽
+                    {totalFloatProfit >= 0 ? `+${totalFloatProfit.toLocaleString()}` : totalFloatProfit.toLocaleString()} {CURRENCY.symbol}
                     <span className="text-[10px] font-bold ml-1">
                       ({totalProfitPercent >= 0 ? '+' : ''}
                       {totalProfitPercent.toFixed(2)}%)
@@ -1235,20 +1239,20 @@ export const StockModal: React.FC<{
                             </span>
                           </div>
                           <div className="text-gray-400 text-[10px] font-mono mt-0.5">
-                            持仓: {h.shares.toLocaleString()} 股 · 成本: {h.avgCost.toFixed(2)} ₽
+                            持仓: {h.shares.toLocaleString()} 股 · 成本: {h.avgCost.toFixed(2)} {CURRENCY.symbol}
                           </div>
                         </div>
 
                         <div className="text-right">
                           <div className="text-white font-black text-xs font-mono">
-                            {currentMarketVal.toLocaleString()} ₽
+                            {currentMarketVal.toLocaleString()} {CURRENCY.symbol}
                           </div>
                           <div
                             className={`text-[10px] font-mono font-black mt-0.5 ${
                               isUp ? 'text-red-400' : 'text-emerald-400'
                             }`}
                           >
-                            {isUp ? `+${floatProfit.toFixed(0)} ₽` : `${floatProfit.toFixed(0)} ₽`} (
+                            {isUp ? `+${floatProfit.toFixed(0)} ${CURRENCY.symbol}` : `${floatProfit.toFixed(0)} ${CURRENCY.symbol}`} (
                             {isUp ? '+' : ''}
                             {floatPct.toFixed(2)}%)
                           </div>
@@ -1354,7 +1358,7 @@ export const StockModal: React.FC<{
                         <span className="text-white font-black text-xs">{log.stockName}</span>
                       </div>
                       <div className="text-gray-400 text-[10px] font-mono mt-0.5">
-                        {log.shares.toLocaleString()} 股 · 单价 {log.price.toFixed(2)} ₽ · {log.time}
+                        {log.shares.toLocaleString()} 股 · 单价 {log.price.toFixed(2)} {CURRENCY.symbol} · {log.time}
                       </div>
                     </div>
 
@@ -1363,7 +1367,7 @@ export const StockModal: React.FC<{
                         log.type === 'buy' ? 'text-red-400' : 'text-emerald-400'
                       }`}
                     >
-                      {log.type === 'buy' ? `-${log.total.toLocaleString()}` : `+${log.total.toLocaleString()}`} ₽
+                      {log.type === 'buy' ? `-${log.total.toLocaleString()}` : `+${log.total.toLocaleString()}`} {CURRENCY.symbol}
                     </div>
                   </div>
                 ))}

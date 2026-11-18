@@ -1,5 +1,7 @@
 import React from 'react';
-import { RussianRuble, Heart, LogOut, TrendingUp, TrendingDown } from 'lucide-react';
+import { Heart, LogOut, TrendingUp, TrendingDown } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
+import { CURRENCY } from '../data/seasons';
 
 // 简洁模式：把用户当成 7 岁儿童来设计的一屏界面。
 // 只保留影响人生模拟的事：一个「过一个月」大按钮（自动治病、处理推演、给家人送礼），
@@ -111,12 +113,12 @@ export const SimpleModeView: React.FC<SimpleModeViewProps> = (p) => {
                 <span className="w-10 text-right">{p.health}</span>
               </div>
               <div className="flex items-center gap-2 text-lg font-black">
-                <RussianRuble size={22} className="text-amber-500" /> 钱
-                <span className="ml-auto">{p.coins.toLocaleString()} ₽</span>
+                <CurrencyIcon size={22} className="text-amber-500" /> 钱
+                <span className="ml-auto">{p.coins.toLocaleString()} {CURRENCY.symbol}</span>
               </div>
               {p.deposit > 0 && (
                 <div className="flex items-center gap-2 text-sm font-bold text-[#8a6d4b]">
-                  🏦 银行里还有 <span className="ml-auto">{p.deposit.toLocaleString()} ₽</span>
+                  🏦 银行里还有 <span className="ml-auto">{p.deposit.toLocaleString()} {CURRENCY.symbol}</span>
                 </div>
               )}
             </div>
@@ -204,7 +206,7 @@ export const SimpleModeView: React.FC<SimpleModeViewProps> = (p) => {
               {p.stockOpened ? (
                 <>
                   <p className="text-sm font-bold text-[#8a6d4b] mb-3">
-                    手里的股票值 {p.stockValue.toLocaleString()} ₽。买入会用三成现金买最近涨得好的股票。
+                    手里的股票值 {p.stockValue.toLocaleString()} {CURRENCY.symbol}。买入会用三成现金买最近涨得好的股票。
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     <button
@@ -238,7 +240,7 @@ export const SimpleModeView: React.FC<SimpleModeViewProps> = (p) => {
                 onClick={p.onMaintenance}
                 className="w-full bg-violet-400 text-white border-4 border-[#3b2a1a] rounded-2xl py-3 text-xl font-black shadow-[0_4px_0_#3b2a1a] active:translate-y-1 active:shadow-none cursor-pointer"
               >
-                保养一次（{p.maintenanceCost.toLocaleString()} ₽）
+                保养一次（{p.maintenanceCost.toLocaleString()} {CURRENCY.symbol}）
               </button>
             </div>
           )}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, Gavel, Ticket, Mail } from 'lucide-react';
 import { Auction, heirloomById, QUALITY_STYLE, TICKET_PRICE, INVITE_REPUTATION, normalizeLot, minNextBid } from '../lib/heirlooms';
+import { CURRENCY } from '../data/seasons';
 
 export interface AuctionModalProps {
   auction: Auction;
@@ -41,7 +42,7 @@ export const AuctionModal: React.FC<AuctionModalProps> = ({ auction, coins, onCl
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         <div className="bg-[#2b2118] border-2 border-black rounded-2xl p-3 text-xs font-bold text-amber-100/90 space-y-1">
           <p>本场拍卖会只在本月举办。从起拍价开始叫价，每次至少加一档；其他竞买人会跟价，没人再跟就由你落槌拍得。也可以按一口价直接买下，或随时放弃。拍得时才付款。</p>
-          <p className="text-amber-300/80">当前现金：{coins.toLocaleString()} ₽</p>
+          <p className="text-amber-300/80">当前现金：{coins.toLocaleString()} {CURRENCY.symbol}</p>
         </div>
 
         {!auction.admitted ? (
@@ -53,7 +54,7 @@ export const AuctionModal: React.FC<AuctionModalProps> = ({ auction, coins, onCl
               onClick={() => show(onBuyTicket())}
               className="bg-amber-400 hover:bg-amber-300 text-black text-xs font-black px-5 py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
             >
-              购买门票 {TICKET_PRICE.toLocaleString()} ₽
+              购买门票 {TICKET_PRICE.toLocaleString()} {CURRENCY.symbol}
             </button>
           </div>
         ) : (
@@ -76,11 +77,11 @@ export const AuctionModal: React.FC<AuctionModalProps> = ({ auction, coins, onCl
                   </div>
                   <p className="text-amber-100/80 text-[11px] font-bold leading-relaxed">{h.desc}</p>
                   <div className="text-[11px] font-bold text-amber-300">
-                    估价 {h.value.toLocaleString()} ₽ · 起拍 {lot.startPrice.toLocaleString()} ₽ · 一口价 {lot.buyout.toLocaleString()} ₽
+                    估价 {h.value.toLocaleString()} {CURRENCY.symbol} · 起拍 {lot.startPrice.toLocaleString()} {CURRENCY.symbol} · 一口价 {lot.buyout.toLocaleString()} {CURRENCY.symbol}
                   </div>
                   {lot.status === 'open' && (
                     <div className="text-[11px] font-black text-white">
-                      当前价 {lot.currentPrice.toLocaleString()} ₽ ·{' '}
+                      当前价 {lot.currentPrice.toLocaleString()} {CURRENCY.symbol} ·{' '}
                       {lot.leader === null ? '还没有人出价' : lot.leader === 'player' ? '你领先' : <span className="text-rose-300">其他竞买人领先</span>}
                     </div>
                   )}
@@ -91,13 +92,13 @@ export const AuctionModal: React.FC<AuctionModalProps> = ({ auction, coins, onCl
                           onClick={() => show(onAction(i, { type: 'raise', amount: min }))}
                           className="bg-amber-400 hover:bg-amber-300 text-black text-xs font-black py-1.5 rounded-lg border-2 border-black cursor-pointer"
                         >
-                          {lot.leader === null ? '起拍' : '加价'} {min.toLocaleString()} ₽
+                          {lot.leader === null ? '起拍' : '加价'} {min.toLocaleString()} {CURRENCY.symbol}
                         </button>
                         <button
                           onClick={() => show(onAction(i, { type: 'buyout' }))}
                           className="bg-emerald-400 hover:bg-emerald-300 text-black text-xs font-black py-1.5 rounded-lg border-2 border-black cursor-pointer"
                         >
-                          一口价 {lot.buyout.toLocaleString()} ₽
+                          一口价 {lot.buyout.toLocaleString()} {CURRENCY.symbol}
                         </button>
                       </div>
                       <div className="flex gap-1.5">
@@ -123,9 +124,9 @@ export const AuctionModal: React.FC<AuctionModalProps> = ({ auction, coins, onCl
                       </div>
                     </div>
                   ) : lot.status === 'won' ? (
-                    <div className="text-emerald-300 text-xs font-black">🎉 以 {lot.paid?.toLocaleString()} ₽ 拍得，已收入家族传家宝</div>
+                    <div className="text-emerald-300 text-xs font-black">🎉 以 {lot.paid?.toLocaleString()} {CURRENCY.symbol} 拍得，已收入家族传家宝</div>
                   ) : (
-                    <div className="text-gray-400 text-xs font-black">已结束：被其他竞买人以 {lot.currentPrice.toLocaleString()} ₽ 拍走</div>
+                    <div className="text-gray-400 text-xs font-black">已结束：被其他竞买人以 {lot.currentPrice.toLocaleString()} {CURRENCY.symbol} 拍走</div>
                   )}
                 </div>
               );
