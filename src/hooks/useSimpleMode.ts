@@ -16,6 +16,7 @@ import { addLifeLog } from '../lib/lifeLog';
 import { isMinor } from '../lib/monthly';
 import { loadMarket, STOCK_KEYS, StockHolding, StockTradeLog } from '../lib/stockMarket';
 import { JOB_POSITIONS, readCurrentJobId, readJobHistoryIds, CURRENT_JOB_KEY, JOB_HISTORY_KEY } from '../components/JobModal';
+import { loadLicenses, meetsLicense } from '../lib/vehicles';
 import { HOUSING_MARKET_PROPERTIES } from '../components/HousingModal';
 import { loadStored, saveStored } from '../lib/storage';
 import { seededRng } from '../lib/appearance';
@@ -289,7 +290,8 @@ export const useSimpleMode = ({
         question: '要去工作吗？',
         hint: '有工作才能领俸禄，还能拿到月薪',
         laterLabel: '以后再说',
-        choices: recommendJobs(JOB_POSITIONS, familyClass.id, seededRng(`simple_jobs_${gameYear}_${gameMonth}`)).map((j) => ({ id: j.id, title: j.title, detail: `${j.department} · 每月约 ${(j.dailySalary * 22).toLocaleString()} ${CURRENCY.symbol}` })),
+        // 需要执照的职业只推荐给已持照的人（第 67.4 题）
+        choices: recommendJobs(JOB_POSITIONS.filter((j) => meetsLicense(j, loadLicenses())), familyClass.id, seededRng(`simple_jobs_${gameYear}_${gameMonth}`)).map((j) => ({ id: j.id, title: j.title, detail: `${j.department} · 每月约 ${(j.dailySalary * 22).toLocaleString()} ${CURRENCY.symbol}` })),
       };
     }
     if (currentAge >= 8 && currentAge <= CHILD_LABOR_MAX_AGE && familyClass.childLabor && !childJob && !snoozed('child')) {

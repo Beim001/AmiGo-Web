@@ -6,6 +6,7 @@ import { loadMarket } from './stockMarket';
 import { BASE_STIPEND, monthlySalary } from './monthly';
 import { CHILD_JOBS, CHILD_LABOR_MAX_AGE } from './lineage';
 import { propertyUpkeep, REPOSSESS_AFTER_MONTHS } from './homeUpkeep';
+import { VEHICLE_HEALTH_BONUS, vehicleById, vehicleUpkeep } from './vehicles';
 
 /** 固定种子的伪随机数，保证每次运行结果相同 */
 const seeded = (seed = 1) => () => {
@@ -50,6 +51,8 @@ const input = (over: Partial<MonthInput> = {}): MonthInput => ({
   market: loadMarket(),
   properties: null,
   rental: null,
+  vehicles: [],
+  licenses: [],
   job: null,
   childJob: null,
   ...over,
@@ -119,6 +122,35 @@ describe('居家开销', () => {
     const r = advanceMonth(input({ coins: 0, properties: [owing] }), QUIET);
     expect(r.properties).toEqual([]);
     expect(r.logs.some(([, title]) => title === '房产「庄园」被收回')).toBe(true);
+  });
+});
+
+describe('车辆保养', () => {
+  const carriageCost = vehicleUpkeep(vehicleById('carriage')!);
+
+  it('有车时每月扣保养费；持有执照时健康恢复 +1', () => {
+    const none = advanceMonth(input({ health: 50 }), QUIET);
+    const drive = advanceMonth(input({ health: 50, vehicles: ['carriage'], licenses: ['carriage'] }), QUIET);
+    expect(drive.netChange).toBe(none.netChange - carriageCost);
+    expect(drive.notes).toContain(`车辆保养 -${carriageCost.toLocaleString()}`);
+    expect(drive.health).toBe(none.health + VEHICLE_HEALTH_BONUS);
+  });
+
+  it('没有执照（例如刚继承）照付保养费，但没有健康加成', () => {
+    const none = advanceMonth(input({ health: 50 }), QUIET);
+    const r = advanceMonth(input({ health: 50, vehicles: ['carriage'] }), QUIET);
+    expect(r.netChange).toBe(none.netChange - carriageCost);
+    expect(r.health).toBe(none.health);
+  });
+
+  it('付不起保养费时不扣钱，本月只能步行', () => {
+    // 先付的居家开销远高于当月零花，把现金全部用完
+    const mansion = [{ id: 'm', isPrimaryResidence: true, currentValue: 50_000_000 }];
+    const none = advanceMonth(input({ coins: 0, health: 50, properties: mansion }), QUIET);
+    const r = advanceMonth(input({ coins: 0, health: 50, properties: mansion, vehicles: ['car'], licenses: ['car'] }), QUIET);
+    expect(r.notes).toContain('⚠️ 养不起车马，本月只能步行');
+    expect(r.netChange).toBe(none.netChange);
+    expect(r.health).toBe(none.health);
   });
 });
 

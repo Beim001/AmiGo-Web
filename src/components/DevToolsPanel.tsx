@@ -5,6 +5,7 @@ import { GIFTS, GIFT_QUALITY_STYLE } from '../lib/gifts';
 import { formatDuration } from '../lib/season';
 import { propertyUpkeep, REPOSSESS_AFTER_MONTHS, UpkeepProperty } from '../lib/homeUpkeep';
 import { CLOTHING_COUPON_CODE, saveCouponLeft } from '../lib/clothingCoupon';
+import { saveLicenses, saveVehicles } from '../lib/vehicles';
 
 // 开发测试工具：仅在 `npm run dev` 下由 App 渲染（import.meta.env.DEV），生产构建中不存在。
 // 悬浮在所有界面之上：调整现金、一键快进月份、编辑年龄、新增子嗣、发放礼物、成就与赛季上报测试。
@@ -308,6 +309,28 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
                 名下房产设为欠费 {REPOSSESS_AFTER_MONTHS} 个月（测试收回房产）
               </button>
               <div className="text-[9px] text-gray-500 font-bold mt-1">再把现金设为 0 并快进 1 个月：付不清欠费的房产会被收回。</div>
+              <div className="grid grid-cols-2 gap-1.5 mt-1.5">
+                <button
+                  onClick={() => {
+                    // 测试第 67.4 题：跳过年龄与 1900 年限制，直接发放两种执照（需重新打开驾照管理）
+                    saveLicenses(['carriage', 'car']);
+                    setError(null);
+                  }}
+                  className={btn}
+                >
+                  发放全部执照
+                </button>
+                <button
+                  onClick={() => {
+                    saveLicenses([]);
+                    saveVehicles([]);
+                    setError(null);
+                  }}
+                  className={btn}
+                >
+                  清空执照与车辆
+                </button>
+              </div>
               <button onClick={onToggleSimpleMode} className={`${btn} w-full mt-1.5`}>
                 {simpleMode ? '切回完整模式' : '切到简洁模式'}
               </button>

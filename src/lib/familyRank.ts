@@ -4,6 +4,7 @@
 // - 影响力：当家人的声望
 
 import { familiesActiveIn, CLASS_LABELS } from '../data/fixedFamilies';
+import { loadVehicles, vehiclesValue } from './vehicles';
 
 export const WEIGHTS = { cohesion: 0.3, wealth: 0.4, influence: 0.3 };
 /** 财力满分对应的资产（10 亿 ₽） */
@@ -63,10 +64,12 @@ export const familyNetWorth = (cash: number, deposit: number, loan: number, held
   const props = readJson<any[]>('amigo_owned_properties', []);
   // 居家开销欠费（第 76 题）与贷款一样算作负债
   const propertyValue = Array.isArray(props) ? props.reduce((s, p) => s + (p.currentValue || p.purchasePrice || 0) - (p.upkeepArrears || 0), 0) : 0;
+  // 家族车辆按转卖价计入（第 67.4 题）
+  const carValue = vehiclesValue(loadVehicles());
   const stocks = readJson<any[]>('amigo_stocks', []);
   const holdings = readJson<any[]>('amigo_stock_holdings', []);
   const stockValue = Array.isArray(holdings)
     ? holdings.reduce((s, h) => s + (h.shares || 0) * ((Array.isArray(stocks) ? stocks.find((x) => x.id === h.stockId)?.price : undefined) ?? h.avgCost ?? 0), 0)
     : 0;
-  return Math.max(0, cash + deposit - loan + propertyValue + stockValue + held + heirloomValue + kinIncome * KIN_INCOME_MONTHS);
+  return Math.max(0, cash + deposit - loan + propertyValue + carValue + stockValue + held + heirloomValue + kinIncome * KIN_INCOME_MONTHS);
 };

@@ -55,6 +55,8 @@ import { loadMarket, saveMarket, findFinanceBackground } from './lib/stockMarket
 import { HospitalModal } from './components/HospitalModal';
 import { CLOTHING_COUPON_KEY } from './lib/clothingCoupon';
 import { WelfareModal } from './components/WelfareModal';
+import { LicenseModal } from './components/LicenseModal';
+import { loadLicenses, loadVehicles } from './lib/vehicles';
 import { JobModal, JOB_POSITIONS, readCurrentJobId, readJobHistoryIds } from './components/JobModal';
 import { BirthModal } from './components/BirthModal';
 import { WealthChartModal } from './components/WealthChartModal';
@@ -110,6 +112,7 @@ export default function App() {
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [showHospital, setShowHospital] = useState(false);
   const [showWelfare, setShowWelfare] = useState(false);
+  const [showLicense, setShowLicense] = useState(false);
   const [showJob, setShowJob] = useState(false);
   const [showHousing, setShowHousing] = useState(false);
   const [showVisa, setShowVisa] = useState(false);
@@ -254,6 +257,8 @@ export default function App() {
       market: loadMarket(),
       properties: Array.isArray(savedProps) ? (savedProps as OwnedProperty[]) : null,
       rental: loadStored<{ monthlyRent?: number; comfortBonus?: number } | null>('amigo_current_rental', null),
+      vehicles: loadVehicles(),
+      licenses: loadLicenses(),
       job: (currentJobId ? JOB_POSITIONS.find((j) => j.id === currentJobId) : null) ?? null,
       childJob: readChildJob(),
     });
@@ -831,6 +836,7 @@ export default function App() {
              onOpenHospital={() => setShowHospital(true)}
              onOpenJob={() => setShowJob(true)}
              onOpenWelfare={() => setShowWelfare(true)}
+             onOpenLicense={() => setShowLicense(true)}
              onOpenBirth={() => setShowBirthModal(true)}
              onOpenGender={() => setShowGenderModal(true)}
              onOpenHousing={() => setShowHousing(true)}
@@ -962,6 +968,19 @@ export default function App() {
              onMaintenance={handleMaintenance}
              hasSpouse={!!family.spouse}
              fertilityText={fertilityText}
+           />
+         )}
+
+         {/* 驾照管理（马车 / 汽车执照） */}
+         {showLicense && (
+           <LicenseModal
+             onClose={() => setShowLicense(false)}
+             coins={coins}
+             setCoins={setCoins}
+             changeReputation={changeReputation}
+             isRegistered={isRegistered}
+             age={currentAge}
+             gameYear={gameYear}
            />
          )}
 

@@ -39,6 +39,7 @@ import { LogCategory } from './lifeLog';
 import type { Appearance } from './appearance';
 import { CURRENCY } from '../data/seasons';
 import { settleUpkeep, livesIn, REPOSSESS_AFTER_MONTHS } from './homeUpkeep';
+import { settleVehicles, VehicleId } from './vehicles';
 
 /** 名下房产（只用到结算相关字段，其余字段原样保留） */
 export interface OwnedProperty {
@@ -90,6 +91,9 @@ export interface MonthInput {
   market: MarketState;
   properties: OwnedProperty[] | null;
   rental: { monthlyRent?: number; comfortBonus?: number } | null;
+  /** 家族车辆与当家人持有的执照（第 67.4 题） */
+  vehicles: VehicleId[];
+  licenses: VehicleId[];
   job: { dailySalary?: number | null } | null;
   childJob: ChildJob | null;
 }
@@ -247,15 +251,20 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
   }
   const properties = propsUpdated ? props : null;
 
+  // 3e. 车辆保养（第 67.4 题）：按车价 1% 付草料、马夫或燃油费；付不起本月只能步行，持有执照才有健康加成
+  const vehicle = settleVehicles(input.vehicles, input.licenses, coins + baseIncome + propertyRentIncome - rentExpense + salary - upkeepPaid);
+  if (vehicle.paid > 0) notes.push(`车辆保养 -${vehicle.paid.toLocaleString()}`);
+  if (vehicle.unpaid) notes.push('⚠️ 养不起车马，本月只能步行');
+
   // 4. 银行存贷款利息（第 5 题：贷款利率随历史大事件上浮）
-  const cashBeforeInterest = Math.max(0, coins + baseIncome + propertyRentIncome - rentExpense + salary - upkeepPaid);
+  const cashBeforeInterest = Math.max(0, coins + baseIncome + propertyRentIncome - rentExpense + salary - upkeepPaid - vehicle.paid);
   const interest = settleMonthlyInterest(input.bankAccounts, cashBeforeInterest, nextY, nextM, rng, depositInterestMultiplier(playerTraits));
   if (interest.depositInterest > 0) notes.push(`存款利息 +${interest.depositInterest.toLocaleString()}`);
   if (interest.loanInterest > 0) notes.push(`贷款利息 -${interest.loanInterest.toLocaleString()}`);
   if (interest.capitalized > 0) notes.push(`⚠️ ${interest.capitalized.toLocaleString()} ${CURRENCY.symbol} 利息计入本金`);
   const bankTotals = totalsOf(interest.accounts);
 
-  const netChange = baseIncome + propertyRentIncome - rentExpense + salary - upkeepPaid - interest.cashPaid;
+  const netChange = baseIncome + propertyRentIncome - rentExpense + salary - upkeepPaid - vehicle.paid - interest.cashPaid;
 
   // 5. 股市推进（第 4 题：每月 20 个交易日）
   const market = advanceMarket(input.market, TRADING_DAYS_PER_MONTH, rng);
@@ -297,7 +306,7 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
       : reachedLifespan
         ? 0
         : isRegistered
-          ? nextHealth(health, comfort, ageNextMonth, diseaseDamage + childLaborDamage - decayReduction(playerTraits, ageNextMonth))
+          ? nextHealth(health, comfort, ageNextMonth, diseaseDamage + childLaborDamage - decayReduction(playerTraits, ageNextMonth) - vehicle.healthBonus)
           : Math.min(100, health + comfort);
   if (isRegistered) {
     const delta = newHealth - health;

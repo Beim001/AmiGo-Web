@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { CurrencyIcon } from './CurrencyIcon';
 import { CURRENCY } from '../data/seasons';
+import { VehicleId, loadLicenses, meetsLicense, vehicleById } from '../lib/vehicles';
 
 export interface JobModalProps {
   onClose: () => void;
@@ -64,6 +65,8 @@ export interface JobPosition {
   badgeColor: string;
   desc: string;
   responsibilities: string[];
+  /** 需要持有的执照（第 67.4 题：车夫需马车执照） */
+  requiresLicense?: VehicleId;
 }
 
 export const JOB_POSITIONS: JobPosition[] = [
@@ -327,6 +330,20 @@ export const JOB_POSITIONS: JobPosition[] = [
     desc: '监控分馏塔温度、取样测试煤油与润滑油纯度，操作高温高压管道设备。',
     responsibilities: ['观测煤油分馏塔温度', '灌装防爆铁桶煤油', '巡检高压蒸汽管线'],
   },
+  {
+    id: 'j21',
+    title: '车夫',
+    category: '交通海事',
+    department: '北城车马行',
+    dailySalary: 700,
+    reqSkill: '持马车执照 · 识得街巷',
+    iconName: 'Compass',
+    badge: '需马车执照',
+    badgeColor: 'bg-slate-500/20 text-slate-300 border-slate-500/50',
+    desc: '替车马行赶车，接送往来北城各区的客人与货物，照料挽马与车具。',
+    responsibilities: ['驾驭挽马接送客人', '照料马匹与车具', '熟记城中街巷捷径'],
+    requiresLicense: 'carriage',
+  },
 ];
 
 export interface CompanyInfo {
@@ -430,6 +447,16 @@ export const COMPANY_DATA: Record<string, CompanyInfo> = {
     registeredCapital: `1,000万 ${CURRENCY.symbol}`,
     desc: '帝国专门培养外交、通商、边政与公文翻译人才的皇家名校，拥有数十名俄语、德语与法文教习大师。',
     benefits: ['学术名望加成', '寒暑假带薪休假', '藏书馆免费借阅', '名门社会地位'],
+  },
+  '北城车马行': {
+    name: '北城车马行',
+    type: '民营客货运输车行',
+    established: '1858年',
+    scale: '100 - 300人',
+    location: '北城驿道口车马驿站',
+    registeredCapital: `120万 ${CURRENCY.symbol}`,
+    desc: '城中最大的出租马车行，经营客运马车与货运大车，承接婚丧嫁娶、商号送货与驿站接驳。车夫须持交通署核发的马车执照。',
+    benefits: ['供应午间干粮', '马厩值夜津贴', '车资分成', '冬季配发皮袄'],
   },
 };
 
@@ -561,6 +588,10 @@ export const JobModal: React.FC<JobModalProps> = ({ onClose, coins, setCoins, ag
     }
     if (currentJobId === job.id) {
       showToast(`当前已在「${job.title}」岗位任职中`);
+      return;
+    }
+    if (!meetsLicense(job, loadLicenses())) {
+      showToast(`应聘「${job.title}」需要先在驾照管理考取${vehicleById(job.requiresLicense!)?.licenseName ?? '执照'}`);
       return;
     }
     setCurrentJobId(job.id);
