@@ -3,6 +3,7 @@ import { Wrench, X, FastForward, Baby, Cake, Square, Trophy, Gift } from 'lucide
 import { CurrencyIcon } from './CurrencyIcon';
 import { GIFTS, GIFT_QUALITY_STYLE } from '../lib/gifts';
 import { formatDuration } from '../lib/season';
+import { propertyUpkeep, REPOSSESS_AFTER_MONTHS, UpkeepProperty } from '../lib/homeUpkeep';
 
 // 开发测试工具：仅在 `npm run dev` 下由 App 渲染（import.meta.env.DEV），生产构建中不存在。
 // 悬浮在所有界面之上：调整现金、一键快进月份、编辑年龄、新增子嗣、发放礼物、成就与赛季上报测试。
@@ -281,6 +282,31 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
               <button disabled={!isRegistered} onClick={onOpenAuctionNow} className={`${btn} w-full mt-2`}>
                 立即开办本月拍卖会
               </button>
+              <button
+                onClick={() => {
+                  // 测试第 76 题：名下房产全部设为已拖欠 6 个月，现金不足时再推进一个月就会被收回
+                  try {
+                    const list = JSON.parse(localStorage.getItem('amigo_owned_properties') || '[]') as UpkeepProperty[];
+                    if (!Array.isArray(list) || list.length === 0) {
+                      setError('名下没有房产');
+                      return;
+                    }
+                    const next = list.map((h) => ({
+                      ...h,
+                      upkeepArrears: Math.max(h.upkeepArrears || 0, propertyUpkeep(h, gameYear) * REPOSSESS_AFTER_MONTHS),
+                      upkeepArrearsMonths: REPOSSESS_AFTER_MONTHS,
+                    }));
+                    localStorage.setItem('amigo_owned_properties', JSON.stringify(next));
+                    setError(null);
+                  } catch (e) {
+                    setError('房产存档读取失败');
+                  }
+                }}
+                className={`${btn} w-full mt-1.5`}
+              >
+                名下房产设为欠费 {REPOSSESS_AFTER_MONTHS} 个月（测试收回房产）
+              </button>
+              <div className="text-[9px] text-gray-500 font-bold mt-1">再把现金设为 0 并快进 1 个月：付不清欠费的房产会被收回。</div>
               <button onClick={onToggleSimpleMode} className={`${btn} w-full mt-1.5`}>
                 {simpleMode ? '切回完整模式' : '切到简洁模式'}
               </button>

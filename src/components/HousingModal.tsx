@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { CurrencyIcon } from './CurrencyIcon';
 import { CURRENCY } from '../data/seasons';
-import { livesIn, propertyUpkeep } from '../lib/homeUpkeep';
+import { livesIn, propertyUpkeep, REPOSSESS_AFTER_MONTHS } from '../lib/homeUpkeep';
 
 export interface PropertyItem {
   id: string;
@@ -71,6 +71,10 @@ export interface OwnedProperty {
   purchaseYear: number;
   purchaseMonth: number;
   totalRentCollected: number;
+  /** 累计欠下的居家开销（第 76 题） */
+  upkeepArrears?: number;
+  /** 欠费已经拖欠的月数，超过 REPOSSESS_AFTER_MONTHS 个月房产被收回 */
+  upkeepArrearsMonths?: number;
 }
 
 export interface CurrentRental {
@@ -341,7 +345,8 @@ export const HousingModal: React.FC<HousingModalProps> = ({
 
   // 出售房产
   const handleSellProperty = (owned: OwnedProperty) => {
-    const refund = Math.floor(owned.currentValue * 0.96); // 扣除4%交易税费
+    const arrears = owned.upkeepArrears || 0;
+    const refund = Math.max(0, Math.floor(owned.currentValue * 0.96) - arrears); // 扣除4%交易税费，并先结清居家开销欠费
     setCoins((prev) => prev + refund);
     setOwnedProperties((prev) => {
       const remaining = prev.filter((p) => p.id !== owned.id);
@@ -351,8 +356,23 @@ export const HousingModal: React.FC<HousingModalProps> = ({
       return remaining.map((p) => (p.id === nextPrimaryId ? { ...p, isPrimaryResidence: true } : p));
     });
 
-    addLifeLog('财富', `出售房产「${owned.title}」`, `扣除交易税费后到账 ${refund.toLocaleString()} ${CURRENCY.symbol}。`);
-    showToast(`成功出售【${owned.title}】，扣除4%交易税费后到账 +${refund.toLocaleString()} ${CURRENCY.symbol}`);
+    const arrearsText = arrears > 0 ? `并结清欠费 ${arrears.toLocaleString()} ${CURRENCY.symbol}` : '';
+    addLifeLog('财富', `出售房产「${owned.title}」`, `扣除交易税费${arrearsText}后到账 ${refund.toLocaleString()} ${CURRENCY.symbol}。`);
+    showToast(`成功出售【${owned.title}】，扣除4%交易税费${arrearsText}后到账 +${refund.toLocaleString()} ${CURRENCY.symbol}`);
+  };
+
+  // 结清居家开销欠费（第 76 题）
+  const handlePayArrears = (owned: OwnedProperty) => {
+    const arrears = owned.upkeepArrears || 0;
+    if (arrears <= 0) return;
+    if (coins < arrears) {
+      showToast(`资金不足：结清欠费需 ${arrears.toLocaleString()} ${CURRENCY.symbol}，当前可用 ${coins.toLocaleString()} ${CURRENCY.symbol}`);
+      return;
+    }
+    setCoins((prev) => prev - arrears);
+    setOwnedProperties((prev) => prev.map((p) => (p.id === owned.id ? { ...p, upkeepArrears: 0, upkeepArrearsMonths: 0 } : p)));
+    addLifeLog('财富', `结清「${owned.title}」的欠费`, `补交居家开销 ${arrears.toLocaleString()} ${CURRENCY.symbol}。`);
+    showToast(`已结清【${owned.title}】的欠费 ${arrears.toLocaleString()} ${CURRENCY.symbol}`);
   };
 
   // 切换出租状态
@@ -1111,6 +1131,11 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                           <div className="text-rose-300/80 text-[10px] font-mono mt-0.5">
                             {livesIn(owned) ? '每月居家开销' : '每月修缮'}: {propertyUpkeep(owned, gameYear).toLocaleString()} {CURRENCY.symbol}
                           </div>
+                          {(owned.upkeepArrears || 0) > 0 && (
+                            <div className="text-rose-400 text-[10px] font-black mt-0.5">
+                              ⚠️ 欠费 {(owned.upkeepArrears || 0).toLocaleString()} {CURRENCY.symbol}（已拖欠 {owned.upkeepArrearsMonths || 0} 个月，超过 {REPOSSESS_AFTER_MONTHS} 个月收回）
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1139,6 +1164,15 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                       {/* Action Controls */}
                       <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2.5 border-t border-black/40">
                         <div className="flex items-center gap-2 flex-wrap">
+                          {(owned.upkeepArrears || 0) > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handlePayArrears(owned)}
+                              className="px-3 py-1.5 bg-rose-600/30 hover:bg-rose-600/40 text-rose-300 rounded-xl border border-rose-500/50 text-xs font-bold shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer"
+                            >
+                              结清欠费
+                            </button>
+                          )}
                           {!owned.isPrimaryResidence && (
                             <button
                               type="button"

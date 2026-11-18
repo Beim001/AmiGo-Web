@@ -5,7 +5,7 @@ import { buildDefaultAccounts } from './bank';
 import { loadMarket } from './stockMarket';
 import { BASE_STIPEND, monthlySalary } from './monthly';
 import { CHILD_JOBS, CHILD_LABOR_MAX_AGE } from './lineage';
-import { propertyUpkeep } from './homeUpkeep';
+import { propertyUpkeep, REPOSSESS_AFTER_MONTHS } from './homeUpkeep';
 
 /** 固定种子的伪随机数，保证每次运行结果相同 */
 const seeded = (seed = 1) => () => {
@@ -101,15 +101,24 @@ describe('居家开销', () => {
     expect(r.notes.some((n) => n.includes('居家开销'))).toBe(false);
   });
 
-  it('付不起时不扣钱，但本月自住房的舒适度加成作废', () => {
-    // 开销远高于当月零花，现金为 0 时付不起
-    const mansion = { ...home, currentValue: 50_000_000 };
-    const cost = propertyUpkeep(mansion, YEAR);
+  // 开销远高于当月零花，现金为 0 时付不起
+  const mansion = { ...home, title: '庄园', currentValue: 50_000_000 };
+  const cost = propertyUpkeep(mansion, YEAR);
+
+  it('付不起的部分记为欠费，本月自住房的舒适度加成作废', () => {
     const broke = advanceMonth(input({ coins: 0, health: 50, properties: [mansion] }), QUIET);
     const paid = advanceMonth(input({ coins: cost, health: 50, properties: [mansion] }), QUIET);
     expect(broke.notes).toContain('⚠️ 交不起居家开销，住处没有取暖照明');
-    expect(broke.netChange).toBe(paid.netChange + cost);
+    expect(broke.properties?.[0].upkeepArrears).toBeGreaterThan(0);
+    expect(broke.properties?.[0].upkeepArrearsMonths).toBe(1);
     expect(broke.health).toBeLessThan(paid.health);
+  });
+
+  it('拖欠超过半年收回房产并写入人生日志', () => {
+    const owing = { ...mansion, upkeepArrears: cost * 6, upkeepArrearsMonths: REPOSSESS_AFTER_MONTHS };
+    const r = advanceMonth(input({ coins: 0, properties: [owing] }), QUIET);
+    expect(r.properties).toEqual([]);
+    expect(r.logs.some(([, title]) => title === '房产「庄园」被收回')).toBe(true);
   });
 });
 

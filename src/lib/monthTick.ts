@@ -38,7 +38,7 @@ import { SimEventInstance, rollMonthlyEvent } from './simEvents';
 import { LogCategory } from './lifeLog';
 import type { Appearance } from './appearance';
 import { CURRENCY } from '../data/seasons';
-import { propertyUpkeep, livesIn } from './homeUpkeep';
+import { settleUpkeep, livesIn, REPOSSESS_AFTER_MONTHS } from './homeUpkeep';
 
 /** 名下房产（只用到结算相关字段，其余字段原样保留） */
 export interface OwnedProperty {
@@ -49,6 +49,8 @@ export interface OwnedProperty {
   comfortBonus?: number;
   currentValue?: number;
   purchasePrice?: number;
+  upkeepArrears?: number;
+  upkeepArrearsMonths?: number;
   [key: string]: unknown;
 }
 
@@ -112,7 +114,7 @@ export interface MonthResult {
   /** undefined 表示不更新监护状态 */
   guardianship: Guardianship | null | undefined;
   pendingCoup: string | null;
-  /** 有房租入账时需要写回的房产列表 */
+  /** 有房租入账、欠费变化或房产被收回时需要写回的房产列表 */
   properties: OwnedProperty[] | null;
   /** 童工因年满 16 岁或阶层不再允许而结束 */
   childJobEnded: boolean;
@@ -168,22 +170,19 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
   let propertyRentIncome = 0;
   let comfortBonusTotal = 0;
   let primaryComfort = 0;
-  let homeUpkeep = 0;
-  let properties: OwnedProperty[] | null = null;
+  let props: OwnedProperty[] | null = null;
+  let propsUpdated = false;
   if (input.properties) {
-    const props = input.properties.map((p) => ({ ...p }));
-    let updated = false;
+    props = input.properties.map((p) => ({ ...p }));
     props.forEach((p) => {
       if (p.isRentedOut && (p.rentPerMonth ?? 0) > 0) {
         propertyRentIncome += p.rentPerMonth!;
         p.totalRentCollected = (p.totalRentCollected || 0) + p.rentPerMonth!;
-        updated = true;
+        propsUpdated = true;
       }
       if (livesIn(p)) primaryComfort += p.comfortBonus || 5;
-      homeUpkeep += propertyUpkeep(p, nextY);
     });
     comfortBonusTotal += primaryComfort;
-    if (updated) properties = props;
   }
 
   // 2. 租住支出
@@ -227,17 +226,26 @@ export const advanceMonth = (input: MonthInput, rng: () => number = Math.random)
     notes.unshift(allowance.total > 0 ? `零花 +${allowance.total.toLocaleString()}` : '没有零花（父母已故或好感度不足 30%）');
   }
 
-  // 3d. 居家开销（第 76 题）：付不起就不扣钱，但本月自住房没有取暖照明，舒适度加成作废
+  // 3d. 居家开销（第 76 题）：付不起的部分记为欠费，拖欠超过半年收回房产；自住房没付上时没有取暖照明，舒适度加成作废
   let upkeepPaid = 0;
-  if (homeUpkeep > 0) {
-    if (coins + baseIncome + propertyRentIncome - rentExpense + salary >= homeUpkeep) {
-      upkeepPaid = homeUpkeep;
-      notes.push(`居家开销 -${homeUpkeep.toLocaleString()}`);
-    } else {
+  if (props) {
+    const upkeep = settleUpkeep(props, coins + baseIncome + propertyRentIncome - rentExpense + salary, nextY);
+    upkeepPaid = upkeep.paid;
+    props = upkeep.properties;
+    if (upkeep.changed) propsUpdated = true;
+    if (upkeep.paid > 0) notes.push(`居家开销 -${upkeep.paid.toLocaleString()}`);
+    if (upkeep.newArrears > 0) notes.push(`⚠️ 欠下居家开销 ${upkeep.newArrears.toLocaleString()}（累计 ${upkeep.totalArrears.toLocaleString()}）`);
+    if (upkeep.homeUnpaid) {
       comfortBonusTotal -= primaryComfort;
       notes.push('⚠️ 交不起居家开销，住处没有取暖照明');
     }
+    upkeep.repossessed.forEach((p) => {
+      const title = typeof p.title === 'string' ? p.title : '房产';
+      notes.push(`⚠️ 「${title}」欠费超过 ${REPOSSESS_AFTER_MONTHS} 个月，已被收回`);
+      addLifeLog('财富', `房产「${title}」被收回`, `拖欠居家开销超过 ${REPOSSESS_AFTER_MONTHS} 个月（共 ${(p.upkeepArrears || 0).toLocaleString()} ${CURRENCY.symbol}），房产被收回抵债。`, { year: nextY, month: nextM, age: ageNextMonth });
+    });
   }
+  const properties = propsUpdated ? props : null;
 
   // 4. 银行存贷款利息（第 5 题：贷款利率随历史大事件上浮）
   const cashBeforeInterest = Math.max(0, coins + baseIncome + propertyRentIncome - rentExpense + salary - upkeepPaid);

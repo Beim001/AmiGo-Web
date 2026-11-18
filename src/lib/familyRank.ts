@@ -61,7 +61,8 @@ export const KIN_INCOME_MONTHS = 12;
 
 export const familyNetWorth = (cash: number, deposit: number, loan: number, held = 0, heirloomValue = 0, kinIncome = 0): number => {
   const props = readJson<any[]>('amigo_owned_properties', []);
-  const propertyValue = Array.isArray(props) ? props.reduce((s, p) => s + (p.currentValue || p.purchasePrice || 0), 0) : 0;
+  // 居家开销欠费（第 76 题）与贷款一样算作负债
+  const propertyValue = Array.isArray(props) ? props.reduce((s, p) => s + (p.currentValue || p.purchasePrice || 0) - (p.upkeepArrears || 0), 0) : 0;
   const stocks = readJson<any[]>('amigo_stocks', []);
   const holdings = readJson<any[]>('amigo_stock_holdings', []);
   const stockValue = Array.isArray(holdings)
