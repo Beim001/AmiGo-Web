@@ -7,6 +7,7 @@ import { randomAppearance } from '../lib/appearance';
 import { takeCustody, ORPHANAGE_NAME, ADULT_AGE as GUARDIAN_ADULT_AGE } from '../lib/guardianship';
 import { CHILD_JOB_KEY } from '../lib/lineage';
 import { addLifeLog, readLifeLog, clearLifeLog } from '../lib/lifeLog';
+import { LAST_WORK_MONTH_KEY } from '../lib/monthly';
 import { loadAccounts, saveAccounts as persistBankAccounts, currentRateEvent } from '../lib/bank';
 import { CURRENT_JOB_KEY, JOB_HISTORY_KEY } from '../components/JobModal';
 import type { Game } from './useGameState';
@@ -76,6 +77,7 @@ export const useSuccession = ({ game, currentAge, playerOccupation, setShowSucce
       localStorage.setItem(JOB_HISTORY_KEY, '[]');
       localStorage.removeItem(CHILD_JOB_KEY);
       localStorage.removeItem('amigo_job_months_worked');
+      localStorage.removeItem(LAST_WORK_MONTH_KEY);
     } catch (e) {}
     setShowSuccession(false);
     setPlayerTraits(heir.traits && heir.traits.length > 0 ? heir.traits : randomTraits());

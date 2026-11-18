@@ -9,8 +9,18 @@ export interface AchievementDef {
   id: string;
   title: string;
   desc: string;
-  icon: 'baby' | 'coins' | 'home' | 'heart' | 'users' | 'gift' | 'gem' | 'crown' | 'chart' | 'plane' | 'globe' | 'hospital' | 'cake' | 'tree' | 'trophy' | 'scroll' | 'handheart' | 'flower' | 'frown' | 'shirt' | 'scissors';
+  icon: 'baby' | 'coins' | 'home' | 'heart' | 'users' | 'gift' | 'gem' | 'crown' | 'chart' | 'plane' | 'globe' | 'hospital' | 'cake' | 'tree' | 'trophy' | 'scroll' | 'handheart' | 'flower' | 'frown' | 'shirt' | 'scissors' | 'soup' | 'sofa';
 }
+
+/** 成就「啃老族」：去世时至少这个年龄 */
+export const NEET_MIN_AGE = 60;
+
+/**
+ * 成就「啃老族」：去世时年满 NEET_MIN_AGE 岁，且这一世从没领过月薪或童工收入。
+ * lastWorkMonth 为这一世最近一次工作的月份；monthsWorked 为这一世累计工作月数（早于工作月份记录的旧存档只有这一项）。
+ */
+export const earnsNeet = (deathAge: number, lastWorkMonth: number | null, monthsWorked: number): boolean =>
+  deathAge >= NEET_MIN_AGE && lastWorkMonth === null && monthsWorked === 0;
 
 export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'born', title: '呱呱坠地', desc: '完成出生登记', icon: 'baby' },
@@ -34,6 +44,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'pity_limited', title: '大非酋', desc: '连抽 98 次都没出限定，第 99 次靠保底才抽到限定服饰', icon: 'frown' },
   { id: 'fashion_show', title: '时装秀', desc: '集齐商城内的全部服饰', icon: 'shirt' },
   { id: 'makeover', title: '变装', desc: '在理发店理一次发', icon: 'scissors' },
+  { id: 'beggar_king', title: '丐帮帮主', desc: '连续 4 个季度领取教会救济，期间没有工作，只靠救济活过一年', icon: 'soup' },
+  { id: 'neet', title: '啃老族', desc: `活到 ${NEET_MIN_AGE} 岁以上去世，一辈子没领过月薪或童工收入`, icon: 'sofa' },
 ];
 
 /** 成就 id → 解锁时的现实时间（毫秒） */

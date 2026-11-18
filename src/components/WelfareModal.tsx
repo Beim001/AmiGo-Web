@@ -2,9 +2,24 @@ import React, { useState } from 'react';
 import { ChevronLeft, HeartHandshake, Lock } from 'lucide-react';
 import { CurrencyIcon } from './CurrencyIcon';
 import { CURRENCY } from '../data/seasons';
-import { RELIEFS, RELIEF_KEY, RELIEF_WEALTH_LIMIT, RELIEF_HEALTH_LIMIT, FUTURE_WELFARE, ReliefDef, applyRelief, quarterKey, reliefBlocked } from '../lib/welfare';
+import {
+  RELIEFS,
+  RELIEF_KEY,
+  RELIEF_WEALTH_LIMIT,
+  RELIEF_HEALTH_LIMIT,
+  FUTURE_WELFARE,
+  ReliefDef,
+  ReliefRecord,
+  applyRelief,
+  earnsBeggarKing,
+  nextReliefRecord,
+  parseReliefRecord,
+  reliefBlocked,
+} from '../lib/welfare';
 import { loadStored, saveStored } from '../lib/storage';
 import { addLifeLog } from '../lib/lifeLog';
+import { LAST_WORK_MONTH_KEY } from '../lib/monthly';
+import { unlockAchievement } from '../lib/achievements';
 
 // 社会福利（第 67.5 题）：帝国时期只有教会救济，每季度可领一次；失业救济、养老金标注联邦时代开放
 
@@ -21,7 +36,7 @@ export interface WelfareModalProps {
 }
 
 export const WelfareModal: React.FC<WelfareModalProps> = ({ onClose, coins, setCoins, health, setHealth, bankDeposit, isRegistered, gameYear, gameMonth }) => {
-  const [lastQuarter, setLastQuarter] = useState<string | null>(() => loadStored<string | null>(RELIEF_KEY, null));
+  const [record, setRecord] = useState<ReliefRecord | null>(() => parseReliefRecord(loadStored<unknown>(RELIEF_KEY, null)));
   const [toast, setToast] = useState<string | null>(null);
   const showToast = (msg: string) => {
     setToast(msg);
@@ -29,7 +44,7 @@ export const WelfareModal: React.FC<WelfareModalProps> = ({ onClose, coins, setC
   };
 
   const wealth = coins + bankDeposit;
-  const blocked = reliefBlocked({ isRegistered, wealth, health, year: gameYear, month: gameMonth, lastQuarter });
+  const blocked = reliefBlocked({ isRegistered, wealth, health, year: gameYear, month: gameMonth, record });
 
   const claim = (relief: ReliefDef) => {
     if (blocked) {
@@ -39,9 +54,10 @@ export const WelfareModal: React.FC<WelfareModalProps> = ({ onClose, coins, setC
     const r = applyRelief(relief, health);
     if (r.coins) setCoins((prev) => prev + r.coins);
     if (r.health !== health) setHealth(r.health);
-    const quarter = quarterKey(gameYear, gameMonth);
-    setLastQuarter(quarter);
-    saveStored(RELIEF_KEY, quarter);
+    const next = nextReliefRecord(record, gameYear, gameMonth);
+    setRecord(next);
+    saveStored(RELIEF_KEY, next);
+    if (earnsBeggarKing(next, loadStored<number | null>(LAST_WORK_MONTH_KEY, null))) unlockAchievement('beggar_king');
     const gain = r.coins ? `+${r.coins.toLocaleString()} ${CURRENCY.symbol}` : `健康 +${r.health - health}`;
     addLifeLog('财富', `领取${relief.name}`, `家境困难，领到${relief.name}（${gain}）。`);
     showToast(`🙏 领到${relief.name}（${gain}）`);
@@ -85,6 +101,7 @@ export const WelfareModal: React.FC<WelfareModalProps> = ({ onClose, coins, setC
             现在：现金 + 存款 {wealth.toLocaleString()} {CURRENCY.symbol} · 健康 {health}
           </div>
           <div className={`text-[11px] font-black ${blocked ? 'text-rose-300' : 'text-emerald-300'}`}>{blocked ?? '✅ 本季度可以领取'}</div>
+          {record && record.streak > 1 && <div className="text-[10px] text-gray-400 font-bold">已连续 {record.streak} 个季度领取救济</div>}
         </div>
 
         {RELIEFS.map((r) => (

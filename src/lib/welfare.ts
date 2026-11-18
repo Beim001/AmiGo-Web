@@ -6,8 +6,22 @@ import { CURRENCY } from '../data/seasons';
 
 export const RELIEF_WEALTH_LIMIT = 500;
 export const RELIEF_HEALTH_LIMIT = 30;
-/** 领取记录的存档键：最近一次领取的季度（如 1871-Q2） */
+/** 领取记录的存档键（见 ReliefRecord） */
 export const RELIEF_KEY = 'amigo_relief_quarter';
+/** 成就「丐帮帮主」：连续这么多个季度都领了救济，并且期间没有工作 */
+export const BEGGAR_KING_QUARTERS = 4;
+
+/** 领取记录：最近一次领取的季度序号（年 × 4 + 季度 − 1），以及到这个季度为止连续领取了几个季度 */
+export interface ReliefRecord {
+  quarter: number;
+  streak: number;
+}
+
+/** 读取存档中的领取记录；格式不符时视为没有领过 */
+export const parseReliefRecord = (value: unknown): ReliefRecord | null =>
+  value && typeof value === 'object' && typeof (value as ReliefRecord).quarter === 'number' && typeof (value as ReliefRecord).streak === 'number'
+    ? (value as ReliefRecord)
+    : null;
 
 export type ReliefId = 'soup' | 'alms';
 
@@ -30,7 +44,19 @@ export const FUTURE_WELFARE = [
   { name: '养老金', note: '帝国时期没有官方养老制度' },
 ];
 
-export const quarterKey = (year: number, month: number) => `${year}-Q${Math.ceil(month / 3)}`;
+export const quarterIndex = (year: number, month: number) => year * 4 + Math.ceil(month / 3) - 1;
+/** 某个季度第一个月的月份序号（年 × 12 + 月） */
+const quarterStartMonth = (quarter: number) => Math.floor(quarter / 4) * 12 + (quarter % 4) * 3 + 1;
+
+/** 本季度领取后的新记录：紧接着上个季度领过则连续季度数 +1，否则重新从 1 算起 */
+export const nextReliefRecord = (prev: ReliefRecord | null, year: number, month: number): ReliefRecord => {
+  const quarter = quarterIndex(year, month);
+  return { quarter, streak: prev && prev.quarter === quarter - 1 ? prev.streak + 1 : 1 };
+};
+
+/** 成就「丐帮帮主」：连续 BEGGAR_KING_QUARTERS 个季度都领了救济，且从这段时间开始以来没有月薪或童工收入 */
+export const earnsBeggarKing = (record: ReliefRecord, lastWorkMonth: number | null): boolean =>
+  record.streak >= BEGGAR_KING_QUARTERS && (lastWorkMonth === null || lastWorkMonth < quarterStartMonth(record.quarter - BEGGAR_KING_QUARTERS + 1));
 
 export interface ReliefContext {
   isRegistered: boolean;
@@ -39,14 +65,14 @@ export interface ReliefContext {
   health: number;
   year: number;
   month: number;
-  /** 最近一次领取的季度 */
-  lastQuarter: string | null;
+  /** 领取记录 */
+  record: ReliefRecord | null;
 }
 
 /** 能否领取救济；可以时返回 null，否则返回原因 */
 export const reliefBlocked = (ctx: ReliefContext): string | null => {
   if (!ctx.isRegistered) return '请先完成出生登记';
-  if (ctx.lastQuarter === quarterKey(ctx.year, ctx.month)) return '本季度已经领过救济了，下个季度再来';
+  if (ctx.record?.quarter === quarterIndex(ctx.year, ctx.month)) return '本季度已经领过救济了，下个季度再来';
   if (ctx.wealth >= RELIEF_WEALTH_LIMIT && ctx.health >= RELIEF_HEALTH_LIMIT) {
     return `只有家里现金加存款不足 ${RELIEF_WEALTH_LIMIT.toLocaleString()} ${CURRENCY.symbol}，或健康低于 ${RELIEF_HEALTH_LIMIT} 时才能领`;
   }

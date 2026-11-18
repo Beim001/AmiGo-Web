@@ -2,6 +2,8 @@
 
 /** 固定基本俸禄（保留） */
 export const BASE_STIPEND = 1500;
+/** 这一世最近一次领到月薪或童工收入的月份（年 × 12 + 月）；传承、重开人生时清除。成就「丐帮帮主」「啃老族」据此判断是否工作过 */
+export const LAST_WORK_MONTH_KEY = 'amigo_last_work_month';
 /** 月薪 = 日薪 × 每月工作日（第 2 题：固定按月发薪，取消手动打卡） */
 export const WORK_DAYS_PER_MONTH = 22;
 /** 就业年龄（第 3 题：A） */

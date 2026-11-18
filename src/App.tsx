@@ -16,7 +16,7 @@ import { MarriageModal } from './components/MarriageModal';
 import { INITIAL_FAMILY_STATE, FOUNDER_START_HEALTH, getHeirlooms, addHeirloom, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs } from './lib/family';
 import { randomTraits, withBirthPrivilege, MAINTENANCE_COST, traitNames } from './lib/traits';
 import { clampReputation, CHARITY_UNIT, charityRemaining } from './lib/reputation';
-import { unlockAchievement, readAchievements, ACHIEVEMENTS, ACHIEVEMENT_EVENT, unlockAllForTesting, clearAchievementsForTesting, readGiftsGiven, recordGiftsGiven } from './lib/achievements';
+import { unlockAchievement, readAchievements, ACHIEVEMENTS, earnsNeet, ACHIEVEMENT_EVENT, unlockAllForTesting, clearAchievementsForTesting, readGiftsGiven, recordGiftsGiven } from './lib/achievements';
 import { CreditsRoll } from './components/CreditsRoll';
 import { Appearance, randomAppearance, rollBeauty, applyBeauty, BEAUTY_TRAIT } from './lib/appearance';
 import { currentSeason, CURRENCY } from './data/seasons';
@@ -34,7 +34,7 @@ import { diseaseInfo } from './lib/disease';
 import { SuccessionModal } from './components/SuccessionModal';
 import { eventDef, resolveOption, optionBlocked, readSimRecent, recordSimRecent } from './lib/simEvents';
 import { addLifeLog, readLifeLog, clearLifeLog } from './lib/lifeLog';
-import { isMinor } from './lib/monthly';
+import { isMinor, LAST_WORK_MONTH_KEY } from './lib/monthly';
 import { familyAllowance } from './lib/allowance';
 import { advanceMonth, OwnedProperty } from './lib/monthTick';
 import { kinIncomeTotal, layoffAllForTesting } from './lib/kinJobs';
@@ -275,6 +275,7 @@ export default function App() {
         localStorage.setItem('amigo_job_earned_coins', String(earned));
         localStorage.setItem('amigo_job_months_worked', String(months));
       } catch (e) {}
+      saveStored(LAST_WORK_MONTH_KEY, nextY * 12 + nextM);
     }
     const bankTotals = persistBankAccounts(r.bankAccounts);
     setBankDeposit(bankTotals.deposit);
@@ -644,6 +645,13 @@ export default function App() {
     fastForwardRemaining,
     setFastForwardRemaining,
   });
+
+  // 成就「啃老族」：去世时年满 NEET_MIN_AGE 岁，且这一世从没领过月薪或童工收入
+  React.useEffect(() => {
+    if (isRegistered && health <= 0 && earnsNeet(currentAge, loadStored<number | null>(LAST_WORK_MONTH_KEY, null), Number(localStorage.getItem('amigo_job_months_worked') || 0))) {
+      unlockAchievement('neet');
+    }
+  }, [isRegistered, health, currentAge]);
 
   // 成就「时装秀」：集齐商城内的全部服饰（抽卡或购买得到）
   React.useEffect(() => {
