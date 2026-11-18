@@ -18,6 +18,7 @@ import { loadMarket, STOCK_KEYS, StockHolding, StockTradeLog } from '../lib/stoc
 import { JOB_POSITIONS, readCurrentJobId, readJobHistoryIds, CURRENT_JOB_KEY, JOB_HISTORY_KEY } from '../components/JobModal';
 import { loadLicenses, meetsLicense } from '../lib/vehicles';
 import { isInPrison, candidateCount, hasActiveRecord, barredByRecord } from '../lib/prison';
+import { addCase, loadCases, saveCases, suitCase } from '../lib/court';
 import { HOUSING_MARKET_PROPERTIES } from '../components/HousingModal';
 import { loadStored, saveStored } from '../lib/storage';
 import { seededRng } from '../lib/appearance';
@@ -158,6 +159,8 @@ export const useSimpleMode = ({
       resolved.push(inst.uid);
       addLifeLog('大事', def.headline, `${option.label}：${result.text}`);
       out.push(`📰 ${def.headline} → ${result.text}`);
+      // 受害后可到法院起诉（第 67.6 题）
+      if (result.lawsuit) saveCases(addCase(loadCases(), suitCase(result.lawsuit, gameYear, gameMonth, inst.uid)));
       if (result.heirloom) {
         const h = heirloomById(result.heirloom);
         fam = addHeirloom(fam, { id: result.heirloom, source: def.title, year: gameYear, month: gameMonth, keeper: '当家人' });

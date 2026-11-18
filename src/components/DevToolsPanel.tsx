@@ -8,6 +8,7 @@ import { CLOTHING_COUPON_CODE, saveCouponLeft } from '../lib/clothingCoupon';
 import { saveLicenses, saveVehicles, saveCoachman } from '../lib/vehicles';
 import { saveLeisureRecord } from '../lib/leisure';
 import { savePrison, saveCriminalRecord, sentenceTo } from '../lib/prison';
+import { addCase, appealCase, loadCases, saveCases, suitCase, NOBLE_CLASH_CRIME } from '../lib/court';
 
 // 开发测试工具：仅在 `npm run dev` 下由 App 渲染（import.meta.env.DEV），生产构建中不存在。
 // 悬浮在所有界面之上：调整现金、一键快进月份、编辑年龄、新增子嗣、发放礼物、成就与赛季上报测试。
@@ -349,24 +350,37 @@ export const DevToolsPanel: React.FC<DevToolsPanelProps> = ({
                   disabled={!isRegistered}
                   onClick={() => {
                     // 测试第 67.7 题：直接入狱 3 个月（不扣声望、不丢工作；需重新打开相关界面）
-                    savePrison(sentenceTo('测试', 3, gameYear, gameMonth));
+                    // 以「冲撞贵族」入狱，同时生成上诉案，可测试法院上诉（第 67.6 题）
+                    savePrison(sentenceTo(NOBLE_CLASH_CRIME, 3, gameYear, gameMonth));
+                    saveCases(addCase(loadCases(), appealCase(NOBLE_CLASH_CRIME, gameYear, gameMonth)));
                     setError(null);
                   }}
                   className={btn}
                 >
-                  入狱 3 个月
+                  冲撞贵族入狱 3 个月
                 </button>
                 <button
                   onClick={() => {
                     savePrison(null);
                     saveCriminalRecord(null);
+                    saveCases([]);
                     setError(null);
                   }}
                   className={btn}
                 >
-                  清空服刑与前科
+                  清空服刑、前科与案件
                 </button>
               </div>
+              <button
+                disabled={!isRegistered}
+                onClick={() => {
+                  saveCases(addCase(loadCases(), suitCase({ title: '起诉贵族伤人', defendant: '测试贵族', claim: 3000, noble: true }, gameYear, gameMonth, '_dev')));
+                  setError(null);
+                }}
+                className={`${btn} w-full mt-1.5`}
+              >
+                新增一桩起诉贵族案（测试法院）
+              </button>
               <button onClick={onToggleSimpleMode} className={`${btn} w-full mt-1.5`}>
                 {simpleMode ? '切回完整模式' : '切到简洁模式'}
               </button>

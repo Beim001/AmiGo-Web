@@ -133,6 +133,8 @@ export interface FunctTabProps {
   onOpenLeisure?: () => void;
   /** 监狱服刑（第 67.7 题） */
   onOpenPrison?: () => void;
+  /** 法院诉讼（第 67.6 题） */
+  onOpenCourt?: () => void;
   onOpenBirth?: () => void;
   onOpenGender?: () => void;
   onOpenHousing?: () => void;
@@ -150,6 +152,7 @@ export const FunctTab: React.FC<FunctTabProps> = ({
   onOpenLicense,
   onOpenLeisure,
   onOpenPrison,
+  onOpenCourt,
   onOpenBirth,
   onOpenGender,
   onOpenHousing,
@@ -175,6 +178,7 @@ export const FunctTab: React.FC<FunctTabProps> = ({
     license: onOpenLicense,
     entertainment: onOpenLeisure,
     prison: onOpenPrison,
+    court: onOpenCourt,
   };
 
   const showToast = (msg: string) => {

@@ -1,4 +1,5 @@
 import { CURRENCY } from '../data/seasons';
+import type { LawsuitOutcome } from './court';
 // 推演系统（undefined.md 第 8–13、24 题）
 // - 每月 50% 概率出现一张事件卡；没抽到时显示「本月无事发生」
 // - 未处理的事件一直保留、不限数量
@@ -39,6 +40,8 @@ export interface Outcome {
   text: string;
   /** 入狱（第 67.7 题） */
   jail?: JailOutcome;
+  /** 可到法院起诉（第 67.6 题） */
+  lawsuit?: LawsuitOutcome;
   /** 获得的传家宝（见 heirlooms.ts） */
   heirloom?: string;
 }
@@ -286,12 +289,44 @@ export const CRIME_EVENTS: SimEventDef[] = [
     desc: '你躲闪不及撞上了贵族的马车，车夫扬起马鞭，车里的老爷探出头来破口大骂。',
     when: (c) => c.age >= 16 && (c.classId === 'beggar' || c.classId === 'commoner'),
     options: [
-      { label: '跪地赔罪', hint: '稳妥 · 吃点苦头', kind: 'safe', result: { health: -3, text: '挨了几鞭子，老爷骂骂咧咧地走了。' } },
+      { label: '跪地赔罪', hint: '稳妥 · 吃点苦头', kind: 'safe', result: { health: -3, text: '挨了几鞭子，老爷骂骂咧咧地走了。可以到法院起诉他伤人。', lawsuit: { title: '起诉贵族伤人', defendant: '鞭打你的贵族', claim: 3000, noble: true } } },
       { label: '据理力争', hint: '高风险 · 可能坐牢', kind: 'risky', chance: 0.2, success: { text: '围观的百姓纷纷帮腔，老爷悻悻离去。' }, failure: { text: '巡捕以冲撞贵族的罪名把你押进大牢。', jail: { crime: '冲撞贵族', months: 3 } } },
     ],
   },
 ];
 SIM_EVENTS.push(...CRIME_EVENTS);
+
+/** 受害事件（第 67.6 题）：受损后可到法院起诉追回 */
+export const VICTIM_EVENTS: SimEventDef[] = [
+  {
+    id: 'swindled', title: '诱惑', headline: '有人兜售铁路股份认购证', icon: 'store',
+    desc: '一位体面的先生说北城铁路就要开工，认购证转手就能翻倍，只剩最后几张。',
+    when: (c) => c.age >= 18 && c.coins >= 5000,
+    options: [
+      { label: '不买', hint: '稳妥', kind: 'safe', result: { text: '你没有理会他。' } },
+      { label: `买下 5,000 ${CURRENCY.symbol}`, hint: '高风险 · 可能翻倍', kind: 'risky', requires: 5000, chance: 0.3, success: { coins: 5000, text: `认购证真的涨了，净赚 5,000 ${CURRENCY.symbol}。` }, failure: { coins: -5000, text: '认购证是伪造的，那位先生早已不见踪影。可以到法院起诉追讨。', lawsuit: { title: '起诉诈骗', defendant: '兜售假认购证的骗子', claim: 5000 } } },
+    ],
+  },
+  {
+    id: 'wage_theft', title: '纠纷', headline: '东家拖欠你两个月工钱', icon: 'factory',
+    desc: '东家说生意周转不开，工钱下个月再说，可下个月又是下个月。',
+    when: (c) => c.age >= 16 && c.employed,
+    options: [
+      { label: '去法院告他', hint: '稳妥 · 打官司', kind: 'safe', result: { text: '你到法院递了状子，等着开庭。', lawsuit: { title: '起诉欠薪', defendant: '拖欠工钱的东家', claim: 4000 } } },
+      { label: '带人上门讨', hint: '有风险', kind: 'risky', chance: 0.5, success: { coins: 4000, text: `东家怕事闹大，当场结清 4,000 ${CURRENCY.symbol}。` }, failure: { health: -5, text: '被东家的打手轰了出来。还可以到法院起诉。', lawsuit: { title: '起诉欠薪', defendant: '拖欠工钱的东家', claim: 4000 } } },
+    ],
+  },
+  {
+    id: 'robbery', title: '意外', headline: '夜路上遇到劫匪', icon: 'alert',
+    desc: '巷口窜出两个蒙面人，刀尖抵着你的腰。',
+    when: (c) => c.age >= 16 && c.coins >= 1000,
+    options: [
+      { label: '交出钱包', hint: '稳妥 · 破财', kind: 'safe', requires: 1000, result: { coins: -1000, text: '劫匪拿了钱扬长而去。巡捕事后抓到了人，可以起诉追赃。', lawsuit: { title: '起诉抢劫', defendant: '落网的劫匪', claim: 1000 } } },
+      { label: '奋力反抗', hint: '有风险', kind: 'risky', chance: 0.4, success: { text: '你大喊着扑上去，劫匪被吓跑了。' }, failure: { coins: -1000, health: -10, text: '被刺伤了胳膊，钱也被抢走。巡捕事后抓到了人，可以起诉追赃。', lawsuit: { title: '起诉抢劫', defendant: '落网的劫匪', claim: 1000 } } },
+    ],
+  },
+];
+SIM_EVENTS.push(...VICTIM_EVENTS);
 
 export interface SimEventInstance {
   uid: string;
@@ -351,6 +386,8 @@ export interface Resolution {
   heirloom?: string;
   /** 入狱（已按概率判定） */
   jail?: { crime: string; months: number };
+  /** 可到法院起诉 */
+  lawsuit?: LawsuitOutcome;
 }
 
 /** 按概率判定结果是否入狱，入狱时把说明接在结果文字后 */
@@ -363,12 +400,12 @@ const applyJail = (r: Outcome, rng: () => number): { text: string; jail?: { crim
 export const resolveOption = (option: SimOption, rng: () => number = Math.random): Resolution => {
   if (option.kind === 'safe') {
     const r = option.result ?? { text: '' };
-    return { coins: r.coins ?? 0, health: r.health ?? 0, score: SCORE_SAFE, text: r.text, succeeded: null, heirloom: r.heirloom };
+    return { coins: r.coins ?? 0, health: r.health ?? 0, score: SCORE_SAFE, text: r.text, succeeded: null, heirloom: r.heirloom, lawsuit: r.lawsuit };
   }
   const ok = rng() < (option.chance ?? 0.5);
   const r = (ok ? option.success : option.failure) ?? { text: '' };
   const j = applyJail(r, rng);
-  return { coins: r.coins ?? 0, health: r.health ?? 0, score: ok ? SCORE_RISK_SUCCESS : SCORE_RISK_FAILURE, text: j.text, succeeded: ok, heirloom: r.heirloom, jail: j.jail };
+  return { coins: r.coins ?? 0, health: r.health ?? 0, score: ok ? SCORE_RISK_SUCCESS : SCORE_RISK_FAILURE, text: j.text, succeeded: ok, heirloom: r.heirloom, jail: j.jail, lawsuit: r.lawsuit };
 };
 
 /** 选项是否因现金不足而不可选 */

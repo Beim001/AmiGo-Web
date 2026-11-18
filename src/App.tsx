@@ -58,6 +58,8 @@ import { WelfareModal } from './components/WelfareModal';
 import { LicenseModal } from './components/LicenseModal';
 import { LeisureModal } from './components/LeisureModal';
 import { PrisonModal } from './components/PrisonModal';
+import { CourtModal } from './components/CourtModal';
+import { addCase, appealCase, loadCases, saveCases, suitCase } from './lib/court';
 import { JAIL_REPUTATION, loadPrison, savePrison, saveCriminalRecord, sentenceTo, isInPrison } from './lib/prison';
 import { loadLicenses, loadVehicles, loadCoachman, saveCoachman } from './lib/vehicles';
 import { JobModal, JOB_POSITIONS, readCurrentJobId, readJobHistoryIds, CURRENT_JOB_KEY } from './components/JobModal';
@@ -118,6 +120,7 @@ export default function App() {
   const [showLicense, setShowLicense] = useState(false);
   const [showLeisure, setShowLeisure] = useState(false);
   const [showPrison, setShowPrison] = useState(false);
+  const [showCourt, setShowCourt] = useState(false);
   const [showJob, setShowJob] = useState(false);
   const [showHousing, setShowHousing] = useState(false);
   const [showVisa, setShowVisa] = useState(false);
@@ -503,7 +506,9 @@ export default function App() {
       localStorage.removeItem(CHILD_JOB_KEY);
     } catch (e) {}
     changeReputation(JAIL_REPUTATION);
-    addLifeLog('大事', `因${crime}入狱`, `被判入狱 ${months} 个月，丢掉了工作，声望 ${JAIL_REPUTATION}。`);
+    // 服刑期间可以到法院上诉（第 67.6 题）
+    saveCases(addCase(loadCases(), appealCase(crime, gameYear, gameMonth)));
+    addLifeLog('大事', `因${crime}入狱`, `被判入狱 ${months} 个月，丢掉了工作，声望 ${JAIL_REPUTATION}。可以到法院上诉。`);
     return `⛓️ 因${crime}入狱 ${months} 个月`;
   };
 
@@ -544,6 +549,8 @@ export default function App() {
     setSimEvents((prev) => prev.filter((e) => e.uid !== uid));
     addLifeLog('大事', def.headline, `${option.label}：${result.text}`);
     if (result.jail) showToast(jailPlayer(result.jail.crime, result.jail.months));
+    // 受害或挨打后可到法院起诉（第 67.6 题）
+    if (result.lawsuit) saveCases(addCase(loadCases(), suitCase(result.lawsuit, gameYear, gameMonth, inst.uid)));
     if (result.heirloom) {
       const h = heirloomById(result.heirloom);
       const SOURCE: Record<string, string> = { army: '参军', rescue: '见义勇为', antique: '旧货摊' };
@@ -867,6 +874,7 @@ export default function App() {
              onOpenLicense={() => setShowLicense(true)}
              onOpenLeisure={() => setShowLeisure(true)}
              onOpenPrison={() => setShowPrison(true)}
+             onOpenCourt={() => setShowCourt(true)}
              onOpenBirth={() => setShowBirthModal(true)}
              onOpenGender={() => setShowGenderModal(true)}
              onOpenHousing={() => setShowHousing(true)}
@@ -1015,6 +1023,19 @@ export default function App() {
              gameYear={gameYear}
              gameMonth={gameMonth}
              onJail={jailPlayer}
+           />
+         )}
+
+         {/* 法院诉讼 */}
+         {showCourt && (
+           <CourtModal
+             onClose={() => setShowCourt(false)}
+             coins={coins}
+             setCoins={setCoins}
+             reputation={reputation}
+             isRegistered={isRegistered}
+             gameYear={gameYear}
+             gameMonth={gameMonth}
            />
          )}
 
