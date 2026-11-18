@@ -28,6 +28,7 @@ npm run build                    # 后端托管 dist/，首次启动前需构建
 npm run worker:dev               # 终端 1：启动后端（端口 8787）
 npm run dev                      # 终端 2：启动前端（端口 3000，/api 自动转发到 8787）
 npm run lint                     # 类型检查（前端 + 后端）
+npm test                         # 单元测试：前端规则库（happy-dom）+ Worker 接口（workerd + 内存 D1）
 ```
 
 - 不想启动后端时，可在 `.env.local` 设置 `VITE_SKIP_AUTH=true` 跳过登录（仅开发模式生效）。
@@ -45,7 +46,7 @@ npm run lint                     # 类型检查（前端 + 后端）
 5. **赛季排行管理员**：在 `wrangler.toml` 的 `ADMIN_EMAILS` 中填写管理员邮箱（逗号分隔）。这些账号需已注册并验证邮箱，登录后可在个人中心排行榜中处理举报、隐藏或恢复成绩。留空则没有人能处理举报。
 6. **关闭开发模式**：确认线上没有设置 `DEV_MODE`（它只应出现在本地 `.dev.vars` 中），否则接口响应会直接返回邮箱验证与重置密码链接，任何人都能冒用他人邮箱注册或重置密码。
 7. **版本号与测试兑换码**：核对 `src/version.ts` 的 `APP_VERSION`。以 `dev-beta` / `beta-dev` 开头时，测试兑换码 ZWZ666 在线上可用（成绩会被排行排除，但玩家能拿到无限金币与全部成就）；面向公众的正式版本需改为不带这两个前缀的版本号。大版本更新若要换赛季，同时在 `src/data/seasons.ts` 末尾新增赛季。
-8. **构建与发布**：`npm run lint` 通过后执行 `npm run deploy`（先 `vite build` 再 `wrangler deploy`）。
+8. **构建与发布**：`npm run lint` 与 `npm test` 通过后执行 `npm run deploy`（先 `vite build` 再 `wrangler deploy`）。
 9. **上线后检查**：在线上注册一个账号并完成邮箱验证；确认云存档能保存与读取；打开个人中心排行榜「本赛季」，确认能正常加载；用管理员账号登录，确认排行榜底部出现「排行管理」区域。
 
 ---
@@ -59,6 +60,9 @@ npm run lint                     # 类型检查（前端 + 后端）
 ├── package.json                      # 依赖与脚本
 ├── vite.config.ts                    # Vite 配置（React、Tailwind 插件，/api 转发到 8787）
 ├── wrangler.toml                     # Cloudflare Workers 部署配置（静态资源 + D1 绑定）
+├── vitest.config.ts                  # 测试配置：web（前端规则库）与 worker（后端接口）两组
+├── scripts/vitest.mjs                # npm test 入口（修正 Windows 小写盘符后启动 vitest）
+├── .github/workflows/ci.yml          # GitHub Actions：类型检查、测试、构建
 ├── .env.example / .dev.vars.example  # 前端 / 后端环境变量模板
 ├── worker/                           # 后端
 │   ├── migrations/
@@ -66,6 +70,7 @@ npm run lint                     # 类型检查（前端 + 后端）
 │   │   ├── 0002_completions.sql      # 全成就完成名次（致谢名单）
 │   │   ├── 0003_seasons.sql          # 赛季成绩
 │   │   └── 0004_season_moderation.sql # 赛季作弊标记、管理员隐藏与举报
+│   ├── test/                         # Worker 接口测试（赛季排行、云存档、账号）
 │   └── src/
 │       ├── index.ts                  # /api/* 路由，其余请求交给前端静态文件
 │       └── crypto.ts                 # PBKDF2 密码哈希、随机令牌与 SHA-256
@@ -312,6 +317,7 @@ npm run lint                     # 类型检查（前端 + 后端）
   - **礼物**：逐件或每种各 5 件添加礼物、清空礼物背包；累计赠礼次数 +9 / +90（测试赠礼成就）；
   - **成就**：一键解锁或清空全部成就（用于测试致谢名单；清空时赠礼次数也归零）。
   - 约定：新增需要手动测试的功能时，同步在开发测试工具里加测试入口。
+- [x] **自动化测试与 CI**（`vitest.config.ts`、`src/lib/*.test.ts`、`worker/test/`）：`npm test` 运行前端规则库单元测试（抽卡保底、银行利息、赛季积分与换赛季）与 Worker 接口测试（赛季防作弊、举报与管理、云存档版本冲突、账号）；GitHub Actions 在每次推送时执行类型检查、测试与构建。
 
 ### 已归档
 
