@@ -10,10 +10,15 @@ import { loadStored, saveStored } from '../lib/storage';
 
 // 商城：抽卡（含保底与开箱动画，奖品为金币、家族礼物与服饰）、服饰购买与穿戴、理发店
 
-/** 十连抽价格 */
+/** 单抽与十连抽价格（首次单抽免费） */
+const SINGLE_DRAW_COST = 8000;
 const TEN_DRAW_COST = 72000;
 
-const ChestAnimation = ({ isDrawing, result, onComplete, onDrawAgain, canDrawAgain }: any) => {
+const RESULT_BUTTON =
+  'bg-gradient-to-b from-[#ffe56c] to-[#f5b822] text-black font-black px-6 py-3 rounded-full border-4 border-black active:scale-95 shadow-[0_6px_0_#000] text-lg transition-transform disabled:opacity-40 disabled:active:scale-100 flex items-center justify-center gap-1';
+
+/** onDrawAgain(times)：按本次的抽数再抽一次；drawCost(times)：该抽数的费用；coins：当前现金 */
+const ChestAnimation = ({ isDrawing, result, onComplete, onDrawAgain, drawCost, coins }: any) => {
   const [phase, setPhase] = React.useState<'closed' | 'opening' | 'rewards'>('closed');
 
   React.useEffect(() => {
@@ -114,21 +119,27 @@ const ChestAnimation = ({ isDrawing, result, onComplete, onDrawAgain, canDrawAga
                 ))}
              </div>
 
-             <div className="mt-12 flex flex-col items-center gap-3 z-10">
-               <button
-                 onClick={onComplete}
-                 className="bg-gradient-to-b from-[#ffe56c] to-[#f5b822] text-black font-black px-12 py-3 rounded-full border-4 border-black active:scale-95 shadow-[0_6px_0_#000] text-xl transition-transform"
-               >
-                 收下奖励
-               </button>
-               <button
-                 onClick={onDrawAgain}
-                 disabled={!canDrawAgain}
-                 className="bg-gradient-to-b from-[#c084fc] to-[#9333ea] text-white font-black px-8 py-2 rounded-full border-4 border-black active:scale-95 shadow-[0_5px_0_#000] text-base transition-transform disabled:opacity-40 disabled:active:scale-100 flex items-center gap-1.5"
-               >
-                 {canDrawAgain ? <>再来十连 <CircleDollarSign size={14} /> {TEN_DRAW_COST.toLocaleString()}</> : '金币不足，无法再来十连'}
-               </button>
-             </div>
+             {(() => {
+               const times = result.length > 1 ? 10 : 1;
+               const cost: number = drawCost(times);
+               const label = times === 10 ? '再来十连' : '再来一次';
+               return (
+                 <div className="mt-12 flex items-stretch justify-center gap-3 z-10">
+                   <button onClick={onComplete} className={RESULT_BUTTON}>
+                     收下奖励
+                   </button>
+                   <button onClick={() => onDrawAgain(times)} disabled={coins < cost} className={RESULT_BUTTON}>
+                     {label}
+                     {cost > 0 && (
+                       <span className="text-[11px] flex items-center gap-0.5">
+                         <CircleDollarSign size={12} />
+                         {cost.toLocaleString()}
+                       </span>
+                     )}
+                   </button>
+                 </div>
+               );
+             })()}
           </div>
        )}
     </div>
@@ -201,17 +212,10 @@ export const ShopModal = ({
     setTimeout(() => setShopToast((prev) => (prev === msg ? null : prev)), 2500);
   };
 
+  const drawCost = (times: number) => (times === 1 ? (freeDrawUsed ? SINGLE_DRAW_COST : 0) : TEN_DRAW_COST);
+
   const handleDraw = (times: number) => {
-    let cost = 0;
-    if (times === 1) {
-      if (!freeDrawUsed) {
-        cost = 0;
-      } else {
-        cost = 8000;
-      }
-    } else {
-      cost = TEN_DRAW_COST;
-    }
+    const cost = drawCost(times);
 
     if (coins < cost) {
       showShopToast(`金币不足！需要 ${cost.toLocaleString()} ₽`);
@@ -324,7 +328,7 @@ export const ShopModal = ({
               <button onClick={() => handleDraw(1)} className="flex-1 bg-gradient-to-b from-[#ffe56c] to-[#f5b822] border-2 border-black rounded-xl py-1.5 flex flex-col items-center shadow-[0_4px_0_#000] active:translate-y-1 active:shadow-none transition-all">
                  <span className="text-black font-black text-sm">抽1次</span>
                  <span className="text-[#a46914] font-bold text-[10px] flex items-center gap-1">
-                    {!freeDrawUsed ? '首次免费' : <><CircleDollarSign size={10} className="text-[#a46914]"/> x8000</>}
+                    {!freeDrawUsed ? '首次免费' : <><CircleDollarSign size={10} className="text-[#a46914]"/> x{SINGLE_DRAW_COST}</>}
                  </span>
               </button>
               <button onClick={() => handleDraw(10)} className="flex-1 bg-gradient-to-b from-[#ffe56c] to-[#f5b822] border-2 border-black rounded-xl py-1.5 flex flex-col items-center shadow-[0_4px_0_#000] active:translate-y-1 active:shadow-none transition-all">
@@ -450,11 +454,12 @@ export const ShopModal = ({
             setIsDrawing(false);
             setDrawResult(null);
           }}
-          canDrawAgain={coins >= TEN_DRAW_COST}
-          onDrawAgain={() => {
-            // 奖励已在开箱动画结束时发放，可以直接开始下一次十连
+          drawCost={drawCost}
+          coins={coins}
+          onDrawAgain={(times: number) => {
+            // 奖励已在开箱动画结束时发放，可以直接按同样的抽数再抽一次
             setDrawResult(null);
-            handleDraw(10);
+            handleDraw(times);
           }}
         />
       )}
