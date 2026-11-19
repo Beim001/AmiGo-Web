@@ -123,6 +123,7 @@ npm test                         # 单元测试：前端规则库（happy-dom）
     └── components/
         ├── OverlayHost.tsx                 # 渲染当前打开的全屏弹窗（开关见 hooks/useOverlays.ts）
         ├── AuthGate.tsx                    # 进入游戏前的关卡：加载中、登录首屏、邮箱验证拦截
+        ├── GameWorkspace.tsx               # 游戏主界面：完整模式的顶部栏、标签页与底部导航，或简洁模式一屏视图
         ├── AuthScreen.tsx / AuthModal.tsx  # 登录首屏 / 游戏内账号管理
         ├── LanguageSwitcher.tsx      # 登录首屏右上角的语言选择，选择保存在本机
         ├── EmailVerificationScreen.tsx     # 邮箱未验证拦截页

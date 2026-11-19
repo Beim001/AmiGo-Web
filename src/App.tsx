@@ -5,21 +5,16 @@
 
 import React, { useState } from 'react';
 import { Newspaper, CheckCircle, Store, MonitorPlay, Zap, Car, Scale, Receipt, Building2, TrendingDown, HeartHandshake, GraduationCap, Megaphone, UserCog, Gamepad2, Medal, ShieldAlert, BarChart2, ArrowUpRight, ArrowDownRight, Percent } from 'lucide-react';
-import { RoleTab, CartoonCharacter } from './components/RoleTab';
+import { CartoonCharacter } from './components/RoleTab';
 import { PRESET_AVATARS } from './components/AvatarSelectModal';
-import { FunctTab as FuncTab } from './components/FunctTab';
-import { SimTab } from './components/SimTab';
-import { LogTab } from './components/LogTab';
-import { FamilyTab } from './components/FamilyTab';
 import { INITIAL_FAMILY_STATE, FOUNDER_START_HEALTH, getHeirlooms, addHeirloom, addChildForTesting, buildFamilyMembers, getOrigin, listHeirs } from './lib/family';
-import { randomTraits, withBirthPrivilege, MAINTENANCE_COST, traitNames } from './lib/traits';
+import { randomTraits, withBirthPrivilege, traitNames } from './lib/traits';
 import { clampReputation, CHARITY_UNIT, charityRemaining } from './lib/reputation';
 import { unlockAchievement, readAchievements, ACHIEVEMENTS, earnsNeet, ACHIEVEMENT_EVENT, unlockAllForTesting, clearAchievementsForTesting, readGiftsGiven, recordGiftsGiven } from './lib/achievements';
 import { CreditsRoll } from './components/CreditsRoll';
 import { Appearance, randomAppearance, rollBeauty, applyBeauty, BEAUTY_TRAIT } from './lib/appearance';
 import { currentSeason, CURRENCY } from './data/seasons';
 import { antibodyNames, DISEASES } from './lib/disease';
-import { SimpleModeView } from './components/SimpleModeView';
 import { SIMPLE_MODE_KEY } from './lib/simpleMode';
 import { addGifts, giftCount } from './lib/gifts';
 import { submitSeasonScore } from './lib/authClient';
@@ -45,6 +40,7 @@ import { useSimpleMode } from './hooks/useSimpleMode';
 import { useOverlays } from './hooks/useOverlays';
 import { useAuth } from './hooks/useAuth';
 import { AuthGate } from './components/AuthGate';
+import { GameWorkspace } from './components/GameWorkspace';
 import { OverlayHost } from './components/OverlayHost';
 import {
   buildDefaultAccounts,
@@ -59,8 +55,6 @@ import { JAIL_REPUTATION, loadPrison, savePrison, saveCriminalRecord, sentenceTo
 import { loadLicenses, loadVehicles, loadCoachman, saveCoachman } from './lib/vehicles';
 import { JOB_POSITIONS, readCurrentJobId, CURRENT_JOB_KEY } from './components/JobModal';
 import { DevToolsPanel } from './components/DevToolsPanel';
-import { TopBar } from './components/TopBar';
-import { BottomNav } from './components/BottomNav';
 import { loadStored, saveStored } from './lib/storage';
 import { CLOTHING } from './data/clothing';
 import { GACHA_PITY_KEY, PITY_LIMITED } from './lib/gacha';
@@ -83,7 +77,7 @@ export default function App() {
 
   // 游戏进度状态统一由 useGameState 管理（初始化、自动存档）；setter 与 useState 的用法相同
   const game = useGameState();
-  const { isRegistered, gender, birthRegisteredYear, playerName, coins, health, gameYear, gameMonth, equippedClothing, ownedClothes, bankDeposit, bankLoan, family, disease, playerTraits, reputation, guardianship, charity, simEvents, simScore, simQuiet, auction, appearance, playerLifespan, giftInventory, antibodies, godMode } = game.state;
+  const { isRegistered, gender, birthRegisteredYear, playerName, coins, health, gameYear, gameMonth, equippedClothing, ownedClothes, bankDeposit, bankLoan, family, disease, playerTraits, reputation, guardianship, charity, simEvents, simScore, auction, appearance, playerLifespan, giftInventory, antibodies, godMode } = game.state;
   const { setIsRegistered, setGender, setBirthRegisteredYear, setPlayerName, setCoins, setHealth, setGameYear, setGameMonth, setFreeDrawUsed, setBankDeposit, setBankLoan, setFamily, setDisease, setPlayerTraits, setReputation, setGuardianship, setCharity, setSimEvents, setSimScore, setSimQuiet, setAuction, setAppearance, setPlayerLifespan, setGiftInventory, setAntibodies, setGodMode } = game.setters;
 
   // 礼物背包：宝箱抽得，在家族页送给家人（第 35 题）
@@ -551,25 +545,7 @@ export default function App() {
   const seasonMine = useSeason({ simScore, simpleMode, isRegistered, cloud, familyClass });
 
   const { handleSuccession, setPendingCoup, handleRetire } = useSuccession({ game, currentAge, playerOccupation, setShowSuccession, setFastForwardRemaining, showToast });
-  const {
-    usedSimpleMode,
-    setUsedSimpleMode,
-    setMaintenanceLog,
-    simpleAutoNotes,
-    simpleMonthNotes,
-    handleSimpleNextMonth,
-    simpleCard,
-    handleSimpleChoose,
-    simpleRemaining,
-    setSimpleRemaining,
-    handleMaintenance,
-    fertilityText,
-    handleSimpleLater,
-    stockOpenedNow,
-    simpleStock,
-    handleSimpleBuyStocks,
-    handleSimpleSellStocks,
-  } = useSimpleMode({
+  const simple = useSimpleMode({
     game,
     simpleMode,
     toast,
@@ -587,6 +563,7 @@ export default function App() {
     fastForwardRemaining,
     setFastForwardRemaining,
   });
+  const { usedSimpleMode, setUsedSimpleMode, setMaintenanceLog, handleMaintenance, fertilityText } = simple;
 
   // 成就「啃老族」：去世时年满 NEET_MIN_AGE 岁，且这一世从没领过月薪或童工收入
   React.useEffect(() => {
@@ -658,162 +635,31 @@ export default function App() {
             <span>{toast}</span>
           </div>
         )}
-         {simpleMode ? (
-           <SimpleModeView
-             isRegistered={isRegistered}
-             name={playerName}
-             age={currentAge}
-             health={health}
-             coins={coins}
-             deposit={bankDeposit}
-             year={gameYear}
-             month={gameMonth}
-             familyLabel={isRegistered ? t('familyLabel', { surname: familyOrigin.surname, classLabel: familyClass.label }) : ''}
-             diseaseName={currentDisease?.name ?? null}
-             jobTitle={(() => {
-               const id = readCurrentJobId();
-               const j = id ? JOB_POSITIONS.find((x) => x.id === id) : null;
-               return j ? j.title : readChildJob()?.title ?? null;
-             })()}
-             spouseName={family.spouse?.name ?? null}
-             childrenCount={family.children.length}
-             recent={readLifeLog().slice(-6).reverse().map((e) => ({ title: `${e.year}.${e.month} ${e.title}`, detail: e.desc }))}
-             lastSummary={[...simpleAutoNotes, ...simpleMonthNotes]}
-             card={simpleCard}
-             onChoose={handleSimpleChoose}
-             onLater={handleSimpleLater}
-             onNextMonth={handleSimpleNextMonth}
-             stockOpened={stockOpenedNow}
-             stockValue={simpleStock.value}
-             onBuyStocks={handleSimpleBuyStocks}
-             onSellStocks={handleSimpleSellStocks}
-             onRegister={() => overlays.open('birth')}
-             onExit={() => {
-               setSimpleRemaining(0);
-               setSimpleMode(false);
-             }}
-             advanceRemaining={simpleRemaining}
-             onAdvance={(n) => setSimpleRemaining(n)}
-             onStopAdvance={() => setSimpleRemaining(0)}
-             maintenanceCost={MAINTENANCE_COST}
-             fertilityText={fertilityText}
-             onMaintenance={() => showToast(handleMaintenance('self'))}
-           />
-         ) : (
-         <>
-         <TopBar 
-           coins={coins} 
-           playerName={playerName} 
-           onOpenProfile={() => overlays.open('profile')}
-           onOpenBank={() => overlays.open('bank')}
-           onOpenWealthChart={() => overlays.open('wealthChart')}
-           onOpenAuth={() => overlays.open('auth')}
+         <GameWorkspace
+           game={game}
+           overlays={overlays}
+           simple={simple}
+           simpleMode={simpleMode}
+           setSimpleMode={setSimpleMode}
+           activeTab={activeTab}
+           setActiveTab={setActiveTab}
            authUser={authUser}
            avatarContent={renderAvatarContent()}
+           currentAge={currentAge}
+           playerOccupation={playerOccupation}
+           familyClass={familyClass}
+           familyOrigin={familyOrigin}
+           currentDisease={currentDisease}
+           familyRanking={familyRanking}
+           familyCohesion={familyCohesion}
+           familyWealth={familyWealth}
+           showToast={showToast}
+           onOpenSuccession={() => setShowSuccession(true)}
+           handleNextMonth={handleNextMonth}
+           handleResetLife={handleResetLife}
+           handleSimResolve={handleSimResolve}
+           handleRetire={handleRetire}
          />
-         
-         {activeTab === 'role' && (
-           <RoleTab
-             onOpenShop={() => overlays.open('shop')}
-             onOpenBank={() => overlays.open('bank')}
-             onOpenWealthChart={() => overlays.open('wealthChart')}
-             onOpenHospital={() => overlays.open('hospital')}
-             onOpenGender={() => overlays.open('gender')}
-             onOpenCalendar={() => overlays.open('calendar')}
-             onNextMonth={handleNextMonth}
-             onGoToBirthRegistration={() => overlays.open('birth')}
-             equippedClothing={equippedClothing}
-             coins={coins}
-             health={health}
-             gameYear={gameYear}
-             gameMonth={gameMonth}
-             isRegistered={isRegistered}
-             gender={gender}
-             age={currentAge}
-             appearance={appearance}
-             childrenCount={family.children.length}
-             diseaseName={currentDisease?.name}
-             onOpenSuccession={() => setShowSuccession(true)}
-           />
-         )}
-         {activeTab === 'bag' && (
-           <FuncTab
-             onOpenBank={() => overlays.open('bank')}
-             onOpenStock={() => overlays.open('stock')}
-             onOpenHospital={() => overlays.open('hospital')}
-             onOpenJob={() => overlays.open('job')}
-             onOpenWelfare={() => overlays.open('welfare')}
-             onOpenLicense={() => overlays.open('license')}
-             onOpenLeisure={() => overlays.open('leisure')}
-             onOpenPrison={() => overlays.open('prison')}
-             onOpenCourt={() => overlays.open('court')}
-             onOpenBirth={() => overlays.open('birth')}
-             onOpenGender={() => overlays.open('gender')}
-             onOpenHousing={() => overlays.open('housing')}
-             onOpenVisa={() => overlays.open('visa')}
-             onOpenImmigrate={() => overlays.open('immigrate')}
-             onOpenMarriage={() => overlays.open('marriage')}
-           />
-         )}
-         {activeTab === 'combat' && (
-           <SimTab
-             isRegistered={isRegistered}
-             health={health}
-             age={currentAge}
-             playerName={playerName}
-             gameYear={gameYear}
-             gameMonth={gameMonth}
-             onGoToBirthRegistration={() => overlays.open('birth')}
-             onResetLife={handleResetLife}
-             onOpenSuccession={() => setShowSuccession(true)}
-             events={simEvents}
-             coins={coins}
-             simScore={simScore}
-             quietMessage={simQuiet}
-             onResolve={handleSimResolve}
-             auctionOpen={!!auction && auction.year === gameYear && auction.month === gameMonth}
-             onOpenAuction={() => overlays.open('auction')}
-           />
-         )}
-         {activeTab === 'log' && <LogTab isRegistered={isRegistered} />}
-         {activeTab === 'map' && (
-           <FamilyTab
-             isRegistered={isRegistered}
-             playerName={playerName}
-             gender={gender}
-             age={currentAge}
-             playerOccupation={playerOccupation}
-             gameYear={gameYear}
-             gameMonth={gameMonth}
-             coins={coins}
-             setCoins={setCoins}
-             setHealth={setHealth}
-             family={family}
-             setFamily={setFamily}
-             onOpenMarriage={() => overlays.open('marriage')}
-             onGoToBirthRegistration={() => overlays.open('birth')}
-             playerTraits={playerTraits}
-             reputation={reputation}
-             ranking={familyRanking}
-             cohesion={familyCohesion}
-             wealth={familyWealth}
-             guardianship={guardianship}
-             heirlooms={getHeirlooms(family)}
-             giftInventory={giftInventory}
-             lazy={usedSimpleMode}
-             playerAntibodies={antibodies}
-             onRetireTo={handleRetire}
-             playerAppearance={appearance}
-             equippedClothing={equippedClothing}
-             setGiftInventory={setGiftInventory}
-             auctionOpen={!!auction && auction.year === gameYear && auction.month === gameMonth}
-             onOpenAuction={() => overlays.open('auction')}
-           />
-         )}
-         
-         <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
-         </>
-         )}
          
          <OverlayHost
            overlays={overlays}
