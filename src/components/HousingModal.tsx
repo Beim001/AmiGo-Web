@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import {
+  addLifeLog } from '../lib/lifeLog';
+import React,
+  { useState,
+  useEffect } from 'react';
 import {
   ChevronLeft,
   Home,
   Building2,
   Key,
-  CircleDollarSign,
   CheckCircle2,
   AlertCircle,
   Sparkles,
@@ -30,6 +33,10 @@ import {
   ShieldAlert,
   Percent,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
+import { CURRENCY } from '../data/seasons';
+import { useTranslation } from 'react-i18next';
+import { livesIn, propertyUpkeep, REPOSSESS_AFTER_MONTHS } from '../lib/homeUpkeep';
 
 export interface PropertyItem {
   id: string;
@@ -65,6 +72,10 @@ export interface OwnedProperty {
   purchaseYear: number;
   purchaseMonth: number;
   totalRentCollected: number;
+  /** 累计欠下的居家开销（第 76 题） */
+  upkeepArrears?: number;
+  /** 欠费已经拖欠的月数，超过 REPOSSESS_AFTER_MONTHS 个月房产被收回 */
+  upkeepArrearsMonths?: number;
 }
 
 export interface CurrentRental {
@@ -189,7 +200,8 @@ export const HOUSING_MARKET_PROPERTIES: PropertyItem[] = [
   },
 ];
 
-const RENOVATION_TIER_NAMES = ['毛坯简装', '舒适精装', '典雅欧陆', '豪华顶配'];
+// 装潢等级名称的翻译键，下标即 renovationTier
+const RENOVATION_TIER_KEYS = ['renovation.t0', 'renovation.t1', 'renovation.t2', 'renovation.t3'] as const;
 const RENOVATION_COST_RATIO = [0, 0.1, 0.25, 0.45]; // 占买入价比例
 const RENOVATION_VALUE_BONUS = [1.0, 1.18, 1.45, 1.85]; // 增值倍数
 const RENOVATION_RENT_BONUS = [1.0, 1.25, 1.6, 2.2]; // 租金倍数
@@ -209,6 +221,9 @@ export interface HousingModalProps {
 
 type SortOption = 'default' | 'price_asc' | 'price_desc' | 'yield_desc' | 'unit_price_asc';
 
+// 房产类型筛选中“全部”的取值；其余取值是房源的类型（房源数据，保持原文）
+const CATEGORY_ALL = 'all';
+
 export const HousingModal: React.FC<HousingModalProps> = ({
   onClose,
   coins,
@@ -221,8 +236,9 @@ export const HousingModal: React.FC<HousingModalProps> = ({
   setHealth,
   onOpenBirth,
 }) => {
+  const { t } = useTranslation('housing');
   const [activeTab, setActiveTab] = useState<'market' | 'owned' | 'rent' | 'stats'>('market');
-  const [categoryFilter, setCategoryFilter] = useState<string>('全部');
+  const [categoryFilter, setCategoryFilter] = useState<string>(CATEGORY_ALL);
   const [sortBy, setSortBy] = useState<SortOption>('default');
   const [selectedPropDetail, setSelectedPropDetail] = useState<PropertyItem | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -284,18 +300,18 @@ export const HousingModal: React.FC<HousingModalProps> = ({
   const currentResidenceName = primaryOwned
     ? `${primaryOwned.title} (${primaryOwned.district})`
     : currentRental
-    ? `${currentRental.title} [租住]`
-    : '暂无固定住所 (客栈/散居)';
+    ? t('residenceRenting', { title: currentRental.title })
+    : t('noResidence');
 
   // 购买房产
   const handleBuyProperty = (item: PropertyItem) => {
     if (!isRegistered) {
-      showToast('请先办理出生登记完成实名登记后再购置房产');
+      showToast(t('toast.registerToBuy'));
       return;
     }
 
     if (coins < item.price) {
-      showToast(`资金不足：需 ${item.price.toLocaleString()} ₽，当前可用 ${coins.toLocaleString()} ₽`);
+      showToast(t('toast.buyNoMoney', { price: item.price.toLocaleString(), coins: coins.toLocaleString(), symbol: CURRENCY.symbol }));
       return;
     }
 
@@ -327,32 +343,48 @@ export const HousingModal: React.FC<HousingModalProps> = ({
       setCurrentRental(null);
     }
 
-    showToast(`成功购入【${item.title}】，产权已录入系统`);
+    addLifeLog('财富', `购入房产「${item.title}」`, `位于${item.district}，花费 ${item.price.toLocaleString()} ${CURRENCY.symbol}。`);
+    showToast(t('toast.bought', { title: item.title }));
     setSelectedPropDetail(null);
     setActiveTab('owned');
   };
 
   // 出售房产
   const handleSellProperty = (owned: OwnedProperty) => {
-    const refund = Math.floor(owned.currentValue * 0.96); // 扣除4%交易税费
+    const arrears = owned.upkeepArrears || 0;
+    const refund = Math.max(0, Math.floor(owned.currentValue * 0.96) - arrears); // 扣除4%交易税费，并先结清居家开销欠费
     setCoins((prev) => prev + refund);
-    setOwnedProperties((prev) => prev.filter((p) => p.id !== owned.id));
+    setOwnedProperties((prev) => {
+      const remaining = prev.filter((p) => p.id !== owned.id);
+      // 如果卖掉的是主居所，迁入剩余房产中第一套未出租的住宅（返回新对象，不直接修改 state）
+      if (!owned.isPrimaryResidence) return remaining;
+      const nextPrimaryId = remaining.find((p) => !p.isRentedOut)?.id;
+      return remaining.map((p) => (p.id === nextPrimaryId ? { ...p, isPrimaryResidence: true } : p));
+    });
 
-    // 如果卖掉的是主居所，重置主居所
-    if (owned.isPrimaryResidence) {
-      const remaining = ownedProperties.filter((p) => p.id !== owned.id);
-      if (remaining.length > 0) {
-        remaining[0].isPrimaryResidence = true;
-      }
+    const arrearsText = arrears > 0 ? `并结清欠费 ${arrears.toLocaleString()} ${CURRENCY.symbol}` : '';
+    addLifeLog('财富', `出售房产「${owned.title}」`, `扣除交易税费${arrearsText}后到账 ${refund.toLocaleString()} ${CURRENCY.symbol}。`);
+    showToast(arrears > 0 ? t('toast.soldWithArrears', { title: owned.title, arrears: arrears.toLocaleString(), refund: refund.toLocaleString(), symbol: CURRENCY.symbol }) : t('toast.sold', { title: owned.title, refund: refund.toLocaleString(), symbol: CURRENCY.symbol }));
+  };
+
+  // 结清居家开销欠费（第 76 题）
+  const handlePayArrears = (owned: OwnedProperty) => {
+    const arrears = owned.upkeepArrears || 0;
+    if (arrears <= 0) return;
+    if (coins < arrears) {
+      showToast(t('toast.arrearsNoMoney', { arrears: arrears.toLocaleString(), coins: coins.toLocaleString(), symbol: CURRENCY.symbol }));
+      return;
     }
-
-    showToast(`成功出售【${owned.title}】，扣除4%交易税费后到账 +${refund.toLocaleString()} ₽`);
+    setCoins((prev) => prev - arrears);
+    setOwnedProperties((prev) => prev.map((p) => (p.id === owned.id ? { ...p, upkeepArrears: 0, upkeepArrearsMonths: 0 } : p)));
+    addLifeLog('财富', `结清「${owned.title}」的欠费`, `补交居家开销 ${arrears.toLocaleString()} ${CURRENCY.symbol}。`);
+    showToast(t('toast.arrearsPaid', { title: owned.title, arrears: arrears.toLocaleString(), symbol: CURRENCY.symbol }));
   };
 
   // 切换出租状态
   const handleToggleRentOut = (owned: OwnedProperty) => {
     if (owned.isPrimaryResidence && !owned.isRentedOut) {
-      showToast('该房产当前为您自住的主要居所，若要出租请先将主要居所切换至其他住宅');
+      showToast(t('toast.primaryCannotRent'));
       return;
     }
 
@@ -368,15 +400,15 @@ export const HousingModal: React.FC<HousingModalProps> = ({
 
     showToast(
       owned.isRentedOut
-        ? `【${owned.title}】已收回自用，停止出租`
-        : `【${owned.title}】已挂牌出租，预计每月租金 +${owned.rentPerMonth.toLocaleString()} ₽`
+        ? t('toast.rentStopped', { title: owned.title })
+        : t('toast.rentListed', { title: owned.title, rent: owned.rentPerMonth.toLocaleString(), symbol: CURRENCY.symbol })
     );
   };
 
   // 设为主要居所
   const handleSetPrimary = (owned: OwnedProperty) => {
     if (owned.isRentedOut) {
-      showToast('该房产正在出租中，无法直接设为自住居所，请先收回房屋');
+      showToast(t('toast.rentedCannotLive'));
       return;
     }
 
@@ -392,13 +424,13 @@ export const HousingModal: React.FC<HousingModalProps> = ({
       setCurrentRental(null);
     }
 
-    showToast(`已迁入【${owned.title}】并设为主要居所`);
+    showToast(t('toast.movedIn', { title: owned.title }));
   };
 
   // 翻新升级房产
   const handleUpgradeRenovation = (owned: OwnedProperty) => {
     if (owned.renovationTier >= 3) {
-      showToast('该房产已达到最高装潢等级【豪华顶配】，无需继续翻新');
+      showToast(t('toast.maxRenovation'));
       return;
     }
 
@@ -406,7 +438,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
     const cost = Math.floor(owned.purchasePrice * RENOVATION_COST_RATIO[nextTier]);
 
     if (coins < cost) {
-      showToast(`装修资金不足：升级至【${RENOVATION_TIER_NAMES[nextTier]}】需 ${cost.toLocaleString()} ₽`);
+      showToast(t('toast.renovateNoMoney', { tier: t(RENOVATION_TIER_KEYS[nextTier]), cost: cost.toLocaleString(), symbol: CURRENCY.symbol }));
       return;
     }
 
@@ -430,19 +462,19 @@ export const HousingModal: React.FC<HousingModalProps> = ({
       })
     );
 
-    showToast(`装修完成：【${owned.title}】已升级至【${RENOVATION_TIER_NAMES[nextTier]}】`);
+    showToast(t('toast.renovated', { title: owned.title, tier: t(RENOVATION_TIER_KEYS[nextTier]) }));
   };
 
   // 租赁签约
   const handleSignRentalLease = (item: PropertyItem) => {
     if (!isRegistered) {
-      showToast('请先办理出生登记完成实名登记');
+      showToast(t('toast.registerToRent'));
       return;
     }
 
     const deposit = item.rentPerMonth * 2; // 押二付一 (首次预付押金)
     if (coins < deposit) {
-      showToast(`资金不足：签约需预付押金与租金共 ${deposit.toLocaleString()} ₽`);
+      showToast(t('toast.rentNoMoney', { deposit: deposit.toLocaleString(), symbol: CURRENCY.symbol }));
       return;
     }
 
@@ -466,7 +498,8 @@ export const HousingModal: React.FC<HousingModalProps> = ({
       }))
     );
 
-    showToast(`已签约租住【${item.title}】，已支付押金与首期租金 ${deposit.toLocaleString()} ₽`);
+    addLifeLog('财富', `租住「${item.title}」`, `位于${item.district}，月租 ${item.rentPerMonth.toLocaleString()} ${CURRENCY.symbol}。`);
+    showToast(t('toast.rented', { title: item.title, deposit: deposit.toLocaleString(), symbol: CURRENCY.symbol }));
     setActiveTab('rent');
   };
 
@@ -475,13 +508,13 @@ export const HousingModal: React.FC<HousingModalProps> = ({
     if (!currentRental) return;
     const refund = Math.floor(currentRental.depositPaid * 0.5); // 退还一半押金
     setCoins((prev) => prev + refund);
-    showToast(`已办理退租手续，退还租房押金 +${refund.toLocaleString()} ₽`);
+    showToast(t('toast.moveOut', { refund: refund.toLocaleString(), symbol: CURRENCY.symbol }));
     setCurrentRental(null);
   };
 
   // 筛选与排序
   const filteredAndSortedProperties = HOUSING_MARKET_PROPERTIES.filter((p) => {
-    if (categoryFilter === '全部') return true;
+    if (categoryFilter === CATEGORY_ALL) return true;
     return p.category === categoryFilter;
   }).sort((a, b) => {
     if (sortBy === 'price_asc') return a.price - b.price;
@@ -519,21 +552,21 @@ export const HousingModal: React.FC<HousingModalProps> = ({
           className="p-2 bg-[#262939] hover:bg-[#32364a] border-2 border-black rounded-xl active:translate-y-0.5 shadow-[0_2px_0_#000] cursor-pointer text-white flex items-center justify-center transition-all z-10 gap-1 text-xs font-bold"
         >
           <ChevronLeft size={20} className="text-white" strokeWidth={3} />
-          {selectedPropDetail && <span className="hidden sm:inline">返回</span>}
+          {selectedPropDetail && <span className="hidden sm:inline">{t('back')}</span>}
         </button>
 
         <div className="flex-1 flex items-center justify-center pointer-events-none px-2">
           <div className="bg-[#242738] border-2 border-amber-500/80 px-4 py-1.5 rounded-xl shadow-[0_2px_0_#000] flex items-center gap-2 max-w-[220px]">
             <Building2 size={16} className="text-amber-400 flex-shrink-0" />
             <span className="text-amber-300 text-sm font-black tracking-wider truncate">
-              {selectedPropDetail ? `${selectedPropDetail.title} · 房源详情` : '住房地产'}
+              {selectedPropDetail ? t('detailTitle', { title: selectedPropDetail.title }) : t('title')}
             </span>
           </div>
         </div>
 
         <div className="flex items-center bg-[#141622] rounded-xl px-3.5 py-1.5 border-2 border-black text-xs font-mono font-black z-10 shadow-[0_2px_0_#000] gap-1.5">
-          <CircleDollarSign size={15} className="text-yellow-400" />
-          <span className="text-amber-300">{coins.toLocaleString()} ₽</span>
+          <CurrencyIcon size={15} className="text-yellow-400" />
+          <span className="text-amber-300">{coins.toLocaleString()} {CURRENCY.symbol}</span>
         </div>
       </div>
 
@@ -541,10 +574,10 @@ export const HousingModal: React.FC<HousingModalProps> = ({
       {!selectedPropDetail && (
         <div className="bg-[#181a24] border-b-2 border-black px-3.5 py-2.5 flex items-center justify-between gap-2 flex-shrink-0 overflow-x-auto no-scrollbar">
           {[
-            { id: 'market', label: '房产市场', icon: Building2, count: HOUSING_MARKET_PROPERTIES.length },
-            { id: 'owned', label: '我的房产', icon: Home, count: ownedProperties.length },
-            { id: 'rent', label: '租房', icon: Key, count: currentRental ? 1 : 0 },
-            { id: 'stats', label: '行情概况', icon: TrendingUp },
+            { id: 'market', label: t('tabs.market'), icon: Building2, count: HOUSING_MARKET_PROPERTIES.length },
+            { id: 'owned', label: t('tabs.owned'), icon: Home, count: ownedProperties.length },
+            { id: 'rent', label: t('tabs.rent'), icon: Key, count: currentRental ? 1 : 0 },
+            { id: 'stats', label: t('tabs.stats'), icon: TrendingUp },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -603,16 +636,16 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                         {isOwned ? (
                           <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                             <CheckCircle2 size={12} />
-                            <span>名下已持有</span>
+                            <span>{t('badge.owned')}</span>
                           </span>
                         ) : isCurrentRenting ? (
                           <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-blue-950/60 text-blue-300 border border-blue-500/30 flex items-center gap-1">
                             <Key size={12} />
-                            <span>当前正在承租</span>
+                            <span>{t('badge.renting')}</span>
                           </span>
                         ) : (
                           <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-950/60 text-emerald-300 border border-emerald-500/30">
-                            在售中
+                            {t('badge.onSale')}
                           </span>
                         )}
                       </div>
@@ -625,25 +658,25 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                   {/* Pricing & Valuation Dashboard */}
                   <div className="bg-[#161823] p-4 rounded-2xl border border-black grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono shadow-inner">
                     <div className="space-y-0.5">
-                      <div className="text-gray-400 text-[10px] font-sans">挂牌总价</div>
+                      <div className="text-gray-400 text-[10px] font-sans">{t('detail.totalPrice')}</div>
                       <div className="text-amber-300 font-black text-base sm:text-lg truncate">
-                        {selectedPropDetail.price.toLocaleString()} ₽
+                        {selectedPropDetail.price.toLocaleString()} {CURRENCY.symbol}
                       </div>
                     </div>
                     <div className="space-y-0.5">
-                      <div className="text-gray-400 text-[10px] font-sans">参考单价</div>
+                      <div className="text-gray-400 text-[10px] font-sans">{t('detail.unitPrice')}</div>
                       <div className="text-gray-200 font-bold text-sm sm:text-base">
-                        {unitPrice.toLocaleString()} ₽/㎡
+                        {unitPrice.toLocaleString()} {CURRENCY.symbol}/㎡
                       </div>
                     </div>
                     <div className="space-y-0.5">
-                      <div className="text-gray-400 text-[10px] font-sans">基准月租预估</div>
+                      <div className="text-gray-400 text-[10px] font-sans">{t('detail.baseRent')}</div>
                       <div className="text-emerald-400 font-bold text-sm sm:text-base">
-                        {selectedPropDetail.rentPerMonth.toLocaleString()} ₽/月
+                        {t('perMonth', { amount: selectedPropDetail.rentPerMonth.toLocaleString(), symbol: CURRENCY.symbol })}
                       </div>
                     </div>
                     <div className="space-y-0.5">
-                      <div className="text-gray-400 text-[10px] font-sans">年化租金回报</div>
+                      <div className="text-gray-400 text-[10px] font-sans">{t('detail.yield')}</div>
                       <div className="text-purple-300 font-bold text-sm sm:text-base">
                         ~{annualYield}%
                       </div>
@@ -655,33 +688,33 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                 <div className="bg-[#202331] border-2 border-black rounded-2xl p-4 sm:p-5 shadow-[0_3px_0_#000] space-y-3">
                   <div className="flex items-center gap-2 text-xs font-black text-white border-b border-black/60 pb-2.5">
                     <Building2 size={16} className="text-amber-400" />
-                    <span>建筑参数与规格</span>
+                    <span>{t('detail.specs')}</span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-sans">
                     <div className="bg-[#161823] p-2.5 rounded-xl border border-black space-y-0.5">
-                      <span className="text-gray-400 text-[10px]">建筑面积：</span>
+                      <span className="text-gray-400 text-[10px]">{t('detail.area')}</span>
                       <div className="font-mono font-bold text-white text-sm">{selectedPropDetail.area} ㎡</div>
                     </div>
                     <div className="bg-[#161823] p-2.5 rounded-xl border border-black space-y-0.5">
-                      <span className="text-gray-400 text-[10px]">房屋户型：</span>
+                      <span className="text-gray-400 text-[10px]">{t('detail.layout')}</span>
                       <div className="font-bold text-white text-sm">{selectedPropDetail.layout}</div>
                     </div>
                     <div className="bg-[#161823] p-2.5 rounded-xl border border-black space-y-0.5">
-                      <span className="text-gray-400 text-[10px]">房屋朝向：</span>
+                      <span className="text-gray-400 text-[10px]">{t('detail.orientation')}</span>
                       <div className="font-bold text-white text-sm">{selectedPropDetail.orientation}</div>
                     </div>
                     <div className="bg-[#161823] p-2.5 rounded-xl border border-black space-y-0.5">
-                      <span className="text-gray-400 text-[10px]">所在楼层：</span>
+                      <span className="text-gray-400 text-[10px]">{t('detail.floor')}</span>
                       <div className="font-bold text-white text-sm">{selectedPropDetail.floor}</div>
                     </div>
                     <div className="bg-[#161823] p-2.5 rounded-xl border border-black space-y-0.5">
-                      <span className="text-gray-400 text-[10px]">居住健康加成：</span>
-                      <div className="font-bold text-blue-300 text-sm">+{selectedPropDetail.comfortBonus} / 月</div>
+                      <span className="text-gray-400 text-[10px]">{t('detail.comfort')}</span>
+                      <div className="font-bold text-blue-300 text-sm">{t('detail.comfortValue', { bonus: selectedPropDetail.comfortBonus })}</div>
                     </div>
                     <div className="bg-[#161823] p-2.5 rounded-xl border border-black space-y-0.5">
-                      <span className="text-gray-400 text-[10px]">产权归属：</span>
-                      <div className="font-bold text-amber-300 text-sm">永久产权 · 独立地契</div>
+                      <span className="text-gray-400 text-[10px]">{t('detail.ownership')}</span>
+                      <div className="font-bold text-amber-300 text-sm">{t('freehold')}</div>
                     </div>
                   </div>
                 </div>
@@ -690,7 +723,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                 <div className="bg-[#202331] border-2 border-black rounded-2xl p-4 sm:p-5 shadow-[0_3px_0_#000] space-y-2.5 text-xs">
                   <div className="flex items-center gap-2 font-black text-white border-b border-black/60 pb-2">
                     <FileCheck size={16} className="text-emerald-400" />
-                    <span>房源描述与区位环境</span>
+                    <span>{t('detail.description')}</span>
                   </div>
                   <p className="text-gray-300 bg-[#161823] p-3.5 rounded-2xl border border-black/60 leading-relaxed font-sans">
                     {selectedPropDetail.description}
@@ -701,7 +734,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                 <div className="bg-[#202331] border-2 border-black rounded-2xl p-4 sm:p-5 shadow-[0_3px_0_#000] space-y-3 text-xs">
                   <div className="flex items-center gap-2 font-black text-white border-b border-black/60 pb-2">
                     <Sparkles size={16} className="text-amber-400" />
-                    <span>核心配套与特色</span>
+                    <span>{t('detail.features')}</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {selectedPropDetail.features.map((feat, i) => (
@@ -720,12 +753,12 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                 <div className="bg-[#202331] border-2 border-black rounded-2xl p-4 sm:p-5 shadow-[0_3px_0_#000] space-y-2 text-xs">
                   <div className="text-gray-400 font-bold flex items-center gap-1.5">
                     <Info size={14} className="text-amber-400" />
-                    <span>交易及权益说明</span>
+                    <span>{t('detail.rulesTitle')}</span>
                   </div>
                   <ul className="list-disc list-inside space-y-1 text-gray-300 leading-relaxed font-sans text-[11px]">
-                    <li>购买成功后自动办理土地房屋地契登记，永久持有。</li>
-                    <li>设为【主要居所】可享受每月体魄健康加成；挂牌出租则于跨月时结算月租。</li>
-                    <li>挂牌出售房产由城市不动产交易中心统筹承接，扣除 4% 交易契税后即时到账。</li>
+                    <li>{t('detail.rule1')}</li>
+                    <li>{t('detail.rule2')}</li>
+                    <li>{t('detail.rule3')}</li>
                   </ul>
                 </div>
 
@@ -736,7 +769,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                     onClick={() => setSelectedPropDetail(null)}
                     className="px-4 py-2.5 bg-[#262939] hover:bg-[#32364a] text-gray-200 border-2 border-black rounded-xl text-xs font-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer transition-all"
                   >
-                    返回列表
+                    {t('detail.backToList')}
                   </button>
 
                   <div className="flex items-center gap-2 flex-1 justify-end">
@@ -750,7 +783,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                         className="py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-black border-2 border-black rounded-xl text-xs font-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer transition-all flex items-center gap-1.5"
                       >
                         <Home size={15} />
-                        <span>前往【我的房产】管理</span>
+                        <span>{t('detail.goManage')}</span>
                       </button>
                     ) : (
                       <>
@@ -765,7 +798,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                           }`}
                         >
                           <Key size={14} />
-                          <span>签约租房 ({(selectedPropDetail.rentPerMonth * 3).toLocaleString()}₽)</span>
+                          <span>{t('detail.rentNow', { amount: (selectedPropDetail.rentPerMonth * 3).toLocaleString(), symbol: CURRENCY.symbol })}</span>
                         </button>
 
                         <button
@@ -779,7 +812,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                           }`}
                         >
                           <Coins size={14} />
-                          <span>立即全款购买 ({selectedPropDetail.price.toLocaleString()} ₽)</span>
+                          <span>{t('detail.buyNow', { amount: selectedPropDetail.price.toLocaleString(), symbol: CURRENCY.symbol })}</span>
                         </button>
                       </>
                     )}
@@ -795,10 +828,10 @@ export const HousingModal: React.FC<HousingModalProps> = ({
               <div className="bg-[#222534] border-2 border-black rounded-2xl p-4 text-center space-y-2.5 shadow-[0_3px_0_#000]">
                 <div className="flex items-center justify-center gap-1.5 text-amber-400 font-black text-xs">
                   <AlertCircle size={16} />
-                  <span>尚未完成出生登记</span>
+                  <span>{t('unregistered.title')}</span>
                 </div>
                 <p className="text-gray-300 text-xs leading-relaxed max-w-md mx-auto">
-                  暂未取得公民身份编号，仅可浏览房产信息。完成登记后即可办理房产买卖与租赁。
+                  {t('unregistered.desc')}
                 </p>
                 {onOpenBirth && (
                   <button
@@ -809,7 +842,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                     className="bg-amber-400 hover:bg-amber-300 text-black font-black text-xs py-2 px-4 rounded-xl border-2 border-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer inline-flex items-center gap-1.5 mt-1"
                   >
                     <Sparkles size={14} />
-                    <span>前往登记出生证明</span>
+                    <span>{t('unregistered.go')}</span>
                   </button>
                 )}
               </div>
@@ -822,7 +855,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
             <div className="space-y-2.5">
               {/* Category Pills */}
               <div className="flex items-center gap-2 overflow-x-auto pb-1.5 no-scrollbar text-xs font-bold">
-                {['全部', '住宅公寓', '商住洋楼', '独栋公馆', '豪华庄园', '地标商业'].map((cat) => (
+                {[CATEGORY_ALL, '住宅公寓', '商住洋楼', '独栋公馆', '豪华庄园', '地标商业'].map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setCategoryFilter(cat)}
@@ -832,27 +865,27 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                         : 'bg-[#222534] text-gray-400 hover:text-white'
                     }`}
                   >
-                    {cat}
+                    {cat === CATEGORY_ALL ? t('all') : cat}
                   </button>
                 ))}
               </div>
 
               {/* Sort Selector Bar */}
               <div className="flex items-center justify-between text-xs px-1 text-gray-400">
-                <span className="font-mono text-xs">共 {filteredAndSortedProperties.length} 套在售房源</span>
+                <span className="font-mono text-xs">{t('list.count', { count: filteredAndSortedProperties.length })}</span>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs">排序:</span>
+                  <span className="text-xs">{t('list.sort')}</span>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    aria-label="房源排序"
+                    aria-label={t('list.sortLabel')}
                     className="bg-[#222534] border border-black rounded-xl px-2.5 py-1 text-gray-200 text-xs font-medium cursor-pointer focus:outline-none focus:border-amber-400"
                   >
-                    <option value="default">默认推荐</option>
-                    <option value="price_asc">总价由低到高</option>
-                    <option value="price_desc">总价由高到低</option>
-                    <option value="yield_desc">年租金回报率高</option>
-                    <option value="unit_price_asc">单价由低到高</option>
+                    <option value="default">{t('list.sorts.default')}</option>
+                    <option value="price_asc">{t('list.sorts.price_asc')}</option>
+                    <option value="price_desc">{t('list.sorts.price_desc')}</option>
+                    <option value="yield_desc">{t('list.sorts.yield_desc')}</option>
+                    <option value="unit_price_asc">{t('list.sorts.unit_price_asc')}</option>
                   </select>
                 </div>
               </div>
@@ -881,7 +914,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                             {item.category}
                           </span>
                           <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-md bg-emerald-950/60 text-emerald-300 border border-emerald-500/30">
-                            在售
+                            {t('list.onSale')}
                           </span>
                         </div>
 
@@ -902,10 +935,10 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                       {/* Total & Unit Price */}
                       <div className="text-right flex-shrink-0">
                         <div className="text-amber-300 font-mono font-black text-base sm:text-lg">
-                          {item.price.toLocaleString()} ₽
+                          {item.price.toLocaleString()} {CURRENCY.symbol}
                         </div>
                         <div className="text-gray-400 text-[10px] font-mono mt-0.5">
-                          单价 {unitPrice.toLocaleString()} ₽/㎡
+                          {t('list.unitPrice', { price: unitPrice.toLocaleString(), symbol: CURRENCY.symbol })}
                         </div>
                       </div>
                     </div>
@@ -921,22 +954,22 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                         </span>
                       ))}
                       <span className="bg-[#171924] text-emerald-300 px-2.5 py-1 rounded-lg border border-black/60 font-mono">
-                        年租金回报 ~{annualYield}%
+                        {t('list.yield', { yield: annualYield })}
                       </span>
                     </div>
 
                     {/* Financial & Rental Summary Box */}
                     <div className="bg-[#161823] p-3 rounded-xl border border-black/60 grid grid-cols-2 gap-3 text-xs font-mono">
                       <div>
-                        <span className="text-gray-400 text-[10px]">基准月租预估：</span>
+                        <span className="text-gray-400 text-[10px]">{t('list.baseRent')}</span>
                         <span className="text-emerald-400 font-bold ml-1">
-                          {item.rentPerMonth.toLocaleString()} ₽/月
+                          {t('perMonth', { amount: item.rentPerMonth.toLocaleString(), symbol: CURRENCY.symbol })}
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-400 text-[10px]">健康恢复增益：</span>
+                        <span className="text-gray-400 text-[10px]">{t('list.comfort')}</span>
                         <span className="text-blue-300 font-bold ml-1">
-                          +{item.comfortBonus}/月
+                          {t('list.comfortValue', { bonus: item.comfortBonus })}
                         </span>
                       </div>
                     </div>
@@ -947,10 +980,10 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                         {isOwned ? (
                           <span className="text-emerald-400 font-bold flex items-center gap-1.5">
                             <CheckCircle2 size={14} />
-                            <span>已持有该房产</span>
+                            <span>{t('list.owned')}</span>
                           </span>
                         ) : (
-                          <span className="text-gray-400 text-xs">永久产权 · 独立地契</span>
+                          <span className="text-gray-400 text-xs">{t('freehold')}</span>
                         )}
                       </div>
 
@@ -960,7 +993,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                           onClick={() => setSelectedPropDetail(item)}
                           className="px-3 py-1.5 rounded-xl border border-black bg-[#2c3044] hover:bg-[#383d57] text-gray-200 text-xs font-bold shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer"
                         >
-                          详情
+                          {t('list.detail')}
                         </button>
 
                         <button
@@ -973,7 +1006,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                               : 'bg-[#2b2f42] hover:bg-[#363c55] text-white cursor-pointer'
                           }`}
                         >
-                          租住 ({item.rentPerMonth}₽/月)
+                          {t('list.rent', { amount: item.rentPerMonth, symbol: CURRENCY.symbol })}
                         </button>
 
                         <button
@@ -986,7 +1019,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                               : 'bg-amber-400 hover:bg-amber-300 text-black cursor-pointer'
                           }`}
                         >
-                          <span>购买</span>
+                          <span>{t('list.buy')}</span>
                         </button>
                       </div>
                     </div>
@@ -1005,31 +1038,31 @@ export const HousingModal: React.FC<HousingModalProps> = ({
               <div className="flex items-center justify-between border-b border-black/60 pb-3">
                 <div className="flex items-center gap-2">
                   <Building2 size={18} className="text-amber-400" />
-                  <span className="text-white font-black text-sm sm:text-base">房产持仓总览</span>
+                  <span className="text-white font-black text-sm sm:text-base">{t('owned.overview')}</span>
                 </div>
                 <span className="text-xs font-mono font-bold text-amber-300 bg-amber-950/60 px-2.5 py-0.5 rounded-full border border-amber-500/40">
-                  持有 {ownedProperties.length} 套
+                  {t('owned.count', { count: ownedProperties.length })}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-3 font-mono">
                 <div className="bg-[#161823] p-3 rounded-xl border border-black shadow-inner space-y-0.5">
-                  <div className="text-gray-400 text-[10px] font-sans">房产总估值</div>
+                  <div className="text-gray-400 text-[10px] font-sans">{t('owned.totalValue')}</div>
                   <div className="text-amber-300 font-black text-base">
-                    {totalPropertyValue.toLocaleString()} ₽
+                    {totalPropertyValue.toLocaleString()} {CURRENCY.symbol}
                   </div>
                 </div>
 
                 <div className="bg-[#161823] p-3 rounded-xl border border-black shadow-inner space-y-0.5">
-                  <div className="text-gray-400 text-[10px] font-sans">每月租金收入</div>
+                  <div className="text-gray-400 text-[10px] font-sans">{t('owned.monthlyRent')}</div>
                   <div className="text-emerald-400 font-black text-base">
-                    +{totalMonthlyRentalIncome.toLocaleString()} ₽/月
+                    {t('owned.incomeValue', { amount: totalMonthlyRentalIncome.toLocaleString(), symbol: CURRENCY.symbol })}
                   </div>
                 </div>
               </div>
 
               <div className="bg-[#161823] p-3 rounded-xl border border-black text-xs flex items-center justify-between font-sans shadow-inner">
-                <span className="text-gray-400 font-bold">主要居所：</span>
+                <span className="text-gray-400 font-bold">{t('owned.primaryLabel')}</span>
                 <span className="text-white font-bold truncate max-w-[220px]">
                   {currentResidenceName}
                 </span>
@@ -1043,9 +1076,9 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                   <Home size={22} className="text-gray-500" />
                 </div>
                 <div className="space-y-1.5">
-                  <h3 className="text-white font-black text-sm sm:text-base">名下暂无房产</h3>
+                  <h3 className="text-white font-black text-sm sm:text-base">{t('owned.emptyTitle')}</h3>
                   <p className="text-gray-400 text-xs leading-relaxed max-w-xs mx-auto">
-                    您尚未购买任何房产。前往【房产市场】选购房屋或翻新住宅获取租金收益。
+                    {t('owned.emptyDesc')}
                   </p>
                 </div>
                 <button
@@ -1054,7 +1087,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                   className="bg-amber-400 hover:bg-amber-300 text-black font-black text-xs py-2 px-4 rounded-xl border-2 border-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer inline-flex items-center gap-1.5 mt-1"
                 >
                   <Building2 size={15} />
-                  <span>前往选购房产</span>
+                  <span>{t('owned.goBuy')}</span>
                 </button>
               </div>
             ) : (
@@ -1080,46 +1113,54 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                             {owned.isPrimaryResidence && (
                               <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
                                 <Crown size={11} />
-                                <span>主要居所</span>
+                                <span>{t('owned.primary')}</span>
                               </span>
                             )}
                             {owned.isRentedOut && (
                               <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                                出租中
+                                {t('owned.rentedOut')}
                               </span>
                             )}
                           </div>
                           <div className="text-xs text-gray-400 font-mono mt-1">
-                            {owned.district} · {template?.layout || '标准户型'} · {RENOVATION_TIER_NAMES[owned.renovationTier]}
+                            {owned.district} · {template?.layout || t('owned.defaultLayout')} · {t(RENOVATION_TIER_KEYS[owned.renovationTier])}
                           </div>
                         </div>
 
                         <div className="text-right flex-shrink-0">
                           <div className="text-amber-300 font-mono font-black text-sm sm:text-base">
-                            {owned.currentValue.toLocaleString()} ₽
+                            {owned.currentValue.toLocaleString()} {CURRENCY.symbol}
                           </div>
                           <div className="text-gray-400 text-[10px] font-mono mt-0.5">
-                            购入价: {owned.purchasePrice.toLocaleString()} ₽
+                            {t('owned.purchasePrice', { amount: owned.purchasePrice.toLocaleString(), symbol: CURRENCY.symbol })}
                           </div>
+                          <div className="text-rose-300/80 text-[10px] font-mono mt-0.5">
+                            {t(livesIn(owned) ? 'owned.upkeepHome' : 'owned.upkeepRepair', { amount: propertyUpkeep(owned, gameYear).toLocaleString(), symbol: CURRENCY.symbol })}
+                          </div>
+                          {(owned.upkeepArrears || 0) > 0 && (
+                            <div className="text-rose-400 text-[10px] font-black mt-0.5">
+                              {t('owned.arrears', { amount: (owned.upkeepArrears || 0).toLocaleString(), months: owned.upkeepArrearsMonths || 0, limit: REPOSSESS_AFTER_MONTHS, symbol: CURRENCY.symbol })}
+                            </div>
+                          )}
                         </div>
                       </div>
 
                       {/* Property Metrics 3-Grid */}
                       <div className="grid grid-cols-3 gap-2.5 text-xs font-mono text-center">
                         <div className="bg-[#161823] p-2.5 rounded-xl border border-black shadow-inner space-y-0.5">
-                          <div className="text-gray-400 text-[10px] font-sans">每月租金</div>
+                          <div className="text-gray-400 text-[10px] font-sans">{t('owned.rent')}</div>
                           <div className="text-emerald-400 font-bold">
-                            {owned.rentPerMonth.toLocaleString()} ₽
+                            {owned.rentPerMonth.toLocaleString()} {CURRENCY.symbol}
                           </div>
                         </div>
                         <div className="bg-[#161823] p-2.5 rounded-xl border border-black shadow-inner space-y-0.5">
-                          <div className="text-gray-400 text-[10px] font-sans">装潢等级</div>
+                          <div className="text-gray-400 text-[10px] font-sans">{t('owned.tier')}</div>
                           <div className="text-purple-300 font-bold">
-                            {RENOVATION_TIER_NAMES[owned.renovationTier]}
+                            {t(RENOVATION_TIER_KEYS[owned.renovationTier])}
                           </div>
                         </div>
                         <div className="bg-[#161823] p-2.5 rounded-xl border border-black shadow-inner space-y-0.5">
-                          <div className="text-gray-400 text-[10px] font-sans">购入时间</div>
+                          <div className="text-gray-400 text-[10px] font-sans">{t('owned.purchasedAt')}</div>
                           <div className="text-gray-300 font-bold">
                             {owned.purchaseYear}.{owned.purchaseMonth}
                           </div>
@@ -1129,13 +1170,22 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                       {/* Action Controls */}
                       <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2.5 border-t border-black/40">
                         <div className="flex items-center gap-2 flex-wrap">
+                          {(owned.upkeepArrears || 0) > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handlePayArrears(owned)}
+                              className="px-3 py-1.5 bg-rose-600/30 hover:bg-rose-600/40 text-rose-300 rounded-xl border border-rose-500/50 text-xs font-bold shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer"
+                            >
+                              {t('owned.payArrears')}
+                            </button>
+                          )}
                           {!owned.isPrimaryResidence && (
                             <button
                               type="button"
                               onClick={() => handleSetPrimary(owned)}
                               className="px-3 py-1.5 bg-[#2b2f42] hover:bg-[#363b53] text-gray-200 rounded-xl border border-black text-xs font-bold shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer"
                             >
-                              设为主居所
+                              {t('owned.setPrimary')}
                             </button>
                           )}
 
@@ -1148,7 +1198,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                                 : 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50'
                             }`}
                           >
-                            {owned.isRentedOut ? '收回自用' : '挂牌出租'}
+                            {owned.isRentedOut ? t('owned.stopRent') : t('owned.listRent')}
                           </button>
 
                           {canUpgrade && (
@@ -1158,7 +1208,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                               className="px-3 py-1.5 bg-purple-600/30 hover:bg-purple-600/40 text-purple-300 rounded-xl border border-purple-500/50 text-xs font-bold shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer flex items-center gap-1.5"
                             >
                               <Hammer size={13} />
-                              <span>装修 ({upgradeCost.toLocaleString()}₽)</span>
+                              <span>{t('owned.renovate', { amount: upgradeCost.toLocaleString(), symbol: CURRENCY.symbol })}</span>
                             </button>
                           )}
                         </div>
@@ -1168,7 +1218,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                           onClick={() => handleSellProperty(owned)}
                           className="px-3.5 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 rounded-xl border border-rose-500/50 text-xs font-bold shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer"
                         >
-                          出售 (扣4%税)
+                          {t('owned.sell')}
                         </button>
                       </div>
                     </div>
@@ -1188,7 +1238,7 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                 <div className="flex items-start justify-between border-b border-black/60 pb-3">
                   <div>
                     <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                      当前租约生效中
+                      {t('rent.active')}
                     </span>
                     <h3 className="text-white font-black text-sm sm:text-base mt-1.5">
                       {currentRental.title}
@@ -1201,30 +1251,30 @@ export const HousingModal: React.FC<HousingModalProps> = ({
 
                   <div className="text-right flex-shrink-0">
                     <div className="text-amber-300 font-mono font-black text-sm sm:text-base">
-                      {currentRental.monthlyRent} ₽/月
+                      {t('perMonth', { amount: currentRental.monthlyRent, symbol: CURRENCY.symbol })}
                     </div>
                     <div className="text-gray-400 text-[10px] font-mono mt-0.5">
-                      已托管押金: {currentRental.depositPaid} ₽
+                      {t('rent.deposit', { amount: currentRental.depositPaid, symbol: CURRENCY.symbol })}
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-[#161823] p-3 rounded-xl border border-black space-y-2 text-xs font-sans shadow-inner">
                   <div className="flex justify-between text-gray-300">
-                    <span>签约时间：</span>
+                    <span>{t('rent.signedAt')}</span>
                     <span className="font-mono font-bold text-white">
-                      {currentRental.startYear}年 {currentRental.startMonth}月
+                      {t('rent.date', { year: currentRental.startYear, month: currentRental.startMonth })}
                     </span>
                   </div>
                   <div className="flex justify-between text-gray-300">
-                    <span>健康加成：</span>
+                    <span>{t('rent.comfort')}</span>
                     <span className="text-emerald-400 font-bold">
-                      每月恢复 +{currentRental.comfortBonus}
+                      {t('rent.comfortValue', { bonus: currentRental.comfortBonus })}
                     </span>
                   </div>
                   <div className="flex justify-between text-gray-300">
-                    <span>租金结算：</span>
-                    <span className="text-gray-400 font-mono">步入下月时自动扣缴</span>
+                    <span>{t('rent.settle')}</span>
+                    <span className="text-gray-400 font-mono">{t('rent.settleValue')}</span>
                   </div>
                 </div>
 
@@ -1233,21 +1283,21 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                   onClick={handleTerminateLease}
                   className="w-full bg-rose-600/30 hover:bg-rose-600/40 text-rose-300 border-2 border-rose-500/50 py-2.5 rounded-xl font-bold text-xs shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer transition-all mt-1"
                 >
-                  办理退租 (退还50%押金)
+                  {t('rent.moveOut')}
                 </button>
               </div>
             ) : (
               <div className="bg-[#202331] border-2 border-black rounded-2xl p-4 sm:p-5 text-center space-y-2 shadow-[0_3px_0_#000]">
-                <div className="text-white font-black text-xs sm:text-sm">当前未租住任何房屋</div>
+                <div className="text-white font-black text-xs sm:text-sm">{t('rent.noneTitle')}</div>
                 <p className="text-gray-400 text-xs max-w-xs mx-auto leading-relaxed">
-                  租房只需支付少量押金与月租，同样可享受月度健康恢复加成。
+                  {t('rent.noneDesc')}
                 </p>
               </div>
             )}
 
             {/* Rental Listings */}
             <div className="space-y-3">
-              <div className="text-xs font-bold text-gray-300 px-1">精选出租房源</div>
+              <div className="text-xs font-bold text-gray-300 px-1">{t('rent.listTitle')}</div>
               {HOUSING_MARKET_PROPERTIES.slice(0, 4).map((item) => (
                 <div
                   key={item.id}
@@ -1268,22 +1318,22 @@ export const HousingModal: React.FC<HousingModalProps> = ({
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <div className="text-right">
                       <div className="text-amber-300 font-mono font-black text-xs sm:text-sm">
-                        {item.rentPerMonth} ₽/月
+                        {t('perMonth', { amount: item.rentPerMonth, symbol: CURRENCY.symbol })}
                       </div>
-                      <div className="text-gray-400 text-[9px] mt-0.5">押二付一</div>
+                      <div className="text-gray-400 text-[9px] mt-0.5">{t('rent.depositRule')}</div>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => handleSignRentalLease(item)}
-                      disabled={!isRegistered || (currentRental && currentRental.propertyId === item.id)}
+                      disabled={!isRegistered || currentRental?.propertyId === item.id}
                       className={`px-3.5 py-1.5 rounded-xl border-2 border-black text-xs font-bold shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer ${
                         currentRental && currentRental.propertyId === item.id
                           ? 'bg-gray-700 text-gray-400 border-gray-600 cursor-not-allowed opacity-60'
                           : 'bg-amber-400 hover:bg-amber-300 text-black'
                       }`}
                     >
-                      {currentRental && currentRental.propertyId === item.id ? '已在租' : '租住'}
+                      {currentRental && currentRental.propertyId === item.id ? t('rent.renting') : t('rent.rentThis')}
                     </button>
                   </div>
                 </div>
@@ -1300,28 +1350,28 @@ export const HousingModal: React.FC<HousingModalProps> = ({
               <div className="flex items-center justify-between border-b border-black/60 pb-3">
                 <div className="flex items-center gap-2 text-sm font-black text-white">
                   <TrendingUp size={16} className="text-amber-400" />
-                  <span>城市不动产行情</span>
+                  <span>{t('stats.title')}</span>
                 </div>
                 <span className="text-emerald-400 text-[10px] font-mono font-bold bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/40">
-                  +4.8% 年化景气度
+                  {t('stats.boom')}
                 </span>
               </div>
 
               <p className="text-gray-300 text-xs leading-relaxed bg-[#161823] p-3.5 rounded-xl border border-black/80 shadow-inner font-sans">
-                城市核心地段地价与租金稳步上扬。持有高品质房产可抵抗通胀并获取长期租金现金流。
+                {t('stats.desc')}
               </p>
 
               <div className="grid grid-cols-2 gap-3 text-xs font-mono text-center">
                 <div className="bg-[#161823] p-3 rounded-xl border border-black shadow-inner space-y-0.5">
-                  <div className="text-gray-400 text-[10px] font-sans">名下房屋套数</div>
+                  <div className="text-gray-400 text-[10px] font-sans">{t('stats.count')}</div>
                   <div className="text-white font-black text-base">
-                    {ownedProperties.length} 套
+                    {t('stats.countValue', { count: ownedProperties.length })}
                   </div>
                 </div>
                 <div className="bg-[#161823] p-3 rounded-xl border border-black shadow-inner space-y-0.5">
-                  <div className="text-gray-400 text-[10px] font-sans">累计租金收益</div>
+                  <div className="text-gray-400 text-[10px] font-sans">{t('stats.totalRent')}</div>
                   <div className="text-amber-300 font-black text-base">
-                    {totalRentCollectedAllTime.toLocaleString()} ₽
+                    {totalRentCollectedAllTime.toLocaleString()} {CURRENCY.symbol}
                   </div>
                 </div>
               </div>
@@ -1331,21 +1381,21 @@ export const HousingModal: React.FC<HousingModalProps> = ({
             <div className="bg-[#202331] border-2 border-black rounded-2xl p-4 sm:p-5 shadow-[0_3px_0_#000] space-y-3">
               <div className="text-xs font-black text-gray-200 flex items-center gap-1.5 border-b border-black/60 pb-2.5">
                 <FileCheck size={16} className="text-purple-400" />
-                <span>房产交易与租售说明</span>
+                <span>{t('stats.rulesTitle')}</span>
               </div>
 
               <div className="space-y-2.5 text-xs text-gray-300 leading-relaxed font-sans">
                 <div className="p-3 bg-[#161823] rounded-xl border border-black shadow-inner space-y-0.5">
-                  <strong className="text-amber-300 block">1. 房产买卖与税费</strong>
-                  购置后享有永久产权，挂牌出售时系统扣除 4% 交易税费。
+                  <strong className="text-amber-300 block">{t('stats.rule1Title')}</strong>
+                  {t('stats.rule1')}
                 </div>
                 <div className="p-3 bg-[#161823] rounded-xl border border-black shadow-inner space-y-0.5">
-                  <strong className="text-emerald-300 block">2. 租金收益结算</strong>
-                  挂牌出租的房产将于步入下月时自动结算租金并打入现金账户。
+                  <strong className="text-emerald-300 block">{t('stats.rule2Title')}</strong>
+                  {t('stats.rule2')}
                 </div>
                 <div className="p-3 bg-[#161823] rounded-xl border border-black shadow-inner space-y-0.5">
-                  <strong className="text-blue-300 block">3. 住宅装潢升级</strong>
-                  升级装潢等级可提升房屋每月租金收益并成倍增加转售估值。
+                  <strong className="text-blue-300 block">{t('stats.rule3Title')}</strong>
+                  {t('stats.rule3')}
                 </div>
               </div>
             </div>

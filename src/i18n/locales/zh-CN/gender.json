@@ -1,0 +1,28 @@
+{
+  "toast": {
+    "notRegistered": "❌ 请先办理出生登记申领公民身份",
+    "same": "当前法定性别已是【{{gender}}】，无需重复更正",
+    "noMoney": "❌ 现金不足！更正规费需 {{fee}} {{symbol}}，当前拥有 {{coins}} {{symbol}}",
+    "changed": "法定性别已更正为【{{gender}}】！扣除规费 {{fee}} {{symbol}}"
+  },
+  "title": "性别权利",
+  "unregistered": {
+    "title": "尚未办理出生登记",
+    "desc": "你尚未登记公民身份。请先前往办理出生登记后，再行申办法定性别更正。",
+    "go": "前往办理出生登记"
+  },
+  "citizen": "合法公民身份",
+  "age": "({{age}} 岁)",
+  "legalFemale": "法定性别：女",
+  "legalMale": "法定性别：男",
+  "status": "公民状态",
+  "effective": "正式生效",
+  "fee": "更正规费",
+  "changeTitle": "法定性别更正",
+  "immediate": "确认后即时生效",
+  "male": "认同为男性",
+  "female": "认同为女性",
+  "current": "当前性别",
+  "alreadyIs": "当前法定性别已是【{{gender}}】",
+  "confirm": "确认更正为【{{gender}}】 (支付 {{fee}} {{symbol}})"
+}

@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
+import {
+  addLifeLog } from '../lib/lifeLog';
+import React,
+  { useState } from 'react';
 import {
   ChevronLeft,
   UserCog,
   CheckCircle2,
   AlertCircle,
   Sparkles,
-  CircleDollarSign,
   BadgeCheck,
   RefreshCw,
   User,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
+import { CURRENCY } from '../data/seasons';
+import { useTranslation } from 'react-i18next';
 
 export interface GenderRightsModalProps {
   onClose: () => void;
@@ -35,6 +40,7 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
   setCoins,
   onOpenBirth,
 }) => {
+  const { t } = useTranslation('gender');
   const currentGender = gender === '女' ? '女' : '男';
   const [selectedGender, setSelectedGender] = useState<'男' | '女'>(currentGender);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -51,17 +57,17 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
   // Handle Gender Change Application
   const handleApplyGenderChange = () => {
     if (!isRegistered) {
-      showToast('❌ 请先办理出生登记申领公民身份');
+      showToast(t('toast.notRegistered'));
       return;
     }
 
     if (selectedGender === currentGender) {
-      showToast(`当前法定性别已是【${currentGender}】，无需重复更正`);
+      showToast(t('toast.same', { gender: currentGender }));
       return;
     }
 
     if (coins < CHANGE_FEE) {
-      showToast(`❌ 现金不足！更正规费需 ${CHANGE_FEE} ₽，当前拥有 ${coins.toLocaleString()} ₽`);
+      showToast(t('toast.noMoney', { fee: CHANGE_FEE, coins: coins.toLocaleString(), symbol: CURRENCY.symbol }));
       return;
     }
 
@@ -72,7 +78,8 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
       localStorage.setItem('amigo_gender', selectedGender);
     } catch {}
 
-    showToast(`法定性别已更正为【${selectedGender}】！扣除规费 ${CHANGE_FEE} ₽`);
+    addLifeLog('成长', '变更法定性别', `法定性别由「${currentGender}」更正为「${selectedGender}」。`);
+    showToast(t('toast.changed', { gender: selectedGender, fee: CHANGE_FEE, symbol: CURRENCY.symbol }));
   };
 
   return (
@@ -97,14 +104,14 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
           <div className="bg-[#2a2d3e] border-2 border-purple-500/80 px-5 py-1.5 rounded-xl shadow-[0_3px_0_#000] flex items-center gap-2">
             <UserCog size={18} className="text-purple-400 flex-shrink-0" />
             <span className="text-purple-300 text-sm font-black tracking-wider">
-              性别权利
+              {t('title')}
             </span>
           </div>
         </div>
 
         <div className="flex items-center bg-[#151722] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black z-10 shadow-[0_2px_0_#000]">
-          <CircleDollarSign size={14} className="text-yellow-400 mr-1" />
-          <span className="text-amber-300">{coins.toLocaleString()} ₽</span>
+          <CurrencyIcon size={14} className="text-yellow-400 mr-1" />
+          <span className="text-amber-300">{coins.toLocaleString()} {CURRENCY.symbol}</span>
         </div>
       </div>
 
@@ -117,9 +124,9 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
               <AlertCircle size={24} />
             </div>
             <div className="space-y-1">
-              <h3 className="text-white font-black text-base">尚未办理出生登记</h3>
+              <h3 className="text-white font-black text-base">{t('unregistered.title')}</h3>
               <p className="text-gray-400 text-xs leading-relaxed max-w-sm mx-auto">
-                你尚未登记公民身份。请先前往办理出生登记后，再行申办法定性别更正。
+                {t('unregistered.desc')}
               </p>
             </div>
             {onOpenBirth && (
@@ -131,7 +138,7 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
                 className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs py-2.5 px-5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer transition-all inline-flex items-center gap-1.5"
               >
                 <Sparkles size={14} />
-                <span>前往办理出生登记</span>
+                <span>{t('unregistered.go')}</span>
               </button>
             )}
           </div>
@@ -144,12 +151,12 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
                 <div>
                   <div className="flex items-center gap-1.5 text-xs text-gray-400 font-bold mb-1">
                     <BadgeCheck size={14} className="text-emerald-400" />
-                    <span>合法公民身份</span>
+                    <span>{t('citizen')}</span>
                   </div>
                   <div className="text-white font-black text-xl tracking-wide flex items-center gap-2">
                     <span>{playerName}</span>
                     <span className="text-xs text-gray-400 font-mono font-normal">
-                      ({age} 岁)
+                      {t('age', { age })}
                     </span>
                   </div>
                 </div>
@@ -164,23 +171,23 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
                   <span className="text-sm font-bold">
                     {currentGender === '女' ? '♀' : '♂'}
                   </span>
-                  <span>{currentGender === '女' ? '法定性别：女' : '法定性别：男'}</span>
+                  <span>{currentGender === '女' ? t('legalFemale') : t('legalMale')}</span>
                 </div>
               </div>
 
               {/* Status Row */}
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="bg-[#181a24] border border-black rounded-xl p-3 flex items-center justify-between">
-                  <span className="text-gray-400 font-bold">公民状态</span>
+                  <span className="text-gray-400 font-bold">{t('status')}</span>
                   <span className="text-emerald-400 font-black flex items-center gap-1">
                     <CheckCircle2 size={13} />
-                    <span>正式生效</span>
+                    <span>{t('effective')}</span>
                   </span>
                 </div>
 
                 <div className="bg-[#181a24] border border-black rounded-xl p-3 flex items-center justify-between">
-                  <span className="text-gray-400 font-bold">更正规费</span>
-                  <span className="text-amber-300 font-mono font-bold">{CHANGE_FEE} ₽</span>
+                  <span className="text-gray-400 font-bold">{t('fee')}</span>
+                  <span className="text-amber-300 font-mono font-bold">{CHANGE_FEE} {CURRENCY.symbol}</span>
                 </div>
               </div>
             </div>
@@ -190,10 +197,10 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs font-black text-white">
                   <RefreshCw size={15} className="text-purple-400" />
-                  <span>法定性别更正</span>
+                  <span>{t('changeTitle')}</span>
                 </div>
                 <span className="text-[11px] text-gray-400">
-                  确认后即时生效
+                  {t('immediate')}
                 </span>
               </div>
 
@@ -211,10 +218,10 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
                   <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 text-3xl font-black">
                     ♂
                   </div>
-                  <span className="text-sm font-black text-blue-200">认同为男性</span>
+                  <span className="text-sm font-black text-blue-200">{t('male')}</span>
                   {currentGender === '男' && (
                     <span className="text-[10px] bg-blue-900/60 text-blue-300 px-2 py-0.5 rounded border border-blue-500/40 font-bold">
-                      当前性别
+                      {t('current')}
                     </span>
                   )}
                 </button>
@@ -232,10 +239,10 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
                   <div className="w-12 h-12 rounded-xl bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400 text-3xl font-black">
                     ♀
                   </div>
-                  <span className="text-sm font-black text-pink-200">认同为女性</span>
+                  <span className="text-sm font-black text-pink-200">{t('female')}</span>
                   {currentGender === '女' && (
                     <span className="text-[10px] bg-pink-900/60 text-pink-300 px-2 py-0.5 rounded border border-pink-500/40 font-bold">
-                      当前性别
+                      {t('current')}
                     </span>
                   )}
                 </button>
@@ -255,8 +262,8 @@ export const GenderRightsModal: React.FC<GenderRightsModalProps> = ({
                 <BadgeCheck size={16} />
                 <span>
                   {selectedGender === currentGender
-                    ? `当前法定性别已是【${currentGender}】`
-                    : `确认更正为【${selectedGender}】 (支付 ${CHANGE_FEE} ₽)`}
+                    ? t('alreadyIs', { gender: currentGender })
+                    : t('confirm', { gender: selectedGender, fee: CHANGE_FEE, symbol: CURRENCY.symbol })}
                 </span>
               </button>
             </div>

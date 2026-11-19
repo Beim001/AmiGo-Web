@@ -1,14 +1,15 @@
 import React from 'react';
 import { X, Check, Camera, User, Sparkles } from 'lucide-react';
-import { FirebaseUser } from '../firebase';
+import type { AppUser } from '../lib/bilibiliToy';
 import { CartoonCharacter } from './RoleTab';
+import { useTranslation } from 'react-i18next';
 
 interface AvatarSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
   avatarSource: string; // 'cartoon' | 'social' | 'preset_knight' | 'preset_mage' | 'preset_ranger' | 'preset_artisan'
   onSelectAvatar: (source: string) => void;
-  authUser: FirebaseUser | null;
+  authUser: AppUser | null;
   bilibiliAvatar: string | null;
   equippedClothing: string;
 }
@@ -16,33 +17,29 @@ interface AvatarSelectModalProps {
 export const PRESET_AVATARS = [
   {
     id: 'preset_knight',
-    name: '帝国圣骑士',
     bg: 'bg-gradient-to-br from-blue-600 to-amber-500',
     borderColor: 'border-yellow-400',
     icon: '🛡️',
   },
   {
     id: 'preset_mage',
-    name: '皇家大魔法师',
     bg: 'bg-gradient-to-br from-purple-700 to-indigo-900',
     borderColor: 'border-purple-400',
     icon: '🔮',
   },
   {
     id: 'preset_ranger',
-    name: '瓦伦丁游侠',
     bg: 'bg-gradient-to-br from-emerald-600 to-teal-800',
     borderColor: 'border-emerald-400',
     icon: '🏹',
   },
   {
     id: 'preset_artisan',
-    name: '蒸汽机械师',
     bg: 'bg-gradient-to-br from-amber-600 to-orange-700',
     borderColor: 'border-amber-400',
     icon: '⚙️',
   },
-];
+] as const;
 
 export const AvatarSelectModal: React.FC<AvatarSelectModalProps> = ({
   isOpen,
@@ -53,6 +50,7 @@ export const AvatarSelectModal: React.FC<AvatarSelectModalProps> = ({
   bilibiliAvatar,
   equippedClothing,
 }) => {
+  const { t } = useTranslation('profile');
   if (!isOpen) return null;
 
   const socialPhoto = authUser?.photoURL || bilibiliAvatar || null;
@@ -67,8 +65,8 @@ export const AvatarSelectModal: React.FC<AvatarSelectModalProps> = ({
               <Camera size={20} />
             </div>
             <div>
-              <h3 className="font-black text-base text-white">更换头像设置</h3>
-              <p className="text-[10px] text-gray-400">点击选中最符合您冒险风格的形象</p>
+              <h3 className="font-black text-base text-white">{t('avatar.title')}</h3>
+              <p className="text-[10px] text-gray-400">{t('avatar.subtitle')}</p>
             </div>
           </div>
 
@@ -97,12 +95,12 @@ export const AvatarSelectModal: React.FC<AvatarSelectModalProps> = ({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-black text-sm text-white">游戏角色小人</span>
+                <span className="font-black text-sm text-white">{t('avatar.cartoon')}</span>
                 <span className="text-[9px] bg-yellow-400 text-black font-extrabold px-1.5 py-0.2 rounded border border-black">
-                  默认/装备同步
+                  {t('avatar.cartoonTag')}
                 </span>
               </div>
-              <p className="text-xs text-gray-400 mt-0.5">展示当前穿戴在身上的限定服饰造型</p>
+              <p className="text-xs text-gray-400 mt-0.5">{t('avatar.cartoonDesc')}</p>
             </div>
             {avatarSource === 'cartoon' && (
               <div className="w-6 h-6 rounded-full bg-yellow-400 text-black border-2 border-black flex items-center justify-center font-black">
@@ -135,10 +133,10 @@ export const AvatarSelectModal: React.FC<AvatarSelectModalProps> = ({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-black text-sm text-white">账号关联社交头像</span>
+                <span className="font-black text-sm text-white">{t('avatar.social')}</span>
               </div>
               <p className="text-xs text-gray-400 mt-0.5">
-                {socialPhoto ? '使用第三方登录账号关联的真彩头像' : '当前登录账号未关联第三方社交头像'}
+                {socialPhoto ? t('avatar.socialLinked') : t('avatar.socialNone')}
               </p>
             </div>
             {avatarSource === 'social' && socialPhoto && (
@@ -152,7 +150,7 @@ export const AvatarSelectModal: React.FC<AvatarSelectModalProps> = ({
           <div className="space-y-2 pt-1">
             <span className="text-xs font-black text-yellow-400 flex items-center gap-1">
               <Sparkles size={14} />
-              <span>预设冒险者徽章头像</span>
+              <span>{t('avatar.presets')}</span>
             </span>
 
             <div className="grid grid-cols-2 gap-2.5">
@@ -172,8 +170,8 @@ export const AvatarSelectModal: React.FC<AvatarSelectModalProps> = ({
                       {preset.icon}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="font-black text-xs text-white truncate">{preset.name}</div>
-                      <div className="text-[9px] text-gray-400 font-bold">通用勋章</div>
+                      <div className="font-black text-xs text-white truncate">{t(`avatar.presetNames.${preset.id}`)}</div>
+                      <div className="text-[9px] text-gray-400 font-bold">{t('avatar.presetTag')}</div>
                     </div>
                     {isSelected && (
                       <div className="w-5 h-5 rounded-full bg-yellow-400 text-black border-2 border-black flex items-center justify-center font-black shrink-0">
@@ -194,7 +192,7 @@ export const AvatarSelectModal: React.FC<AvatarSelectModalProps> = ({
             onClick={onClose}
             className="bg-amber-400 hover:bg-amber-300 text-black font-black text-xs px-5 py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] active:translate-y-0.5 transition-all cursor-pointer"
           >
-            完成设置
+            {t('avatar.done')}
           </button>
         </div>
       </div>

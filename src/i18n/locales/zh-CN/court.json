@@ -1,0 +1,21 @@
+{
+  "toast": {
+    "notRegistered": "请先完成出生登记",
+    "noMoney": "现金不足：需要 {{cost}}"
+  },
+  "title": "法院诉讼",
+  "noticeTitle": "帝国法院告示",
+  "notice": "诉讼费 {{fee}}；胜诉率 40% + 声望 ÷ 2%，最高 90%。对手是贵族时胜诉率减半；冲撞贵族以外的罪名证据确凿，上诉更难。可加请律政士（{{lawyerFee}}，胜诉率 +{{lawyerBonus}}%）。每个案件只能开庭一次；上诉被驳回刑期加 {{extra}} 个月。上诉只在服刑期间受理，起诉须在 {{expire}} 个月内提出。",
+  "noCases": "眼下没有可以打的官司",
+  "defendant": "对方：{{name}}",
+  "noble": "（贵族）",
+  "date": "{{year}} 年 {{month}} 月",
+  "claim": " · 胜诉可得 {{amount}}",
+  "appealHint": " · 胜诉当庭释放、不留前科",
+  "hireLawyer": "请律政士（{{fee}}）",
+  "chance": "胜诉率约 {{pct}}%",
+  "trial": "开庭（{{cost}}）",
+  "history": "判决记录",
+  "won": "胜诉",
+  "lost": "败诉"
+}

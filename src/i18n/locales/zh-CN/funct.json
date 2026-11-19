@@ -1,0 +1,30 @@
+{
+  "title": "功能",
+  "comingSoon": "即将开放",
+  "comingSoonTitle": "{{label}}（即将开放）",
+  "comingSoonToast": "「{{label}}」即将开放，敬请期待",
+  "tiles": {
+    "stock": { "label": "交易所", "sub": "股票交易" },
+    "finance": { "label": "财务银行", "sub": "资产与信用体系" },
+    "birth": { "label": "出生登记", "sub": "新生儿证明" },
+    "marriage": { "label": "结婚登记", "sub": "婚姻关系" },
+    "visa": { "label": "签证申办", "sub": "出入境许可" },
+    "immigrate": { "label": "移民居留", "sub": "入籍申请" },
+    "gender": { "label": "性别权利", "sub": "身份信息更新" },
+    "housing": { "label": "住房地产", "sub": "不动产买卖" },
+    "job": { "label": "就业招聘", "sub": "职场求职" },
+    "tax": { "label": "税单查询", "sub": "个人所得税" },
+    "cost": { "label": "物价补贴", "sub": "生活成本" },
+    "company": { "label": "企业事务", "sub": "公司登记" },
+    "hospital": { "label": "医疗服务", "sub": "医院诊疗" },
+    "license": { "label": "驾照管理", "sub": "车辆换证" },
+    "education": { "label": "教育学府", "sub": "入学证明" },
+    "welfare": { "label": "社会福利", "sub": "养老救济金" },
+    "court": { "label": "法院诉讼", "sub": "法庭调解" },
+    "prison": { "label": "监狱服刑", "sub": "前科记录" },
+    "org": { "label": "社团政党", "sub": "组织管理" },
+    "movement": { "label": "公民运动", "sub": "示威游行" },
+    "map_srv": { "label": "社区地图", "sub": "公共设施" },
+    "entertainment": { "label": "文娱休闲", "sub": "剧院、赛马、斗鸡与摔跤" }
+  }
+}

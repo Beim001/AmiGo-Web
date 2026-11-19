@@ -1,0 +1,15 @@
+{
+  "toast": {
+    "received": "🙏 领到{{name}}（{{gain}}）"
+  },
+  "healthGain": "健康 +{{amount}}",
+  "title": "社会福利",
+  "church": "教会救济",
+  "churchDesc": "帝国时期没有官方的社会福利，贫苦人家只能求助于宗教机构。家里现金加存款不足 {{wealth}} {{symbol}}，或健康低于 {{health}} 时，每个季度可以领一次救济（两种任选其一）。",
+  "current": "现在：现金 + 存款 {{wealth}} {{symbol}} · 健康 {{health}}",
+  "available": "✅ 本季度可以领取",
+  "streak": "已连续 {{count}} 个季度领取救济",
+  "receive": "领取",
+  "others": "其他福利",
+  "federalOnly": "：联邦时代开放（{{note}}）"
+}

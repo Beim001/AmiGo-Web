@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import {
+  addLifeLog } from '../lib/lifeLog';
+import React,
+  { useState } from 'react';
 import {
   ChevronLeft,
   Globe,
   Award,
   ShieldCheck,
-  CircleDollarSign,
   Sparkles,
   CheckCircle2,
   AlertCircle,
@@ -18,7 +20,10 @@ import {
   BookOpen,
   ArrowRight,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
 import { HistoricalFlag } from './HistoricalFlag';
+import { CURRENCY } from '../data/seasons';
+import { useTranslation } from 'react-i18next';
 
 export interface ResidencyProgram {
   id: string;
@@ -100,7 +105,7 @@ const IMMIGRATION_COUNTRIES: CountryImmigrationGroup[] = [
         processingMonths: 1,
         requirements: [
           '持有阿米诺斯合法公民身份',
-          '认购英国国家统合国债 ≥ 15,000 ₽',
+          `认购英国国家统合国债 ≥ 15,000 ${CURRENCY.symbol}`,
           '无皇家海事法庭通缉罪责',
         ],
         benefits: [
@@ -135,7 +140,7 @@ const IMMIGRATION_COUNTRIES: CountryImmigrationGroup[] = [
         processingMonths: 1,
         requirements: [
           '持有阿米诺斯合法公民身份',
-          '个人流动或银行储蓄 ≥ 8,000 ₽',
+          `个人流动或银行储蓄 ≥ 8,000 ${CURRENCY.symbol}`,
           '体魄健康度 ≥ 60 点（适应新大陆开拓环境）',
         ],
         benefits: [
@@ -170,7 +175,7 @@ const IMMIGRATION_COUNTRIES: CountryImmigrationGroup[] = [
         processingMonths: 1,
         requirements: [
           '持有阿米诺斯合法公民身份',
-          '个人储备资产 ≥ 12,000 ₽',
+          `个人储备资产 ≥ 12,000 ${CURRENCY.symbol}`,
           '认可法兰西民法典之契约自由原则',
         ],
         benefits: [
@@ -205,7 +210,7 @@ const IMMIGRATION_COUNTRIES: CountryImmigrationGroup[] = [
         processingMonths: 1,
         requirements: [
           '持有阿米诺斯合法公民身份',
-          '在瑞士联合银行或苏黎世储备资产 ≥ 30,000 ₽',
+          `在瑞士联合银行或苏黎世储备资产 ≥ 30,000 ${CURRENCY.symbol}`,
           '无交战国军役履职与违法前科记录',
         ],
         benefits: [
@@ -240,7 +245,7 @@ const IMMIGRATION_COUNTRIES: CountryImmigrationGroup[] = [
         processingMonths: 1,
         requirements: [
           '持有阿米诺斯合法公民身份',
-          '个人流动储备 ≥ 10,000 ₽',
+          `个人流动储备 ≥ 10,000 ${CURRENCY.symbol}`,
           '体魄健康度 ≥ 70 点（符合重工业制造体检标准）',
         ],
         benefits: [
@@ -275,7 +280,7 @@ const IMMIGRATION_COUNTRIES: CountryImmigrationGroup[] = [
         processingMonths: 1,
         requirements: [
           '持有阿米诺斯合法公民身份',
-          '全额缴纳圣彼得堡皇家公会入会保证金 ≥ 18,000 ₽',
+          `全额缴纳圣彼得堡皇家公会入会保证金 ≥ 18,000 ${CURRENCY.symbol}`,
           '恪守帝国冬宫商业法度与关税公约',
         ],
         benefits: [
@@ -305,6 +310,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
   setHealth: _setHealth,
   onOpenBirth,
 }) => {
+  const { t } = useTranslation('immigration');
   const [activeSubTab, setActiveSubTab] = useState<'countries' | 'dossier' | 'naturalize'>('countries');
   const [searchFilter, setSearchFilter] = useState('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -343,28 +349,28 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
   // 申请永久居留
   const handleApplyResidency = (prog: ResidencyProgram) => {
     if (!isRegistered) {
-      showToast('❌ 请先完成出生登记，取得合法公民身份后方可申办海外居留');
+      showToast(t('toast.notRegistered'));
       return;
     }
 
     const alreadyOwned = ownedResidencies.some((r) => r.programId === prog.id);
     if (alreadyOwned) {
-      showToast(`⚠️ 你已持有【${prog.country}】永久居留身份，无需重复申领`);
+      showToast(t('toast.alreadyHas', { country: prog.country }));
       return;
     }
 
     if (coins < prog.cost) {
-      showToast(`❌ 申请规费不足！需要 ${prog.cost.toLocaleString()} ₽，当前拥有 ${coins.toLocaleString()} ₽`);
+      showToast(t('toast.feeShort', { cost: prog.cost.toLocaleString(), coins: coins.toLocaleString(), symbol: CURRENCY.symbol }));
       return;
     }
 
     if (coins < prog.minAssets) {
-      showToast(`❌ 资产储备不达标！【${prog.country}】要求个人储备资金 ≥ ${prog.minAssets.toLocaleString()} ₽`);
+      showToast(t('toast.assetsShort', { country: prog.country, amount: prog.minAssets.toLocaleString(), symbol: CURRENCY.symbol }));
       return;
     }
 
     if (health < prog.minHealth) {
-      showToast(`❌ 健康体魄不达标！体检要求体魄 ≥ ${prog.minHealth} 点（当前：${health}）`);
+      showToast(t('toast.healthShort', { min: prog.minHealth, health }));
       return;
     }
 
@@ -391,7 +397,8 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
     saveResidencies(updated);
 
     setSelectedProgram(null);
-    showToast(`🎉 恭喜！已获发【${prog.country}】永久居留绿卡！扣除规费 ${prog.cost.toLocaleString()} ₽`);
+    addLifeLog('出行', `获得${prog.country}永久居留`, `${prog.cardName}，卡号 ${randomCardNo}。`);
+    showToast(t('toast.granted', { country: prog.country, cost: prog.cost.toLocaleString(), symbol: CURRENCY.symbol }));
     setActiveSubTab('dossier');
   };
 
@@ -399,7 +406,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
   const handlePerformOath = (res: OwnedResidency) => {
     const NATURALIZE_FEE = 3000;
     if (coins < NATURALIZE_FEE) {
-      showToast(`❌ 归化入籍国籍公证书规费需 ${NATURALIZE_FEE.toLocaleString()} ₽`);
+      showToast(t('toast.naturalizeFee', { fee: NATURALIZE_FEE.toLocaleString(), symbol: CURRENCY.symbol }));
       return;
     }
 
@@ -418,7 +425,8 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
 
     saveResidencies(updated);
     setOathProgram(null);
-    showToast(`👑 宣誓完成！正式加入【${res.country}】国籍，尊享全套主权国民政治与经济特权！`);
+    addLifeLog('大事', `入籍${res.country}`, `完成宣誓，正式加入${res.country}国籍。`);
+    showToast(t('toast.naturalized', { country: res.country }));
   };
 
   const filteredCountries = IMMIGRATION_COUNTRIES.filter((c) => {
@@ -453,14 +461,14 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
           <div className="bg-[#2a2d3e] border-2 border-purple-500/80 px-4 sm:px-5 py-1.5 rounded-xl shadow-[0_3px_0_#000] flex items-center gap-2">
             <Globe size={18} className="text-purple-400 flex-shrink-0" />
             <span className="text-purple-200 text-sm font-black tracking-wider">
-              {selectedCountryGroup ? `${selectedCountryGroup.country} · 移民居留` : '移民居留'}
+              {selectedCountryGroup ? t('countryTitle', { country: selectedCountryGroup.country }) : t('title')}
             </span>
           </div>
         </div>
 
         <div className="flex items-center bg-[#151722] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black z-10 shadow-[0_2px_0_#000]">
-          <CircleDollarSign size={14} className="text-yellow-400 mr-1" />
-          <span className="text-amber-300">{coins.toLocaleString()} ₽</span>
+          <CurrencyIcon size={14} className="text-yellow-400 mr-1" />
+          <span className="text-amber-300">{coins.toLocaleString()} {CURRENCY.symbol}</span>
         </div>
       </div>
 
@@ -478,7 +486,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
           }`}
         >
           <Globe size={14} />
-          <span>各国移民署</span>
+          <span>{t('tabs.offices')}</span>
         </button>
 
         <button
@@ -493,7 +501,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
           }`}
         >
           <BadgeCheck size={14} />
-          <span>居留权</span>
+          <span>{t('tabs.residencies')}</span>
           {ownedResidencies.length > 0 && (
             <span className="bg-amber-400 text-black text-[10px] font-black px-1.5 py-0.2 rounded-full border border-black">
               {ownedResidencies.length}
@@ -513,7 +521,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
           }`}
         >
           <Crown size={14} />
-          <span>归化入籍盟约</span>
+          <span>{t('tabs.naturalize')}</span>
         </button>
       </div>
 
@@ -526,9 +534,9 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
               <AlertCircle size={24} />
             </div>
             <div className="space-y-1">
-              <h3 className="text-white font-black text-base">尚未登记合法公民身份</h3>
+              <h3 className="text-white font-black text-base">{t('unregistered.title')}</h3>
               <p className="text-gray-400 text-xs leading-relaxed max-w-sm mx-auto">
-                你尚未办理出生登记。各国移民公署要求申请人必须具备合法的本国公民身份，方可受理跨国居留与归化审理。
+                {t('unregistered.desc')}
               </p>
             </div>
             {onOpenBirth && (
@@ -540,7 +548,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                 className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs py-2.5 px-5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer transition-all inline-flex items-center gap-1.5"
               >
                 <Sparkles size={14} />
-                <span>前往办理出生登记</span>
+                <span>{t('unregistered.go')}</span>
               </button>
             )}
           </div>
@@ -557,7 +565,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                       <input
                         type="text"
-                        placeholder="搜索国家..."
+                        placeholder={t('search')}
                         value={searchFilter}
                         onChange={(e) => setSearchFilter(e.target.value)}
                         className="w-full bg-[#1e202e] text-white placeholder-gray-500 text-xs rounded-xl border-2 border-black pl-9 pr-3 py-2.5 focus:outline-none focus:border-purple-400 shadow-[0_2px_0_#000]"
@@ -592,7 +600,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                                 {hasPR && (
                                   <span className="bg-emerald-950 text-emerald-300 border border-emerald-500/50 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 flex-shrink-0">
                                     <CheckCircle2 size={11} />
-                                    <span>已获居留</span>
+                                    <span>{t('granted')}</span>
                                   </span>
                                 )}
                               </div>
@@ -601,7 +609,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                             {/* Right: Program count & Arrow */}
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <span className="text-[11px] text-gray-400 font-mono font-bold bg-[#12141e] px-2.5 py-1 rounded-lg border border-black">
-                                {countryGroup.programs.length} 项法案
+                                {t('programCount', { count: countryGroup.programs.length })}
                               </span>
                               <ChevronRight size={16} className="text-gray-400 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
                             </div>
@@ -623,7 +631,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                           className="shadow-sm"
                         />
                         <span className="text-white font-black text-sm">
-                          {selectedCountryGroup.country} 移民署
+                          {t('office', { country: selectedCountryGroup.country })}
                         </span>
                       </div>
 
@@ -632,7 +640,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                         className="bg-[#2a2d3e] hover:bg-[#363a50] text-xs text-gray-200 font-bold px-3 py-1.5 rounded-xl border border-black cursor-pointer active:translate-y-0.5 transition-all flex items-center gap-1"
                       >
                         <ChevronLeft size={14} />
-                        <span>返回列表</span>
+                        <span>{t('backToList')}</span>
                       </button>
                     </div>
 
@@ -664,13 +672,13 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                               {isOwned ? (
                                 <span className="bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 text-[11px] font-black px-2.5 py-1 rounded-xl flex items-center gap-1 shadow-sm flex-shrink-0">
                                   <CheckCircle2 size={13} />
-                                  <span>已获居留</span>
+                                  <span>{t('granted')}</span>
                                 </span>
                               ) : (
                                 <div className="text-right flex-shrink-0">
-                                  <span className="text-[10px] text-gray-400 block font-bold">规费</span>
+                                  <span className="text-[10px] text-gray-400 block font-bold">{t('fee')}</span>
                                   <span className="text-amber-300 font-mono font-black text-sm">
-                                    {prog.cost.toLocaleString()} ₽
+                                    {prog.cost.toLocaleString()} {CURRENCY.symbol}
                                   </span>
                                 </div>
                               )}
@@ -679,16 +687,16 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                             {/* Requirements inline badge row */}
                             <div className="flex items-center gap-2 text-[11px] font-mono text-gray-300 bg-[#12141e] p-2 rounded-xl border border-black/80 flex-wrap">
                               <div className="flex items-center gap-1">
-                                <span className="text-gray-400">资产要求:</span>
+                                <span className="text-gray-400">{t('assetsRequired')}</span>
                                 <span className={coins >= prog.minAssets ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                                  ≥{prog.minAssets.toLocaleString()} ₽
+                                  ≥{prog.minAssets.toLocaleString()} {CURRENCY.symbol}
                                 </span>
                               </div>
                               <span className="text-gray-600">|</span>
                               <div className="flex items-center gap-1">
-                                <span className="text-gray-400">体魄要求:</span>
+                                <span className="text-gray-400">{t('healthRequired')}</span>
                                 <span className={health >= prog.minHealth ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                                  ≥{prog.minHealth}点
+                                  {t('healthValue', { min: prog.minHealth })}
                                 </span>
                               </div>
                             </div>
@@ -700,7 +708,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                                 className="bg-[#282b3d] hover:bg-[#32364c] text-gray-200 text-xs font-bold py-2 px-3 rounded-xl border border-black flex items-center gap-1 cursor-pointer transition-all active:translate-y-0.5 flex-shrink-0"
                               >
                                 <FileText size={13} />
-                                <span>法案规程</span>
+                                <span>{t('rules')}</span>
                               </button>
 
                               {!isOwned && (
@@ -714,7 +722,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                                   }`}
                                 >
                                   <Award size={14} />
-                                  <span>申领居留 ({prog.cost.toLocaleString()} ₽)</span>
+                                  <span>{t('apply', { cost: prog.cost.toLocaleString(), symbol: CURRENCY.symbol })}</span>
                                 </button>
                               )}
                             </div>
@@ -736,9 +744,9 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                       <Globe size={24} />
                     </div>
                     <div className="space-y-1">
-                      <h4 className="text-white font-black text-sm">暂无已获居留权</h4>
+                      <h4 className="text-white font-black text-sm">{t('none.title')}</h4>
                       <p className="text-gray-400 text-xs max-w-xs mx-auto">
-                        你当前仅持有阿米诺斯本土公民身份。可前往「各国移民署」申办居留。
+                        {t('none.desc')}
                       </p>
                     </div>
                     <button
@@ -746,16 +754,16 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                       className="bg-purple-700 hover:bg-purple-600 text-white font-black text-xs py-2.5 px-4 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer transition-all inline-flex items-center gap-1.5"
                     >
                       <Globe size={14} />
-                      <span>浏览各国移民署法案</span>
+                      <span>{t('none.browse')}</span>
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between text-xs text-gray-400 font-bold px-1">
-                      <span>已持有名录 ({ownedResidencies.length})</span>
+                      <span>{t('ownedList', { count: ownedResidencies.length })}</span>
                       <span className="text-emerald-400 flex items-center gap-1">
                         <ShieldCheck size={14} />
-                        <span>公署认证</span>
+                        <span>{t('certified')}</span>
                       </span>
                     </div>
 
@@ -789,11 +797,11 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                               {res.isNaturalized ? (
                                 <span className="bg-amber-400 text-black border border-black font-black text-[10px] px-2 py-0.5 rounded shadow-sm inline-flex items-center gap-1">
                                   <Crown size={11} />
-                                  <span>已归化</span>
+                                  <span>{t('naturalizedTag')}</span>
                                 </span>
                               ) : (
                                 <span className="bg-emerald-950 text-emerald-300 border border-emerald-500/40 font-bold text-[10px] px-2 py-0.5 rounded">
-                                  居留生效中
+                                  {t('active')}
                                 </span>
                               )}
                             </div>
@@ -801,9 +809,9 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
 
                           {/* Details strip */}
                           <div className="flex items-center justify-between text-[11px] font-mono bg-[#12141e] px-3 py-1.5 rounded-xl border border-black/80 text-gray-300">
-                            <span>持证: <strong className="text-white">{playerName}</strong></span>
-                            <span>编号: <strong className="text-amber-300">{res.cardNumber}</strong></span>
-                            <span>签发: {res.issueYear}.{res.issueMonth < 10 ? `0${res.issueMonth}` : res.issueMonth}</span>
+                            <span>{t('holder')}<strong className="text-white">{playerName}</strong></span>
+                            <span>{t('cardNo')}<strong className="text-amber-300">{res.cardNumber}</strong></span>
+                            <span>{t('issued', { date: `${res.issueYear}.${res.issueMonth < 10 ? `0${res.issueMonth}` : res.issueMonth}` })}</span>
                           </div>
 
                           {/* Action if not naturalized */}
@@ -813,7 +821,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                               className="w-full bg-[#352549] hover:bg-[#45315f] text-purple-200 font-bold text-xs py-1.5 rounded-xl border border-black flex items-center justify-center gap-1 cursor-pointer transition-all active:translate-y-0.5"
                             >
                               <Crown size={13} className="text-amber-400" />
-                              <span>申请归化【{res.country}】国籍</span>
+                              <span>{t('applyNaturalize', { country: res.country })}</span>
                             </button>
                           )}
                         </div>
@@ -830,19 +838,19 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                 <div className="bg-[#1f2230] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] space-y-3">
                   <div className="flex items-center gap-2 text-white font-black text-sm pb-2 border-b border-black/50">
                     <Crown size={18} className="text-amber-400" />
-                    <span>主权国归化入籍法案 (Naturalization Law)</span>
+                    <span>{t('law.title')}</span>
                   </div>
                   <p className="text-gray-300 text-xs leading-relaxed">
-                    在持有该国永久居留证件的基础上，外国居民可向其内政公署提出《归化入籍宣言》，签署忠诚盟约，正式取得双重国籍与主权国民全部政治与外交保护权。
+                    {t('law.desc')}
                   </p>
                 </div>
 
                 {ownedResidencies.length === 0 ? (
                   <div className="bg-[#232635] border-2 border-black rounded-2xl p-6 text-center space-y-3 shadow-[0_4px_0_#000]">
                     <AlertCircle size={28} className="text-amber-400 mx-auto" />
-                    <h4 className="text-white font-black text-sm">尚无可供归化的永居身份</h4>
+                    <h4 className="text-white font-black text-sm">{t('law.noneTitle')}</h4>
                     <p className="text-gray-400 text-xs max-w-xs mx-auto">
-                      请先前往办理海外永久居留绿卡，满足移民公署居住资质后方可进行入籍宣誓。
+                      {t('law.noneDesc')}
                     </p>
                   </div>
                 ) : (
@@ -858,8 +866,8 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                             <span className="text-white font-black text-sm block">{res.country}</span>
                             <span className="text-gray-400 text-xs">
                               {res.isNaturalized
-                                ? `于 ${res.naturalizedYear}.${res.naturalizedMonth} 完成归化`
-                                : '已满足永居前置条件，可申请归化'}
+                                ? t('naturalizedAt', { year: res.naturalizedYear, month: res.naturalizedMonth })
+                                : t('canNaturalize')}
                             </span>
                           </div>
                         </div>
@@ -867,7 +875,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                         {res.isNaturalized ? (
                           <div className="bg-amber-400 text-black font-black text-xs px-3 py-1.5 rounded-xl border border-black shadow-sm flex items-center gap-1">
                             <Crown size={14} />
-                            <span>正统公民</span>
+                            <span>{t('citizen')}</span>
                           </div>
                         ) : (
                           <button
@@ -875,7 +883,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                             className="bg-purple-700 hover:bg-purple-600 text-white font-black text-xs py-2 px-3.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer transition-all flex items-center gap-1"
                           >
                             <Stamp size={14} />
-                            <span>入籍宣誓</span>
+                            <span>{t('oath')}</span>
                           </button>
                         )}
                       </div>
@@ -897,7 +905,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
               <div className="flex items-center gap-2.5">
                 <HistoricalFlag code={selectedProgram.countryCode} width={34} height={21} />
                 <div>
-                  <h3 className="text-white font-black text-sm">{selectedProgram.country}移民署</h3>
+                  <h3 className="text-white font-black text-sm">{t('officeShort', { country: selectedProgram.country })}</h3>
                   <span className="text-[11px] text-purple-300 font-bold">{selectedProgram.cardName}</span>
                 </div>
               </div>
@@ -914,7 +922,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
               <div className="space-y-1.5">
                 <span className="text-purple-300 font-black text-xs flex items-center gap-1">
                   <BookOpen size={14} />
-                  <span>历史法案背景</span>
+                  <span>{t('detail.lore')}</span>
                 </span>
                 <p className="text-gray-300 bg-[#151722] p-3 rounded-xl border border-black/60 leading-relaxed text-[11px]">
                   {selectedProgram.lore}
@@ -924,7 +932,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
               <div className="space-y-2">
                 <span className="text-white font-black text-xs flex items-center gap-1">
                   <ShieldCheck size={14} className="text-emerald-400" />
-                  <span>公署资格审查标准</span>
+                  <span>{t('detail.requirements')}</span>
                 </span>
                 <div className="space-y-1.5">
                   {selectedProgram.requirements.map((req, idx) => (
@@ -942,7 +950,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
               <div className="space-y-2">
                 <span className="text-white font-black text-xs flex items-center gap-1">
                   <Sparkles size={14} />
-                  <span>持卡人专属法权与常驻收益</span>
+                  <span>{t('detail.perks')}</span>
                 </span>
                 <div className="space-y-1.5">
                   {selectedProgram.benefits.map((b, idx) => (
@@ -964,14 +972,14 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                 onClick={() => setSelectedProgram(null)}
                 className="px-4 py-2.5 bg-[#2a2d3e] text-gray-300 font-bold rounded-xl border border-black cursor-pointer text-xs"
               >
-                返回
+                {t('back')}
               </button>
               <button
                 onClick={() => handleApplyResidency(selectedProgram)}
                 className="flex-1 bg-purple-700 hover:bg-purple-600 text-white font-black text-xs py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Award size={14} />
-                <span>立即递交居留申请 ({selectedProgram.cost.toLocaleString()} ₽)</span>
+                <span>{t('detail.submit', { cost: selectedProgram.cost.toLocaleString(), symbol: CURRENCY.symbol })}</span>
               </button>
             </div>
           </div>
@@ -985,7 +993,7 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
             <div className="bg-gradient-to-r from-[#493166] to-[#2d1f40] p-4 border-b-2 border-black flex items-center justify-between text-white">
               <div className="flex items-center gap-2">
                 <Crown size={18} className="text-yellow-400" />
-                <span className="font-black text-sm">【{oathProgram.country}】归化入籍盟约仪式</span>
+                <span className="font-black text-sm">{t('ceremony.title', { country: oathProgram.country })}</span>
               </div>
               <button
                 onClick={() => setOathProgram(null)}
@@ -998,24 +1006,24 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
             <div className="p-5 space-y-4 text-xs">
               <div className="text-center space-y-2">
                 <HistoricalFlag code={oathProgram.countryCode} width={50} height={30} className="mx-auto shadow-md" />
-                <h4 className="text-white font-black text-base">签署归化忠诚誓言</h4>
+                <h4 className="text-white font-black text-base">{t('ceremony.heading')}</h4>
                 <p className="text-gray-300 text-[11px] leading-relaxed max-w-xs mx-auto">
-                  我谨以【{playerName}】之名宣誓：恪守【{oathProgram.country}】宪章与主权法度，自愿履行主权国民之神圣义务，受帝国法律庇佑。
+                  {t('ceremony.oath', { name: playerName, country: oathProgram.country })}
                 </p>
               </div>
 
               <div className="bg-[#151722] p-3.5 rounded-xl border border-black space-y-2 text-[11px]">
                 <div className="flex justify-between text-gray-300">
-                  <span>宣誓人：</span>
+                  <span>{t('ceremony.swearer')}</span>
                   <span className="text-white font-bold">{playerName}</span>
                 </div>
                 <div className="flex justify-between text-gray-300">
-                  <span>居留凭证编号：</span>
+                  <span>{t('ceremony.cardNo')}</span>
                   <span className="text-amber-300 font-mono">{oathProgram.cardNumber}</span>
                 </div>
                 <div className="flex justify-between text-gray-300">
-                  <span>国籍公证规费：</span>
-                  <span className="text-amber-300 font-mono font-bold">3,000 ₽</span>
+                  <span>{t('ceremony.fee')}</span>
+                  <span className="text-amber-300 font-mono font-bold">3,000 {CURRENCY.symbol}</span>
                 </div>
               </div>
             </div>
@@ -1025,14 +1033,14 @@ export const ImmigrationModal: React.FC<ImmigrationModalProps> = ({
                 onClick={() => setOathProgram(null)}
                 className="px-4 py-2.5 bg-[#2a2d3e] text-gray-300 font-bold rounded-xl border border-black cursor-pointer text-xs"
               >
-                取消
+                {t('cancel')}
               </button>
               <button
                 onClick={() => handlePerformOath(oathProgram)}
                 className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Stamp size={15} />
-                <span>签署盟誓并盖印归化 (支付 3,000 ₽)</span>
+                <span>{t('ceremony.sign', { symbol: CURRENCY.symbol })}</span>
               </button>
             </div>
           </div>

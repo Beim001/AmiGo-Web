@@ -3,10 +3,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  CircleDollarSign,
   Clock,
   Bookmark,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
+import { CURRENCY } from '../data/seasons';
+import { useTranslation } from 'react-i18next';
 
 export interface CalendarModalProps {
   onClose: () => void;
@@ -105,6 +107,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
   onNextMonth,
   coins,
 }) => {
+  const { t } = useTranslation('calendar');
   const [viewYear, setViewYear] = useState(gameYear);
   const [selectedMonth, setSelectedMonth] = useState(gameMonth);
 
@@ -113,7 +116,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
 
   // 30 days grid
   const daysInMonth = Array.from({ length: 30 }, (_, i) => i + 1);
-  const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
+  const weekDays = [t('weekdays.d0'), t('weekdays.d1'), t('weekdays.d2'), t('weekdays.d3'), t('weekdays.d4'), t('weekdays.d5'), t('weekdays.d6')];
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex justify-center items-center p-3 font-sans text-white">
@@ -143,14 +146,14 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
             <div className="flex-1 flex items-center justify-center pointer-events-none px-2">
               <div className="bg-[#1c1d25] border-2 border-black px-6 py-1.5 rounded-xl shadow-[0_2px_0_#000] flex items-center justify-center">
                 <span className="text-white text-base font-black tracking-widest">
-                  日历
+                  {t('title')}
                 </span>
               </div>
             </div>
 
             <div className="flex items-center bg-[#1c1d25] rounded-xl px-2.5 py-1 border-2 border-black text-xs font-mono font-black shadow-[0_2px_0_#000] z-10">
-              <CircleDollarSign size={14} className="text-yellow-400 mr-1" />
-              <span>{coins.toLocaleString()} ₽</span>
+              <CurrencyIcon size={14} className="text-yellow-400 mr-1" />
+              <span>{coins.toLocaleString()} {CURRENCY.symbol}</span>
             </div>
           </div>
         </div>
@@ -170,15 +173,15 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
 
             <div className="text-center">
               <span className="text-[10px] text-gray-400 font-bold tracking-wider">
-                年份
+                {t('year')}
               </span>
               <div className="flex items-center gap-2 justify-center">
                 <span className="text-xl font-black font-mono tracking-widest text-white">
-                  {viewYear} 年
+                  {t('yearValue', { year: viewYear })}
                 </span>
                 {viewYear === gameYear && (
                   <span className="bg-emerald-950 text-emerald-300 border border-emerald-500/50 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    进行中
+                    {t('current')}
                   </span>
                 )}
               </div>
@@ -196,7 +199,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
           <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3 shadow-[0_4px_0_#000]">
             <div className="flex items-center justify-between mb-3 px-1">
               <span className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
-                <Clock size={14} className="text-amber-400" /> 选择月份
+                <Clock size={14} className="text-amber-400" /> {t('chooseMonth')}
               </span>
               <span className="text-[11px] font-mono text-gray-400">
                 {viewYear}.{selectedMonth < 10 ? `0${selectedMonth}` : selectedMonth}
@@ -220,7 +223,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
                         : 'bg-[#21232e] text-gray-300 border-black shadow-[0_2px_0_#000] hover:bg-[#323546]'
                     }`}
                   >
-                    <span>{m} 月</span>
+                    <span>{t('month', { month: m })}</span>
                     <span className="text-[9px] font-normal opacity-80 mt-0.5">
                       {MONTH_EVENTS[m]?.tag}
                     </span>
@@ -247,14 +250,14 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
           <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3.5 shadow-[0_4px_0_#000] space-y-2">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
-                <Bookmark size={14} className="text-amber-400" /> 日历盘 ({selectedMonth} 月)
+                <Bookmark size={14} className="text-amber-400" /> {t('board', { month: selectedMonth })}
               </span>
             </div>
 
             {/* Weekday Header */}
             <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-400 border-b border-black pb-1.5">
               {weekDays.map((d, idx) => (
-                <div key={idx}>周{d}</div>
+                <div key={idx}>{d}</div>
               ))}
             </div>
 
@@ -278,12 +281,12 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
                     <span>{day}</span>
                     {isPayday && (
                       <span className="text-[8px] text-amber-300 -mt-1 font-sans">
-                        薪水
+                        {t('salary')}
                       </span>
                     )}
                     {isToday && (
                       <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[8px] font-black px-1 rounded-full border border-black">
-                        今
+                        {t('today')}
                       </span>
                     )}
                   </div>
@@ -296,11 +299,11 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
           <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-3.5 flex flex-col gap-2.5 shadow-[0_4px_0_#000]">
             <div className="flex items-center justify-between text-xs px-1">
               <span className="text-gray-300 font-bold flex items-center gap-1.5">
-                <CircleDollarSign size={14} className="text-amber-400" />
-                月度薪水与利息收益: <span className="font-mono text-emerald-400 font-bold">+1,500 ₽</span>
+                <CurrencyIcon size={14} className="text-amber-400" />
+                {t('monthlyIncome')}<span className="font-mono text-emerald-400 font-bold">+1,500 {CURRENCY.symbol}</span>
               </span>
               <span className="text-[11px] text-gray-400 font-mono">
-                现金: {coins.toLocaleString()} ₽
+                {t('cash', { coins: coins.toLocaleString(), symbol: CURRENCY.symbol })}
               </span>
             </div>
 
@@ -318,7 +321,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
               }}
               className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black text-sm py-3 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer active:translate-y-0.5 flex items-center justify-center gap-2 transition-transform"
             >
-              <Sparkles size={16} /> 推进至下一个月 (+1,500 ₽ 薪水)
+              <Sparkles size={16} /> {t('advance', { symbol: CURRENCY.symbol })}
             </button>
           </div>
         </div>

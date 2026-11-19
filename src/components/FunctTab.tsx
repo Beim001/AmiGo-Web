@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   TrendingUp,
   Wallet,
@@ -23,42 +23,43 @@ import {
   Map as MapIcon,
   Gamepad2,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const FUNC_BENTO = [
   // Block 1: 核心金融与商业 (Cols 1-4, Rows 1-2)
-  { id: 'stock', label: '交易所', sub: '股票交易', icon: TrendingUp, color: '#1d4ed8', span: 'col-span-2 row-span-2' },
-  { id: 'finance', label: '财务银行', sub: '资产与信用体系', icon: Wallet, color: '#a68245', span: 'col-span-2 row-span-2' },
+  { id: 'stock', icon: TrendingUp, color: '#1d4ed8', span: 'col-span-2 row-span-2' },
+  { id: 'finance', icon: Wallet, color: '#a68245', span: 'col-span-2 row-span-2' },
 
   // Block 2: 公民身份与政务 (Cols 1-4, Rows 3-4)
-  { id: 'birth', label: '出生登记', sub: '新生儿证明', icon: Baby, color: '#a85b6f', span: 'col-span-2' },
-  { id: 'marriage', label: '结婚登记', sub: '婚姻关系', icon: Heart, color: '#b2586a', span: 'col-span-2' },
-  { id: 'visa', label: '签证申办', sub: '出入境许可', icon: Plane, color: '#4d6b8c', span: 'col-span-1' },
-  { id: 'immigrate', label: '移民居留', sub: '入籍申请', icon: Globe, color: '#6a518a', span: 'col-span-1' },
-  { id: 'gender', label: '性别权利', sub: '身份信息更新', icon: UserCog, color: '#88508a', span: 'col-span-2' },
+  { id: 'birth', icon: Baby, color: '#a85b6f', span: 'col-span-2' },
+  { id: 'marriage', icon: Heart, color: '#b2586a', span: 'col-span-2' },
+  { id: 'visa', icon: Plane, color: '#4d6b8c', span: 'col-span-1' },
+  { id: 'immigrate', icon: Globe, color: '#6a518a', span: 'col-span-1' },
+  { id: 'gender', icon: UserCog, color: '#88508a', span: 'col-span-2' },
 
   // Block 3: 不动产、职场与税务 (Cols 1-4, Rows 5-6)
-  { id: 'housing', label: '住房地产', sub: '不动产买卖', icon: Home, color: '#9e6743', span: 'col-span-2 row-span-2' },
-  { id: 'job', label: '就业招聘', sub: '职场求职', icon: Briefcase, color: '#525a66', span: 'col-span-2' },
-  { id: 'tax', label: '税单查询', sub: '个人所得税', icon: Receipt, color: '#3d7a63', span: 'col-span-1' },
-  { id: 'cost', label: '物价补贴', sub: '生活成本', icon: Landmark, color: '#3d757a', span: 'col-span-1' },
+  { id: 'housing', icon: Home, color: '#9e6743', span: 'col-span-2 row-span-2' },
+  { id: 'job', icon: Briefcase, color: '#525a66', span: 'col-span-2' },
+  { id: 'tax', icon: Receipt, color: '#3d7a63', span: 'col-span-1' },
+  { id: 'cost', icon: Landmark, color: '#3d757a', span: 'col-span-1' },
 
   // Block 4: 企业与公共事务 (Cols 1-4, Rows 7-8)
-  { id: 'company', label: '企业事务', sub: '公司登记', icon: Building2, color: '#3d6185', span: 'col-span-2' },
-  { id: 'hospital', label: '医疗服务', sub: '医院诊疗', icon: Hospital, color: '#a64245', span: 'col-span-2' },
-  { id: 'license', label: '驾照管理', sub: '车辆换证', icon: Car, color: '#5e6573', span: 'col-span-1' },
-  { id: 'education', label: '教育学府', sub: '入学证明', icon: GraduationCap, color: '#4a5785', span: 'col-span-3' },
+  { id: 'company', icon: Building2, color: '#3d6185', span: 'col-span-2' },
+  { id: 'hospital', icon: Hospital, color: '#a64245', span: 'col-span-2' },
+  { id: 'license', icon: Car, color: '#5e6573', span: 'col-span-1' },
+  { id: 'education', icon: GraduationCap, color: '#4a5785', span: 'col-span-3' },
 
   // Block 5: 社会保障与司法 (Cols 1-4, Rows 9-10)
-  { id: 'welfare', label: '社会福利', sub: '养老救济金', icon: HeartHandshake, color: '#a1476b', span: 'col-span-2 row-span-2' },
-  { id: 'court', label: '法院诉讼', sub: '法庭调解', icon: Scale, color: '#8a6538', span: 'col-span-1' },
-  { id: 'prison', label: '监狱服刑', sub: '前科记录', icon: Lock, color: '#42454d', span: 'col-span-1' },
-  { id: 'org', label: '社团政党', sub: '组织管理', icon: Users, color: '#684a85', span: 'col-span-2' },
+  { id: 'welfare', icon: HeartHandshake, color: '#a1476b', span: 'col-span-2 row-span-2' },
+  { id: 'court', icon: Scale, color: '#8a6538', span: 'col-span-1' },
+  { id: 'prison', icon: Lock, color: '#42454d', span: 'col-span-1' },
+  { id: 'org', icon: Users, color: '#684a85', span: 'col-span-2' },
 
   // Block 6: 社区与文娱 (Cols 1-4, Rows 11-12)
-  { id: 'movement', label: '公民运动', sub: '示威游行', icon: Megaphone, color: '#a84c38', span: 'col-span-2' },
-  { id: 'map_srv', label: '社区地图', sub: '公共设施', icon: MapIcon, color: '#487a48', span: 'col-span-2' },
-  { id: 'entertainment', label: '文娱休闲', sub: '剧院、博彩与社交圈', icon: Gamepad2, color: '#7a4285', span: 'col-span-4' },
-];
+  { id: 'movement', icon: Megaphone, color: '#a84c38', span: 'col-span-2' },
+  { id: 'map_srv', icon: MapIcon, color: '#487a48', span: 'col-span-2' },
+  { id: 'entertainment', icon: Gamepad2, color: '#7a4285', span: 'col-span-4' },
+] as const;
 
 const renderBentoContent = (item: any) => {
   if (item.span === 'col-span-2 row-span-2') {
@@ -125,73 +126,120 @@ export interface FunctTabProps {
   onOpenStock?: () => void;
   onOpenHospital?: () => void;
   onOpenJob?: () => void;
+  /** 社会福利（帝国时期为教会救济，第 67.5 题） */
+  onOpenWelfare?: () => void;
+  /** 驾照管理（马车 / 汽车执照，第 67.4 题） */
+  onOpenLicense?: () => void;
+  /** 文娱休闲（剧院、赌场、赛马、斗鸡、斗牛、摔跤，第 67.10 题） */
+  onOpenLeisure?: () => void;
+  /** 监狱服刑（第 67.7 题） */
+  onOpenPrison?: () => void;
+  /** 法院诉讼（第 67.6 题） */
+  onOpenCourt?: () => void;
   onOpenBirth?: () => void;
   onOpenGender?: () => void;
   onOpenHousing?: () => void;
   onOpenVisa?: () => void;
   onOpenImmigrate?: () => void;
+  onOpenMarriage?: () => void;
 }
 
-export const FunctTab: React.FC<FunctTabProps> = ({ 
-  onOpenBank, 
-  onOpenStock, 
-  onOpenHospital, 
-  onOpenJob, 
+export const FunctTab: React.FC<FunctTabProps> = ({
+  onOpenBank,
+  onOpenStock,
+  onOpenHospital,
+  onOpenJob,
+  onOpenWelfare,
+  onOpenLicense,
+  onOpenLeisure,
+  onOpenPrison,
+  onOpenCourt,
   onOpenBirth,
   onOpenGender,
   onOpenHousing,
   onOpenVisa,
   onOpenImmigrate,
-}) => (
-  <div className="flex-1 overflow-y-auto bg-[#252632] pb-8 flex flex-col custom-scrollbar">
-    <div className="bg-[#1e3a8a] text-white text-center py-3 font-bold text-xl border-b-4 border-[#172554] relative z-10 shadow-lg flex-shrink-0">
-      <div className="absolute inset-0 flex justify-center items-center opacity-30 pointer-events-none overflow-hidden">
-         <div className="w-24 h-24 border-[6px] border-black rounded-full absolute -top-8"></div>
-         <div className="w-32 h-32 border-[6px] border-black rounded-full absolute -bottom-16"></div>
-      </div>
-      <span className="relative z-10 drop-shadow-[0_2px_0_#000] font-black tracking-widest text-2xl">功能</span>
-    </div>
+  onOpenMarriage,
+}) => {
+  const { t } = useTranslation('funct');
+  const [toast, setToast] = useState<string | null>(null);
 
-    <div className="p-3.5 space-y-4">
-      <div className="grid grid-cols-4 gap-2.5 auto-rows-[76px]">
-        {FUNC_BENTO.map((item) => (
-          <div 
-            key={item.id} 
-            onClick={() => {
-              if (item.id === 'finance' && onOpenBank) {
-                onOpenBank();
-              } else if (item.id === 'stock' && onOpenStock) {
-                onOpenStock();
-              } else if (item.id === 'hospital' && onOpenHospital) {
-                onOpenHospital();
-              } else if (item.id === 'job' && onOpenJob) {
-                onOpenJob();
-              } else if (item.id === 'birth' && onOpenBirth) {
-                onOpenBirth();
-              } else if (item.id === 'gender' && onOpenGender) {
-                onOpenGender();
-              } else if (item.id === 'housing' && onOpenHousing) {
-                onOpenHousing();
-              } else if (item.id === 'visa' && onOpenVisa) {
-                onOpenVisa();
-              } else if (item.id === 'immigrate' && onOpenImmigrate) {
-                onOpenImmigrate();
-              }
-            }}
-            className={`
-              ${item.span} 
-              rounded-xl border-2 border-black relative overflow-hidden shadow-[0_4px_0_#000] 
-              cursor-pointer active:translate-y-[4px] active:shadow-none hover:brightness-110 transition-all
-            `}
-            style={{ backgroundColor: item.color }}
-          >
-            {renderBentoContent(item)}
-          </div>
-        ))}
+  // 已实现的功能入口；不在此表中的入口显示「即将开放」
+  const handlers: Record<string, (() => void) | undefined> = {
+    stock: onOpenStock,
+    finance: onOpenBank,
+    birth: onOpenBirth,
+    visa: onOpenVisa,
+    immigrate: onOpenImmigrate,
+    marriage: onOpenMarriage,
+    gender: onOpenGender,
+    housing: onOpenHousing,
+    job: onOpenJob,
+    hospital: onOpenHospital,
+    welfare: onOpenWelfare,
+    license: onOpenLicense,
+    entertainment: onOpenLeisure,
+    prison: onOpenPrison,
+    court: onOpenCourt,
+  };
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast((prev) => (prev === msg ? null : prev)), 2200);
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto bg-[#252632] pb-8 flex flex-col custom-scrollbar">
+      {toast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[60] bg-black/90 text-yellow-300 border-2 border-yellow-500 text-xs font-black px-4 py-2 rounded-xl shadow-[0_4px_0_#000] animate-in fade-in slide-in-from-top-2 duration-200 text-center max-w-[85%] pointer-events-none">
+          {toast}
+        </div>
+      )}
+
+      <div className="bg-[#1e3a8a] text-white text-center py-3 font-bold text-xl border-b-4 border-[#172554] relative z-10 shadow-lg flex-shrink-0">
+        <div className="absolute inset-0 flex justify-center items-center opacity-30 pointer-events-none overflow-hidden">
+           <div className="w-24 h-24 border-[6px] border-black rounded-full absolute -top-8"></div>
+           <div className="w-32 h-32 border-[6px] border-black rounded-full absolute -bottom-16"></div>
+        </div>
+        <span className="relative z-10 drop-shadow-[0_2px_0_#000] font-black tracking-widest text-2xl">{t('title')}</span>
+      </div>
+
+      <div className="p-3.5 space-y-4">
+        <div className="grid grid-cols-4 gap-2.5 auto-rows-[76px]">
+          {FUNC_BENTO.map((tile) => {
+            const item = { ...tile, label: t(`tiles.${tile.id}.label`), sub: t(`tiles.${tile.id}.sub`) };
+            const open = handlers[item.id];
+            const available = !!open;
+            return (
+              <div
+                key={item.id}
+                onClick={() => {
+                  if (open) open();
+                  else showToast(t('comingSoonToast', { label: item.label }));
+                }}
+                className={`
+                  ${item.span}
+                  rounded-xl border-2 border-black relative overflow-hidden shadow-[0_4px_0_#000]
+                  cursor-pointer active:translate-y-[4px] active:shadow-none transition-all
+                  ${available ? 'hover:brightness-110' : 'grayscale-[55%] opacity-75'}
+                `}
+                style={{ backgroundColor: item.color }}
+                title={available ? item.label : t('comingSoonTitle', { label: item.label })}
+              >
+                {renderBentoContent(item)}
+                {!available && (
+                  <div className="absolute top-1 right-1 z-20 bg-black/80 text-yellow-300 text-[8px] font-black px-1 py-px rounded border border-yellow-500/60 leading-tight pointer-events-none">
+                    {t('comingSoon')}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Alias FuncTab for backward compatibility
 export const FuncTab = FunctTab;

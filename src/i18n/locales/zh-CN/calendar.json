@@ -1,0 +1,23 @@
+{
+  "weekdays": {
+    "d0": "周一",
+    "d1": "周二",
+    "d2": "周三",
+    "d3": "周四",
+    "d4": "周五",
+    "d5": "周六",
+    "d6": "周日"
+  },
+  "title": "日历",
+  "year": "年份",
+  "yearValue": "{{year}} 年",
+  "current": "进行中",
+  "chooseMonth": "选择月份",
+  "month": "{{month}} 月",
+  "board": "日历盘 ({{month}} 月)",
+  "salary": "薪水",
+  "today": "今",
+  "monthlyIncome": "月度薪水与利息收益: ",
+  "cash": "现金: {{coins}} {{symbol}}",
+  "advance": "推进至下一个月 (+1,500 {{symbol}} 薪水)"
+}

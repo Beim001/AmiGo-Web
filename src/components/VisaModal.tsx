@@ -1,4 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import {
+  addLifeLog } from '../lib/lifeLog';
+import React,
+  { useState,
+  useEffect,
+  useMemo } from 'react';
 import {
   ChevronLeft,
   Plane,
@@ -7,7 +12,6 @@ import {
   BookOpen,
   Stamp,
   ShieldCheck,
-  CircleDollarSign,
   Sparkles,
   CheckCircle2,
   AlertCircle,
@@ -39,7 +43,11 @@ import {
   ChevronDown,
   Layers,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
 import { HistoricalFlag } from './HistoricalFlag';
+import { CURRENCY } from '../data/seasons';
+import { isInPrison, PRISON_BLOCK_TEXT } from '../lib/prison';
+import { useTranslation } from 'react-i18next';
 
 export interface VisaItem {
   id: string;
@@ -131,7 +139,7 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 4000,
     durationMonths: 36,
     expediteFee: 500,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 4,000 ₽', '无外交豁免阻却事由'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 4,000 ${CURRENCY.symbol}`, '无外交豁免阻却事由'],
     benefits: ['前往伦敦金融城、牛津大学与皇家学会交流', '游历归来大幅增加学术声誉与阅历见闻', '有机会获得日不落帝国工业专利授权'],
     description: '日不落帝国官方公文签证，准许通行伦敦金融城、泰晤士河各大港口与皇家科学院。',
     color: '#8b5cf6',
@@ -149,8 +157,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 2000,
     durationMonths: 24,
     expediteFee: 400,
-    requirements: ['持有效帝国护照', '个人资金储备 ≥ 2,000 ₽', '体魄状态良好健康'],
-    benefits: ['派驻柏林机械厂与鲁尔重工业冶金基地', '每次出境技术派遣可斩获高额技师津贴 +2,800 ~ 5,200 ₽', '获取德意志先进车床采买配额'],
+    requirements: ['持有效帝国护照', `个人资金储备 ≥ 2,000 ${CURRENCY.symbol}`, '体魄状态良好健康'],
+    benefits: ['派驻柏林机械厂与鲁尔重工业冶金基地', `每次出境技术派遣可斩获高额技师津贴 +2,800 ~ 5,200 ${CURRENCY.symbol}`, '获取德意志先进车床采买配额'],
     description: '北德意志联邦与普鲁士重工招募准入文书，技术工程师与机械工匠的海外发展通道。',
     color: '#06b6d4',
     accentBg: 'rgba(6, 182, 212, 0.15)',
@@ -167,7 +175,7 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 1200,
     durationMonths: 12,
     expediteFee: 200,
-    requirements: ['持有效帝国护照', '基础差旅资金 ≥ 1,200 ₽'],
+    requirements: ['持有效帝国护照', `基础差旅资金 ≥ 1,200 ${CURRENCY.symbol}`],
     benefits: ['漫步香榭丽舍大街、卢浮宫与左岸艺术沙龙', '极速恢复体魄与精力（健康度 +30）', '收集欧陆古典印象派油画与精致奢侈藏品'],
     description: '欧陆艺术与时尚之都旅游准证，畅游塞纳河畔、巴黎歌剧院与名流沙龙。',
     color: '#ec4899',
@@ -185,7 +193,7 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 20000,
     durationMonths: 60,
     expediteFee: 2000,
-    requirements: ['持有效帝国护照', '验资净资产 ≥ 20,000 ₽', '认购美洲铁路建设公债'],
+    requirements: ['持有效帝国护照', `验资净资产 ≥ 20,000 ${CURRENCY.symbol}`, '认购美洲铁路建设公债'],
     benefits: ['获得纽约与旧金山长期居留特权与无限次出入境', '出境游历可参与华尔街铁路证券与西海岸黄金对冲大赚', '专属领事级绿色快速通关通道'],
     description: '镀金时代资本通行证，太平洋铁路连通后的淘金与工商业投资热土。',
     color: '#eab308',
@@ -203,8 +211,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 2500,
     durationMonths: 24,
     expediteFee: 300,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 2,500 ₽', '无通缉或未结案记录'],
-    benefits: ['前往圣彼得堡与莫斯科进行跨国大宗贸易', '每次考察可斩获 2,000 ~ 4,500 ₽ 毛皮与贵金属订单', '提升沙皇宫廷贵族商贸声誉'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 2,500 ${CURRENCY.symbol}`, '无通缉或未结案记录'],
+    benefits: ['前往圣彼得堡与莫斯科进行跨国大宗贸易', `每次考察可斩获 2,000 ~ 4,500 ${CURRENCY.symbol} 毛皮与贵金属订单`, '提升沙皇宫廷贵族商贸声誉'],
     description: '罗曼诺夫王朝官方商签，连接欧亚大陆的珍贵皮草、木材与大宗商贸干线。',
     color: '#3b82f6',
     accentBg: 'rgba(59, 130, 246, 0.15)',
@@ -221,7 +229,7 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 5000,
     durationMonths: 24,
     expediteFee: 600,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 5,000 ₽'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 5,000 ${CURRENCY.symbol}`],
     benefits: ['前往开埠之横滨港、东京与京都探秘', '极高几率发掘传世浮世绘、古名刀与东洋珍宝', '在箱根温泉中大幅洗涤体魄（健康度 +35）'],
     description: '明治维新文明开化时期的涉外通商许可，古老幕府余韵与近代浪潮交汇之地。',
     color: '#f43f5e',
@@ -239,8 +247,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 3000,
     durationMonths: 24,
     expediteFee: 350,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 3,000 ₽'],
-    benefits: ['进驻维也纳金色大厅聆听圆舞曲与宫廷歌剧', '签订中欧多瑙河流域粮食与工芸品贸易契约（收益 +2,500 ~ 4,200 ₽）', '获得哈布斯堡王朝宫廷赞誉'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 3,000 ${CURRENCY.symbol}`],
+    benefits: ['进驻维也纳金色大厅聆听圆舞曲与宫廷歌剧', `签订中欧多瑙河流域粮食与工芸品贸易契约（收益 +2,500 ~ 4,200 ${CURRENCY.symbol}）`, '获得哈布斯堡王朝宫廷赞誉'],
     description: '哈布斯堡双元帝国皇家通关文牒，古典艺术、歌剧与中欧多瑙河航运枢纽。',
     color: '#10b981',
     accentBg: 'rgba(16, 185, 129, 0.15)',
@@ -257,8 +265,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 3500,
     durationMonths: 24,
     expediteFee: 400,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 3,500 ₽'],
-    benefits: ['考察上海公共租界江海关与广州十三行外贸口岸', '采购优质生丝、名贵瓷器与武夷贡茶销往欧陆（收益 +3,000 ~ 6,000 ₽）', '获清廷总理各国事务衙门通商关防'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 3,500 ${CURRENCY.symbol}`],
+    benefits: ['考察上海公共租界江海关与广州十三行外贸口岸', `采购优质生丝、名贵瓷器与武夷贡茶销往欧陆（收益 +3,000 ~ 6,000 ${CURRENCY.symbol}）`, '获清廷总理各国事务衙门通商关防'],
     description: '洋务运动蓬勃兴起时期的通商准照，开埠口岸与东方大宗丝茶贸易黄金通道。',
     color: '#d97706',
     accentBg: 'rgba(217, 119, 6, 0.15)',
@@ -275,8 +283,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 2800,
     durationMonths: 24,
     expediteFee: 300,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 2,800 ₽'],
-    benefits: ['游历罗马斗兽场、威尼斯水城与佛罗伦萨文艺复兴殿堂', '采购托斯卡纳顶级橄榄油与古典大理石雕塑（收益 +2,400 ~ 4,000 ₽）', '健康度 +25'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 2,800 ${CURRENCY.symbol}`],
+    benefits: ['游历罗马斗兽场、威尼斯水城与佛罗伦萨文艺复兴殿堂', `采购托斯卡纳顶级橄榄油与古典大理石雕塑（收益 +2,400 ~ 4,000 ${CURRENCY.symbol}）`, '健康度 +25'],
     description: '意大利王国收复罗马完成统一时期的涉外文牒，地中海贸易枢纽与艺术复兴重镇。',
     color: '#059669',
     accentBg: 'rgba(5, 150, 105, 0.15)',
@@ -293,8 +301,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 2200,
     durationMonths: 18,
     expediteFee: 250,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 2,200 ₽'],
-    benefits: ['涉足直布罗陀海峡与加的斯跨洋海运干线', '签订伊比利亚半岛软木、柑橘与雪莉酒贸易契约（收益 +2,200 ~ 3,800 ₽）'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 2,200 ${CURRENCY.symbol}`],
+    benefits: ['涉足直布罗陀海峡与加的斯跨洋海运干线', `签订伊比利亚半岛软木、柑橘与雪莉酒贸易契约（收益 +2,200 ~ 3,800 ${CURRENCY.symbol}）`],
     description: '伊比利亚半岛通商公文，连结地中海与大西洋贸易的古老航海大国。',
     color: '#ea580c',
     accentBg: 'rgba(234, 88, 12, 0.15)',
@@ -311,8 +319,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 3800,
     durationMonths: 24,
     expediteFee: 450,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 3,800 ₽'],
-    benefits: ['深入鹿特丹港口与阿姆斯特丹钻石交易所', '承接远东肉豆蔻、丁香与郁金香大宗期货清算（收益 +3,200 ~ 5,500 ₽）'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 3,800 ${CURRENCY.symbol}`],
+    benefits: ['深入鹿特丹港口与阿姆斯特丹钻石交易所', `承接远东肉豆蔻、丁香与郁金香大宗期货清算（收益 +3,200 ~ 5,500 ${CURRENCY.symbol}）`],
     description: '低地国家老牌金融商贸签，全球航运保险与远洋香料集散核心。',
     color: '#2563eb',
     accentBg: 'rgba(37, 99, 235, 0.15)',
@@ -329,8 +337,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 4500,
     durationMonths: 36,
     expediteFee: 500,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 4,500 ₽'],
-    benefits: ['在阿尔卑斯雪山圣地静修，体魄与健康度极速回满 (+40)', '获得日内瓦独立制表大师专属机芯制造配额（收益 +3,500 ~ 6,000 ₽）'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 4,500 ${CURRENCY.symbol}`],
+    benefits: ['在阿尔卑斯雪山圣地静修，体魄与健康度极速回满 (+40)', `获得日内瓦独立制表大师专属机芯制造配额（收益 +3,500 ~ 6,000 ${CURRENCY.symbol}）`],
     description: '中立国专属通行函，精密机械工坊、永久中立金融与高山疗养胜地。',
     color: '#dc2626',
     accentBg: 'rgba(220, 38, 38, 0.15)',
@@ -347,8 +355,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 2600,
     durationMonths: 24,
     expediteFee: 350,
-    requirements: ['持有效帝国护照', '个人资金储备 ≥ 2,600 ₽'],
-    benefits: ['考察基律纳特级优质铁矿与波罗的海造船木料', '与阿尔弗雷德·诺贝尔火药工坊合作获取安全炸药专利授权（收益 +2,900 ~ 4,800 ₽）'],
+    requirements: ['持有效帝国护照', `个人资金储备 ≥ 2,600 ${CURRENCY.symbol}`],
+    benefits: ['考察基律纳特级优质铁矿与波罗的海造船木料', `与阿尔弗雷德·诺贝尔火药工坊合作获取安全炸药专利授权（收益 +2,900 ~ 4,800 ${CURRENCY.symbol}）`],
     description: '北欧联合王国工矿准照，优质铁矿石、耐寒木材与近代工程化学前沿。',
     color: '#0284c7',
     accentBg: 'rgba(2, 132, 199, 0.15)',
@@ -365,8 +373,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 2600,
     durationMonths: 24,
     expediteFee: 320,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 2,600 ₽'],
-    benefits: ['横跨欧亚博斯普鲁斯海峡，掌控近东商道', '采购大马士革名刀、波斯织毯与叙利亚香精（收益 +2,600 ~ 4,600 ₽）'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 2,600 ${CURRENCY.symbol}`],
+    benefits: ['横跨欧亚博斯普鲁斯海峡，掌控近东商道', `采购大马士革名刀、波斯织毯与叙利亚香精（收益 +2,600 ~ 4,600 ${CURRENCY.symbol}）`],
     description: '坦志麦特改革时期的崇高门商照，连结欧亚非三大洲的大巴扎枢纽。',
     color: '#b91c1c',
     accentBg: 'rgba(185, 28, 28, 0.15)',
@@ -383,8 +391,8 @@ const HISTORICAL_VISAS: VisaItem[] = [
     minAssets: 12000,
     durationMonths: 48,
     expediteFee: 1200,
-    requirements: ['持有效帝国护照', '个人流动资金 ≥ 12,000 ₽'],
-    benefits: ['入股圣保罗咖啡种植园与亚马逊野生天然橡胶贸易', '每次出境可获得南美大宗热带经济作物分红 +5,500 ~ 9,000 ₽'],
+    requirements: ['持有效帝国护照', `个人流动资金 ≥ 12,000 ${CURRENCY.symbol}`],
+    benefits: ['入股圣保罗咖啡种植园与亚马逊野生天然橡胶贸易', `每次出境可获得南美大宗热带经济作物分红 +5,500 ~ 9,000 ${CURRENCY.symbol}`],
     description: '佩德罗二世统治下的南美帝国，热带咖啡、蔗糖与热带雨林宝藏的投资乐园。',
     color: '#15803d',
     accentBg: 'rgba(21, 128, 61, 0.15)',
@@ -403,6 +411,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
   setHealth,
   onOpenBirth,
 }) => {
+  const { t } = useTranslation('visa');
   const [activeTab, setActiveTab] = useState<'hall' | 'my_visas' | 'passport' | 'travel' | 'customs'>('hall');
   
   // 申办大厅筛选与搜索状态
@@ -543,12 +552,12 @@ export const VisaModal: React.FC<VisaModalProps> = ({
   // 1. 办理/申领护照
   const handleApplyPassport = () => {
     if (!isRegistered) {
-      showToast('请先前往出生登记处申领帝国公民身份', 'error');
+      showToast(t('toast.notRegistered'), 'error');
       return;
     }
     const PASSPORT_FEE = 300;
     if (coins < PASSPORT_FEE) {
-      showToast(`金币不足！办理帝国出入境护照需 ${PASSPORT_FEE} ₽ 工本费`, 'error');
+      showToast(t('toast.passportNoMoney', { fee: PASSPORT_FEE, symbol: CURRENCY.symbol }), 'error');
       return;
     }
 
@@ -563,13 +572,14 @@ export const VisaModal: React.FC<VisaModalProps> = ({
       tier: 'Standard',
     };
     setPassport(newPassport);
-    showToast('阿米诺斯帝国出入境护照签发成功！已加盖皇家出入境公署防伪钢印', 'success');
+    addLifeLog('出行', '申领护照', `护照编号 ${newPassport.passportNumber}。`);
+    showToast(t('toast.passportIssued'), 'success');
   };
 
   // 2. 申办签证 (包含多阶段交互动画与公证书颁发)
   const handleApplyVisa = (visa: VisaItem, isExpedited: boolean = false) => {
     if (!passport.issued) {
-      showToast('无法申办！请先在【护照证件】页面申领帝国公民护照', 'error');
+      showToast(t('toast.needPassport'), 'error');
       setActiveTab('passport');
       return;
     }
@@ -577,18 +587,18 @@ export const VisaModal: React.FC<VisaModalProps> = ({
     // 检查是否已持有同国家有效签证
     const existing = issuedVisas.find((v) => v.visaId === visa.id && v.status === 'valid');
     if (existing) {
-      showToast(`您已持有【${visa.country}】有效签证（剩余 ${existing.entriesRemaining} 次入境），无需重复申请`, 'info');
+      showToast(t('toast.alreadyHeld', { country: visa.country, entries: existing.entriesRemaining }), 'info');
       return;
     }
 
     const totalCost = visa.cost + (isExpedited ? visa.expediteFee : 0);
     if (coins < totalCost) {
-      showToast(`资金不足！申办该签证共需 ${totalCost} ₽（工本规费 ${visa.cost} ₽ + 领事加急 ${isExpedited ? visa.expediteFee : 0} ₽）`, 'error');
+      showToast(t('toast.visaNoMoney', { total: totalCost, cost: visa.cost, expedite: isExpedited ? visa.expediteFee : 0, symbol: CURRENCY.symbol }), 'error');
       return;
     }
 
     if (coins < visa.minAssets) {
-      showToast(`验资未通过！该签证要求个人资产达到 ${visa.minAssets.toLocaleString()} ₽`, 'error');
+      showToast(t('toast.assetsShort', { amount: visa.minAssets.toLocaleString(), symbol: CURRENCY.symbol }), 'error');
       return;
     }
 
@@ -638,21 +648,27 @@ export const VisaModal: React.FC<VisaModalProps> = ({
       }
 
       // 打开仪式感签证公证书弹窗
+      addLifeLog('出行', `获得${visa.country}签证`, `${visa.visaType}，有效期至 ${expireY}.${expireM}。`);
       setAwardedVisaCertificate({ visa, issuedVisa: newVisa });
-      showToast(`【${visa.country} · ${visa.visaType}】审核通过！已获得官方领事签证准许公证书`, 'success');
+      showToast(t('toast.approved', { country: visa.country, type: visa.visaType }), 'success');
     }, 2200);
   };
 
   // 3. 发起海外出境游历 / 商务考察
   const handleDepartTravel = (issued: IssuedVisa) => {
+    // 狱中不能出国旅行（第 67.7 题）
+    if (isInPrison()) {
+      showToast(`⛓️ ${PRISON_BLOCK_TEXT}`, 'error');
+      return;
+    }
     if (issued.status !== 'valid' || issued.entriesRemaining <= 0) {
-      showToast('该签证已失效或入境次数已耗尽，请重新申办', 'error');
+      showToast(t('toast.invalid'), 'error');
       return;
     }
 
     const TRAVEL_EXPENSE = 400; // 远洋客轮差旅基础开销
     if (coins < TRAVEL_EXPENSE) {
-      showToast(`差旅费不足！出境登船需支付 ${TRAVEL_EXPENSE} ₽ 跨洋远洋客轮头等舱票`, 'error');
+      showToast(t('toast.travelNoMoney', { fee: TRAVEL_EXPENSE, symbol: CURRENCY.symbol }), 'error');
       return;
     }
 
@@ -691,7 +707,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `贸易与学术酬金 +${gainCoins} ₽，见闻广博，体魄 +${gainHealth}`;
+        rewardText = `贸易与学术酬金 +${gainCoins} ${CURRENCY.symbol}，见闻广博，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'PRU') {
         const outcomes = [
           { s: '在埃森克虏伯重工铸造厂指导蒸汽钻机调试，矿业督察官签发了丰厚的特别技术酬劳。', c: 3800, h: 10 },
@@ -701,7 +717,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `重工技术津贴 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `重工技术津贴 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'FRA') {
         const outcomes = [
           { s: '漫步巴黎香榭丽舍大街与杜乐丽花园，品尝波尔多名庄红酒，结识贵族艺术家，身心得到充分调养。', c: 600, h: 30 },
@@ -711,7 +727,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `度假圆满，体魄大满 +${gainHealth}，艺术收益 +${gainCoins} ₽`;
+        rewardText = `度假圆满，体魄大满 +${gainHealth}，艺术收益 +${gainCoins} ${CURRENCY.symbol}`;
       } else if (issued.countryCode === 'USA') {
         const outcomes = [
           { s: '在纽约华尔街联合交易所参与联合太平洋铁路股票发行，斩获巨额资本红利。', c: 7500, h: 15 },
@@ -721,7 +737,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `美洲资本红利 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `美洲资本红利 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'RUS') {
         const outcomes = [
           { s: '在圣彼得堡涅瓦大街与皇室供货商达成西伯利亚顶级紫貂皮草采购契约，获利颇丰。', c: 3600, h: 10 },
@@ -731,7 +747,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `欧亚贸易收益 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `欧亚贸易收益 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'JPN') {
         const outcomes = [
           { s: '在横滨开埠口岸与商行达成生丝贸易契约，并在箱根温泉中洗尽铅华，身心全面焕发。', c: 2200, h: 35 },
@@ -741,7 +757,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `体魄大涨 +${gainHealth}，东洋奇珍收益 +${gainCoins} ₽`;
+        rewardText = `体魄大涨 +${gainHealth}，东洋奇珍收益 +${gainCoins} ${CURRENCY.symbol}`;
       } else if (issued.countryCode === 'AUT') {
         const outcomes = [
           { s: '在维也纳金色大厅聆听施特劳斯圆舞曲，与哈布斯堡贵族敲定多瑙河航运谷物期货合同。', c: 3300, h: 15 },
@@ -751,7 +767,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `多瑙河商贸收益 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `多瑙河商贸收益 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'ITA') {
         const outcomes = [
           { s: '漫步罗马斗兽场与万神殿，并与佛罗伦萨商行达成大理石雕塑采购订单。', c: 3400, h: 25 },
@@ -761,7 +777,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `地中海贸易收益 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `地中海贸易收益 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'ESP') {
         const outcomes = [
           { s: '在马德里皇家商会签订安达卢西亚特产雪莉酒与橄榄油采购总约，销路极佳。', c: 3100, h: 15 },
@@ -771,7 +787,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `西班牙商贸收益 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `西班牙商贸收益 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'NLD') {
         const outcomes = [
           { s: '在阿姆斯特丹证券交易所精准交割东印度香料期票，斩获巨额投机收益。', c: 4600, h: 15 },
@@ -781,7 +797,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `低地金融收益 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `低地金融收益 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'CHE') {
         const outcomes = [
           { s: '在日内瓦钟表大师工坊订购专属陀飞轮天文台怀表，并于阿尔卑斯峰峦间尽情呼吸，体魄焕新。', c: 4200, h: 40 },
@@ -791,7 +807,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `瑞士钟表与银行收益 +${gainCoins} ₽，体魄暴增 +${gainHealth}`;
+        rewardText = `瑞士钟表与银行收益 +${gainCoins} ${CURRENCY.symbol}，体魄暴增 +${gainHealth}`;
       } else if (issued.countryCode === 'SWE') {
         const outcomes = [
           { s: '在斯德哥尔摩与诺贝尔实验室工程师共同改进安全雷管，获得技术转让分红。', c: 4100, h: 15 },
@@ -801,7 +817,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `北欧工矿分红 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `北欧工矿分红 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'TUR') {
         const outcomes = [
           { s: '穿行于伊斯坦布尔大巴扎，采购名贵波斯毛毯与大马士革手工刀剑，返程大获全胜。', c: 3700, h: 20 },
@@ -811,7 +827,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `近东丝路大单 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `近东丝路大单 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else if (issued.countryCode === 'BRA') {
         const outcomes = [
           { s: '在里约热内卢港口交割整船优质热带咖啡豆与橡胶原料，赚取丰厚外汇。', c: 7200, h: 20 },
@@ -821,7 +837,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `南美热带大宗分红 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `南美热带大宗分红 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       } else {
         const outcomes = [
           { s: '在上海公共租界江海关采购优质湖丝与景德镇青花瓷，转运返航大受追捧，获利丰厚。', c: 4800, h: 15 },
@@ -831,7 +847,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
         story = res.s;
         gainCoins = res.c;
         gainHealth = res.h;
-        rewardText = `洋务丝茶贸易收益 +${gainCoins} ₽，体魄 +${gainHealth}`;
+        rewardText = `洋务丝茶贸易收益 +${gainCoins} ${CURRENCY.symbol}，体魄 +${gainHealth}`;
       }
 
       if (gainCoins > 0) setCoins((prev) => prev + gainCoins);
@@ -860,6 +876,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
       };
 
       setTravelLogs((prev) => [newLog, ...prev]);
+      addLifeLog('出行', `出访${issued.country}`, story);
       setIsTravelling(false);
       setTravelResultModal(newLog);
     }, 800);
@@ -880,25 +897,25 @@ export const VisaModal: React.FC<VisaModalProps> = ({
           <div className="bg-[#242839] border-2 border-sky-500/80 px-4 py-1.5 rounded-xl shadow-[0_3px_0_#000] flex items-center gap-2">
             <Plane size={17} className="text-sky-400 flex-shrink-0" />
             <span className="text-sky-300 text-sm font-black tracking-wider">
-              签证申办
+              {t('title')}
             </span>
           </div>
         </div>
 
         <div className="flex items-center bg-[#11131c] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black z-10 shadow-[0_2px_0_#000]">
-          <CircleDollarSign size={14} className="text-yellow-400 mr-1" />
-          <span className="text-amber-300">{coins.toLocaleString()} ₽</span>
+          <CurrencyIcon size={14} className="text-yellow-400 mr-1" />
+          <span className="text-amber-300">{coins.toLocaleString()} {CURRENCY.symbol}</span>
         </div>
       </div>
 
       {/* Navigation Sub-Tabs */}
       <div className="bg-[#181a24] border-b-2 border-black px-2 py-2 flex items-center justify-between gap-1.5 flex-shrink-0 overflow-x-auto no-scrollbar">
         {[
-          { id: 'hall', label: '申办大厅', icon: Globe },
-          { id: 'my_visas', label: `已持签证 (${issuedVisas.filter((v) => v.status === 'valid').length})`, icon: Stamp },
-          { id: 'travel', label: '出境游历', icon: Compass },
-          { id: 'passport', label: '护照证件', icon: BookOpen },
-          { id: 'customs', label: '戳印海关', icon: Award },
+          { id: 'hall', label: t('tabs.hall'), icon: Globe },
+          { id: 'my_visas', label: t('tabs.myVisas', { count: issuedVisas.filter((v) => v.status === 'valid').length }), icon: Stamp },
+          { id: 'travel', label: t('tabs.travel'), icon: Compass },
+          { id: 'passport', label: t('tabs.passport'), icon: BookOpen },
+          { id: 'customs', label: t('tabs.customs'), icon: Award },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -934,9 +951,9 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                 <BadgeAlert size={22} />
               </div>
               <div>
-                <div className="text-white font-black text-xs">您尚未申领帝国出入境护照</div>
+                <div className="text-white font-black text-xs">{t('noPassport.title')}</div>
                 <div className="text-gray-300 text-[11px] mt-0.5">
-                  申办各国签证及登船出境通关前，需先在护照署登记并申领有效护照本。
+                  {t('noPassport.desc')}
                 </div>
               </div>
             </div>
@@ -944,7 +961,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
               onClick={() => setActiveTab('passport')}
               className="bg-amber-500 hover:bg-amber-400 text-black text-xs font-black py-1.5 px-3 rounded-xl border-2 border-black active:translate-y-0.5 cursor-pointer flex-shrink-0 shadow-[0_2px_0_#000] flex items-center gap-1"
             >
-              <span>前往申领</span>
+              <span>{t('noPassport.go')}</span>
               <ArrowRight size={13} />
             </button>
           </div>
@@ -963,7 +980,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="搜索国家名称、三字代码 (GBR/USA/PRU) 或签证关键字..."
+                    placeholder={t('search')}
                     className="w-full bg-[#11131c] border-2 border-black/90 rounded-xl pl-9 pr-9 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-sky-400 transition-colors shadow-inner"
                   />
                   {searchQuery && (
@@ -980,12 +997,12 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                 <div className="bg-[#1b1e2b] border-2 border-black rounded-2xl overflow-hidden shadow-[0_4px_0_#000] divide-y divide-black/60">
                   {filteredCountryGroups.length === 0 ? (
                     <div className="p-8 text-center space-y-2">
-                      <div className="text-gray-400 text-xs font-bold">未找到符合搜索条件的国家或签证</div>
+                      <div className="text-gray-400 text-xs font-bold">{t('noMatch')}</div>
                       <button
                         onClick={() => setSearchQuery('')}
                         className="text-sky-400 text-xs underline font-bold cursor-pointer"
                       >
-                        清空搜索框
+                        {t('clearSearch')}
                       </button>
                     </div>
                   ) : (
@@ -1018,7 +1035,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                               {hasValidVisa && (
                                 <span className="bg-emerald-950 text-emerald-300 border border-emerald-500/50 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 flex-shrink-0">
                                   <CheckCircle2 size={11} />
-                                  <span>已获签证</span>
+                                  <span>{t('granted')}</span>
                                 </span>
                               )}
                             </div>
@@ -1027,7 +1044,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                           {/* 右侧：签证数量与箭头 */}
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <span className="text-[11px] text-gray-400 font-mono font-bold bg-[#12141e] px-2.5 py-1 rounded-lg border border-black">
-                              {countryGroup.visas.length} 款签证
+                              {t('visaCount', { count: countryGroup.visas.length })}
                             </span>
                             <ChevronRight size={16} className="text-gray-400 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
                           </div>
@@ -1051,10 +1068,10 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                     />
                     <div>
                       <span className="text-white font-black text-sm block">
-                        {selectedCountryGroup.country} 领事馆与签证处
+                        {t('consulate', { country: selectedCountryGroup.country })}
                       </span>
                       <span className="text-gray-400 text-[10px] font-mono">
-                        共 {selectedCountryGroup.visas.length} 款可申办官方签证方案
+                        {t('consulateCount', { count: selectedCountryGroup.visas.length })}
                       </span>
                     </div>
                   </div>
@@ -1064,7 +1081,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                     className="bg-[#2a2d3e] hover:bg-[#363a50] text-xs text-gray-200 font-bold px-3 py-1.5 rounded-xl border border-black cursor-pointer active:translate-y-0.5 transition-all flex items-center gap-1"
                   >
                     <ChevronLeft size={14} />
-                    <span>返回国家列表</span>
+                    <span>{t('backToCountries')}</span>
                   </button>
                 </div>
 
@@ -1079,12 +1096,12 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                         onChange={(e) => setSelectedCategory(e.target.value)}
                         className="w-full appearance-none bg-[#131622] border border-black/90 hover:border-sky-400/60 rounded-xl pl-8 pr-7 py-1.5 text-xs text-sky-200 font-bold focus:outline-none focus:border-sky-400 cursor-pointer transition-colors shadow-inner"
                       >
-                        <option value="all">全部类型</option>
-                        <option value="business">商贸考察</option>
-                        <option value="tourism">文旅漫游</option>
-                        <option value="study">学术深造</option>
-                        <option value="investment">黄金投资</option>
-                        <option value="work">重工派遣</option>
+                        <option value="all">{t('categories.all')}</option>
+                        <option value="business">{t('categories.business')}</option>
+                        <option value="tourism">{t('categories.tourism')}</option>
+                        <option value="study">{t('categories.study')}</option>
+                        <option value="investment">{t('categories.investment')}</option>
+                        <option value="work">{t('categories.work')}</option>
                       </select>
                       <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                     </div>
@@ -1097,10 +1114,10 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                         onChange={(e) => setSortBy(e.target.value as any)}
                         className="w-full appearance-none bg-[#131622] border border-black/90 hover:border-sky-400/60 rounded-xl pl-8 pr-7 py-1.5 text-xs text-gray-200 font-bold focus:outline-none focus:border-sky-400 cursor-pointer transition-colors shadow-inner"
                       >
-                        <option value="default">默认推荐排序</option>
-                        <option value="cost_asc">规费从低到高</option>
-                        <option value="cost_desc">规费从高到低</option>
-                        <option value="duration">有效期从长到短</option>
+                        <option value="default">{t('sorts.default')}</option>
+                        <option value="cost_asc">{t('sorts.cost_asc')}</option>
+                        <option value="cost_desc">{t('sorts.cost_desc')}</option>
+                        <option value="duration">{t('sorts.duration')}</option>
                       </select>
                       <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                     </div>
@@ -1111,7 +1128,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                     <div className="flex items-center bg-[#131622] border border-black/90 rounded-xl p-0.5 shadow-inner">
                       <button
                         onClick={() => setViewMode('list')}
-                        title="列表视图"
+                        title={t('listView')}
                         className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
                           viewMode === 'list' ? 'bg-sky-400 text-black font-bold' : 'text-gray-400 hover:text-white'
                         }`}
@@ -1120,7 +1137,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                       </button>
                       <button
                         onClick={() => setViewMode('grid')}
-                        title="卡片视图"
+                        title={t('gridView')}
                         className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
                           viewMode === 'grid' ? 'bg-sky-400 text-black font-bold' : 'text-gray-400 hover:text-white'
                         }`}
@@ -1134,12 +1151,12 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                 {/* 签证列表 / 网格展现 */}
                 {currentGroupVisas.length === 0 ? (
                   <div className="bg-[#1b1e2b] border-2 border-black rounded-2xl p-8 text-center space-y-2 shadow-[0_3px_0_#000]">
-                    <div className="text-white font-bold text-xs">该类型下暂无对应签证</div>
+                    <div className="text-white font-bold text-xs">{t('noVisaInType')}</div>
                     <button
                       onClick={() => setSelectedCategory('all')}
                       className="bg-sky-500 hover:bg-sky-400 text-black text-xs font-black py-1.5 px-4 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer"
                     >
-                      查看全部类型
+                      {t('showAllTypes')}
                     </button>
                   </div>
                 ) : viewMode === 'list' ? (
@@ -1172,7 +1189,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                                 </span>
                                 {isHeld && (
                                   <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 px-1.5 py-0.2 rounded font-bold">
-                                    已获批持有
+                                    {t('heldBadge')}
                                   </span>
                                 )}
                               </div>
@@ -1191,10 +1208,10 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                           <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-black/40">
                             <div className="text-left sm:text-right">
                               <div className="text-amber-300 font-mono font-black text-xs sm:text-sm">
-                                {visa.cost.toLocaleString()} ₽
+                                {visa.cost.toLocaleString()} {CURRENCY.symbol}
                               </div>
                               <div className="text-[10px] text-gray-400 font-mono">
-                                有效 {visa.durationMonths}月 · 需验资 {visa.minAssets.toLocaleString()} ₽
+                                {t('listMeta', { months: visa.durationMonths, amount: visa.minAssets.toLocaleString(), symbol: CURRENCY.symbol })}
                               </div>
                             </div>
 
@@ -1203,7 +1220,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                                 onClick={() => setSelectedVisaDetail(visa)}
                                 className="bg-[#2a2e40] hover:bg-[#353a50] text-gray-200 hover:text-white px-2.5 py-1.5 rounded-xl border border-black text-xs font-bold active:translate-y-0.5 cursor-pointer shadow-[0_2px_0_#000]"
                               >
-                                详情
+                                {t('detailButton')}
                               </button>
 
                               <button
@@ -1216,7 +1233,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                                 }`}
                               >
                                 <Stamp size={13} />
-                                <span>{isHeld ? '已持有' : '申办'}</span>
+                                <span>{isHeld ? t('held') : t('apply')}</span>
                               </button>
                             </div>
                           </div>
@@ -1252,7 +1269,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                                 </span>
                                 {isHeld && (
                                   <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 px-1.5 py-0.2 rounded font-bold">
-                                    已持有效
+                                    {t('heldValid')}
                                   </span>
                                 )}
                               </div>
@@ -1261,10 +1278,10 @@ export const VisaModal: React.FC<VisaModalProps> = ({
 
                             <div className="text-right">
                               <div className="text-amber-300 font-mono font-black text-sm">
-                                {visa.cost.toLocaleString()} ₽
+                                {visa.cost.toLocaleString()} {CURRENCY.symbol}
                               </div>
                               <div className="text-[10px] text-gray-400 font-mono">
-                                有效期 {visa.durationMonths} 个月
+                                {t('validity', { months: visa.durationMonths })}
                               </div>
                             </div>
                           </div>
@@ -1276,7 +1293,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                           <div className="space-y-2 text-[11px]">
                             <div className="text-gray-400 font-bold flex items-center gap-1.5">
                               <ShieldCheck size={13} className="text-sky-400" />
-                              <span>申请门槛与条件：</span>
+                              <span>{t('requirements')}</span>
                             </div>
                             <div className="flex flex-wrap gap-1.5">
                               {visa.requirements.map((req, i) => (
@@ -1291,7 +1308,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
 
                             <div className="text-gray-400 font-bold flex items-center gap-1.5 pt-1">
                               <Sparkles size={13} className="text-amber-400" />
-                              <span>签证权益与特权：</span>
+                              <span>{t('perks')}</span>
                             </div>
                             <div className="text-amber-300/90 text-[10px] space-y-1">
                               {visa.benefits.slice(0, 2).map((b, i) => (
@@ -1308,7 +1325,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                               onClick={() => setSelectedVisaDetail(visa)}
                               className="bg-[#2a2e40] hover:bg-[#353a50] text-gray-200 hover:text-white px-3 py-2 rounded-xl border border-black text-xs font-bold active:translate-y-0.5 cursor-pointer shadow-[0_2px_0_#000]"
                             >
-                              详情
+                              {t('detailButton')}
                             </button>
                             <button
                               onClick={() => handleApplyVisa(visa, false)}
@@ -1320,7 +1337,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                               }`}
                             >
                               <Stamp size={14} />
-                              <span>{isHeld ? '已持有效签证' : '立即申办'}</span>
+                              <span>{isHeld ? t('heldValidVisa') : t('applyNow')}</span>
                             </button>
                           </div>
                         </div>
@@ -1340,10 +1357,10 @@ export const VisaModal: React.FC<VisaModalProps> = ({
               <div className="flex items-center justify-between border-b border-black/60 pb-2">
                 <div className="flex items-center gap-2">
                   <Stamp size={16} className="text-sky-400" />
-                  <span className="text-white font-black text-xs">名下有效出入境签证批文</span>
+                  <span className="text-white font-black text-xs">{t('mine.title')}</span>
                 </div>
                 <span className="text-[11px] font-mono text-gray-400">
-                  有效签证: {issuedVisas.filter((v) => v.status === 'valid').length} 本
+                  {t('mine.count', { count: issuedVisas.filter((v) => v.status === 'valid').length })}
                 </span>
               </div>
 
@@ -1352,15 +1369,15 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                   <div className="w-12 h-12 rounded-full bg-[#14161f] border border-black/80 flex items-center justify-center text-gray-500 mx-auto">
                     <Plane size={24} />
                   </div>
-                  <div className="text-gray-400 text-xs font-bold">暂无任何签发的有效签证</div>
+                  <div className="text-gray-400 text-xs font-bold">{t('mine.empty')}</div>
                   <p className="text-gray-500 text-[11px]">
-                    前往【申办大厅】搜索与提交各国签证申请，获批后即可登船开启出境游历与商贸考察。
+                    {t('mine.emptyDesc')}
                   </p>
                   <button
                     onClick={() => setActiveTab('hall')}
                     className="bg-sky-500 hover:bg-sky-400 text-black text-xs font-black py-1.5 px-4 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer mt-2"
                   >
-                    前往选办签证 →
+                    {t('mine.go')}
                   </button>
                 </div>
               ) : (
@@ -1398,17 +1415,17 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                                   : 'bg-gray-700 text-gray-400 border-gray-600'
                               }`}
                             >
-                              {isValid ? '有效签注中' : '已失效'}
+                              {isValid ? t('mine.valid') : t('mine.expired')}
                             </span>
                             <div className="text-[10px] text-gray-400 font-mono mt-1">
-                              剩余入境: <strong className="text-amber-300">{visa.entriesRemaining} 次</strong>
+                              {t('mine.entriesLabel')}<strong className="text-amber-300">{t('mine.entries', { count: visa.entriesRemaining })}</strong>
                             </div>
                           </div>
                         </div>
 
                         <div className="flex items-center justify-between text-[10px] text-gray-400 pt-2.5 mt-2.5 border-t border-black/40">
                           <div>
-                            签发: {visa.issueYear}.{visa.issueMonth} 至 {visa.expireYear}.{visa.expireMonth}
+                            {t('mine.period', { from: `${visa.issueYear}.${visa.issueMonth}`, to: `${visa.expireYear}.${visa.expireMonth}` })}
                           </div>
                           {isValid && (
                             <button
@@ -1417,7 +1434,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                               }}
                               className="text-sky-400 font-bold hover:underline cursor-pointer flex items-center gap-0.5"
                             >
-                              <span>前往登船出境</span>
+                              <span>{t('mine.travel')}</span>
                               <ChevronRight size={12} />
                             </button>
                           )}
@@ -1438,9 +1455,9 @@ export const VisaModal: React.FC<VisaModalProps> = ({
               <div className="flex items-center justify-between border-b border-black/60 pb-2">
                 <div className="flex items-center gap-2">
                   <Compass size={16} className="text-sky-400" />
-                  <span className="text-white font-black text-xs">帝国远洋客轮港口口岸 (Departures)</span>
+                  <span className="text-white font-black text-xs">{t('travel.title')}</span>
                 </div>
-                <span className="text-[10px] text-gray-400 font-mono">客舱票: 400 ₽ / 次</span>
+                <span className="text-[10px] text-gray-400 font-mono">{t('travel.ticket', { symbol: CURRENCY.symbol })}</span>
               </div>
 
               <div className="bg-[#14161f] p-3 rounded-xl border border-black/60 flex items-center gap-3">
@@ -1448,27 +1465,27 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                   <Ship size={20} />
                 </div>
                 <div className="text-xs">
-                  <div className="text-white font-bold">远洋跨国航行须知</div>
+                  <div className="text-white font-bold">{t('travel.noticeTitle')}</div>
                   <div className="text-gray-400 text-[11px] mt-0.5 leading-relaxed">
-                    持有任一国家有效签证即可搭乘远洋客轮出境。出境可斩获海外外贸大单、学术见识增长、收集异国海关戳印并全面恢复体魄健康。
+                    {t('travel.notice')}
                   </div>
                 </div>
               </div>
 
               {/* Ready to Depart Destinations */}
               <div className="space-y-2.5 pt-1">
-                <div className="text-xs font-black text-gray-300">可通关目的地港口列表：</div>
+                <div className="text-xs font-black text-gray-300">{t('travel.ports')}</div>
                 {issuedVisas.filter((v) => v.status === 'valid').length === 0 ? (
                   <div className="p-4 bg-[#14161f] border border-black/60 rounded-xl text-center space-y-2">
-                    <div className="text-amber-300 text-xs font-bold">暂无有效签证可供登船</div>
+                    <div className="text-amber-300 text-xs font-bold">{t('travel.empty')}</div>
                     <p className="text-gray-400 text-[11px]">
-                      您名下暂无有效签注。请前往【申办大厅】申领目的地签证。
+                      {t('travel.emptyDesc')}
                     </p>
                     <button
                       onClick={() => setActiveTab('hall')}
                       className="bg-sky-500 text-black text-xs font-black py-1.5 px-3 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer"
                     >
-                      前往办理签证 →
+                      {t('travel.go')}
                     </button>
                   </div>
                 ) : (
@@ -1489,7 +1506,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                               </span>
                             </div>
                             <div className="text-[11px] text-gray-400 mt-0.5">
-                              {visa.visaType} · 剩余 {visa.entriesRemaining} 次出境
+                              {t('travel.entries', { type: visa.visaType, count: visa.entriesRemaining })}
                             </div>
                           </div>
                         </div>
@@ -1500,7 +1517,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                           className="bg-sky-500 hover:bg-sky-400 text-black text-xs font-black py-2 px-3.5 rounded-xl border-2 border-black active:translate-y-0.5 cursor-pointer shadow-[0_2px_0_#000] flex items-center gap-1.5 flex-shrink-0"
                         >
                           <Ship size={14} />
-                          <span>即刻登船 (400 ₽)</span>
+                          <span>{t('travel.board', { symbol: CURRENCY.symbol })}</span>
                         </button>
                       </div>
                     ))
@@ -1527,7 +1544,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                   </div>
                   <div>
                     <div className="text-amber-200 text-xs font-black tracking-widest uppercase">
-                      阿米诺斯帝国出入境管理局
+                      {t('passport.authority')}
                     </div>
                     <div className="text-[#a88a54] text-[10px] font-mono font-bold tracking-wider">
                       IMPERIAL EMPIRE OF AMINOAC · {gameYear}
@@ -1543,7 +1560,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                         : 'bg-red-500/20 text-red-300 border-red-500/40'
                     }`}
                   >
-                    {passport.issued ? '有效证件 (Valid)' : '未申领 (Unissued)'}
+                    {passport.issued ? t('passport.valid') : t('passport.unissued')}
                   </span>
                 </div>
               </div>
@@ -1551,25 +1568,25 @@ export const VisaModal: React.FC<VisaModalProps> = ({
               {/* Passport Details Fields */}
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="bg-[#140c08]/80 p-2.5 rounded-xl border border-[#8c6d3d]/30 space-y-0.5">
-                  <div className="text-[#a88a54] text-[10px] font-bold">护照号码 / Passport No.</div>
+                  <div className="text-[#a88a54] text-[10px] font-bold">{t('passport.number')}</div>
                   <div className="text-amber-200 font-mono font-black text-sm">
                     {passport.issued ? passport.passportNumber : '--------'}
                   </div>
                 </div>
 
                 <div className="bg-[#140c08]/80 p-2.5 rounded-xl border border-[#8c6d3d]/30 space-y-0.5">
-                  <div className="text-[#a88a54] text-[10px] font-bold">持照人姓名 / Full Name</div>
-                  <div className="text-amber-200 font-black text-sm">{playerName || '帝国公民'}</div>
+                  <div className="text-[#a88a54] text-[10px] font-bold">{t('passport.name')}</div>
+                  <div className="text-amber-200 font-black text-sm">{playerName || t('passport.defaultName')}</div>
                 </div>
 
                 <div className="bg-[#140c08]/80 p-2.5 rounded-xl border border-[#8c6d3d]/30 space-y-0.5">
-                  <div className="text-[#a88a54] text-[10px] font-bold">国籍 / Nationality</div>
-                  <div className="text-amber-200 font-bold">阿米诺斯帝国 (Aminoac)</div>
+                  <div className="text-[#a88a54] text-[10px] font-bold">{t('passport.nationality')}</div>
+                  <div className="text-amber-200 font-bold">{t('passport.nationalityValue')}</div>
                 </div>
 
                 <div className="bg-[#140c08]/80 p-2.5 rounded-xl border border-[#8c6d3d]/30 space-y-0.5">
-                  <div className="text-[#a88a54] text-[10px] font-bold">出入境信用评级 / Rating</div>
-                  <div className="text-emerald-400 font-mono font-black">{passport.creditScore} (AAA 卓越)</div>
+                  <div className="text-[#a88a54] text-[10px] font-bold">{t('passport.rating')}</div>
+                  <div className="text-emerald-400 font-mono font-black">{t('passport.ratingValue', { score: passport.creditScore })}</div>
                 </div>
               </div>
 
@@ -1577,8 +1594,8 @@ export const VisaModal: React.FC<VisaModalProps> = ({
               <div className="pt-2 border-t border-[#8c6d3d]/40 flex items-center justify-between">
                 <div className="text-[11px] text-[#a88a54]">
                   {passport.issued
-                    ? `签发日期: ${passport.issueYear}.${passport.issueMonth} · 防伪钢印已激活`
-                    : '申领需缴纳工本费 300 ₽'}
+                    ? t('passport.issuedAt', { date: `${passport.issueYear}.${passport.issueMonth}` })
+                    : t('passport.fee', { symbol: CURRENCY.symbol })}
                 </div>
 
                 {!passport.issued ? (
@@ -1587,12 +1604,12 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                     className="bg-[#d4a359] hover:bg-[#e6b56b] text-black text-xs font-black py-2 px-4 rounded-xl border-2 border-black active:translate-y-0.5 cursor-pointer shadow-[0_2px_0_#000] flex items-center gap-1.5"
                   >
                     <BookOpen size={14} />
-                    <span>即刻申领护照 (300 ₽)</span>
+                    <span>{t('passport.apply', { symbol: CURRENCY.symbol })}</span>
                   </button>
                 ) : (
                   <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-bold">
                     <CheckCircle2 size={15} />
-                    <span>已随身携带护照本</span>
+                    <span>{t('passport.carried')}</span>
                   </div>
                 )}
               </div>
@@ -1607,10 +1624,10 @@ export const VisaModal: React.FC<VisaModalProps> = ({
               <div className="flex items-center justify-between border-b border-black/60 pb-2">
                 <div className="flex items-center gap-2">
                   <Award size={16} className="text-amber-400" />
-                  <span className="text-white font-black text-xs">出入境海关戳印收集册 (Customs Record)</span>
+                  <span className="text-white font-black text-xs">{t('customs.title')}</span>
                 </div>
                 <span className="text-[11px] font-mono text-amber-300">
-                  累计章戳: {travelLogs.length} 枚
+                  {t('customs.count', { count: travelLogs.length })}
                 </span>
               </div>
 
@@ -1619,9 +1636,9 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                   <div className="w-12 h-12 rounded-full bg-[#14161f] border border-black/80 flex items-center justify-center text-gray-500 mx-auto">
                     <Stamp size={24} />
                   </div>
-                  <div className="text-gray-400 text-xs font-bold">暂无海关通关戳印记录</div>
+                  <div className="text-gray-400 text-xs font-bold">{t('customs.empty')}</div>
                   <p className="text-gray-500 text-[11px]">
-                    使用签证完成出境游历或商务考察后，海关边检公署将在此加盖通关印章。
+                    {t('customs.emptyDesc')}
                   </p>
                 </div>
               ) : (
@@ -1702,26 +1719,26 @@ export const VisaModal: React.FC<VisaModalProps> = ({
             {/* Specs Grid */}
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="bg-[#14161f] p-2.5 rounded-xl border border-black/60">
-                <span className="text-gray-400 text-[10px]">官方规费：</span>
-                <div className="text-amber-300 font-mono font-black">{selectedVisaDetail.cost.toLocaleString()} ₽</div>
+                <span className="text-gray-400 text-[10px]">{t('detail.fee')}</span>
+                <div className="text-amber-300 font-mono font-black">{selectedVisaDetail.cost.toLocaleString()} {CURRENCY.symbol}</div>
               </div>
               <div className="bg-[#14161f] p-2.5 rounded-xl border border-black/60">
-                <span className="text-gray-400 text-[10px]">有效期限：</span>
-                <div className="text-sky-300 font-mono font-bold">{selectedVisaDetail.durationMonths} 个月</div>
+                <span className="text-gray-400 text-[10px]">{t('detail.validity')}</span>
+                <div className="text-sky-300 font-mono font-bold">{t('detail.months', { months: selectedVisaDetail.durationMonths })}</div>
               </div>
               <div className="bg-[#14161f] p-2.5 rounded-xl border border-black/60">
-                <span className="text-gray-400 text-[10px]">验资门槛：</span>
-                <div className="text-emerald-400 font-mono font-bold">≥ {selectedVisaDetail.minAssets.toLocaleString()} ₽</div>
+                <span className="text-gray-400 text-[10px]">{t('detail.minAssets')}</span>
+                <div className="text-emerald-400 font-mono font-bold">≥ {selectedVisaDetail.minAssets.toLocaleString()} {CURRENCY.symbol}</div>
               </div>
               <div className="bg-[#14161f] p-2.5 rounded-xl border border-black/60">
-                <span className="text-gray-400 text-[10px]">领事特急费：</span>
-                <div className="text-amber-400 font-mono font-bold">+{selectedVisaDetail.expediteFee} ₽</div>
+                <span className="text-gray-400 text-[10px]">{t('detail.expediteFee')}</span>
+                <div className="text-amber-400 font-mono font-bold">+{selectedVisaDetail.expediteFee} {CURRENCY.symbol}</div>
               </div>
             </div>
 
             {/* Benefits & Requirements */}
             <div className="space-y-2 text-xs bg-[#14161f] p-3 rounded-xl border border-black/80">
-              <div className="text-gray-400 text-[11px] font-bold">签证核心权益与待遇：</div>
+              <div className="text-gray-400 text-[11px] font-bold">{t('detail.perks')}</div>
               <div className="text-amber-300/90 text-[11px] space-y-1">
                 {selectedVisaDetail.benefits.map((b, i) => (
                   <div key={i} className="flex items-start gap-1.5">
@@ -1747,7 +1764,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                     }`}
                   >
                     <Stamp size={14} />
-                    <span>{isHeld ? '名下已持有此签证' : `常规申办 (${selectedVisaDetail.cost} ₽)`}</span>
+                    <span>{isHeld ? t('detail.held') : t('detail.applyNormal', { cost: selectedVisaDetail.cost, symbol: CURRENCY.symbol })}</span>
                   </button>
 
                   {!isHeld && (
@@ -1757,7 +1774,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                       className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-2 border-amber-500/60 py-2.5 px-3 rounded-xl font-bold text-xs active:translate-y-0.5 cursor-pointer flex items-center gap-1 shadow-[0_2px_0_#000]"
                     >
                       <Flame size={14} className="text-amber-400" />
-                      <span>加急 (+{selectedVisaDetail.expediteFee} ₽)</span>
+                      <span>{t('detail.expedite', { fee: selectedVisaDetail.expediteFee, symbol: CURRENCY.symbol })}</span>
                     </button>
                   )}
                 </div>
@@ -1777,16 +1794,16 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                 <HistoricalFlag code={applyingVisaInfo.visa.countryCode} width={56} height={36} className="shadow-md rounded border border-black" />
                 {applyingVisaInfo.isExpedited && (
                   <span className="absolute -top-2 -right-2 bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full border border-black flex items-center gap-0.5 animate-pulse">
-                    <Flame size={10} /> 加急
+                    <Flame size={10} /> {t('expedited')}
                   </span>
                 )}
               </div>
               <div className="mt-1">
                 <div className="text-amber-400 text-[11px] font-mono font-bold tracking-widest uppercase">
-                  {applyingVisaInfo.visa.country} 驻帝国总领事馆 · 签证审查处
+                  {t('review.office', { country: applyingVisaInfo.visa.country })}
                 </div>
                 <h3 className="text-white text-base font-black mt-0.5">
-                  正在核验 {applyingVisaInfo.visa.visaType}
+                  {t('review.checking', { type: applyingVisaInfo.visa.visaType })}
                 </h3>
               </div>
             </div>
@@ -1801,7 +1818,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                   <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border-2 border-sky-400/40 flex items-center justify-center text-sky-400 animate-spin">
                     <RefreshCw size={24} />
                   </div>
-                  <div className="text-sky-200 text-xs font-bold">① 递交出入境申请履历与资产证明...</div>
+                  <div className="text-sky-200 text-xs font-bold">{t('review.step1')}</div>
                 </div>
               )}
 
@@ -1810,7 +1827,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                   <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border-2 border-amber-400/40 flex items-center justify-center text-amber-400">
                     <ShieldCheck size={26} className="animate-pulse" />
                   </div>
-                  <div className="text-amber-200 text-xs font-bold">② 领事官审核资信额度 (≥ {applyingVisaInfo.visa.minAssets.toLocaleString()} ₽)...</div>
+                  <div className="text-amber-200 text-xs font-bold">{t('review.step2', { amount: applyingVisaInfo.visa.minAssets.toLocaleString(), symbol: CURRENCY.symbol })}</div>
                 </div>
               )}
 
@@ -1821,10 +1838,10 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                     <div className="text-center font-black leading-tight text-[10px] text-red-200 uppercase tracking-tighter">
                       <div>APPROVED</div>
                       <Stamp size={18} className="mx-auto my-0.5 text-red-400" />
-                      <div>官方核准</div>
+                      <div>{t('review.approved')}</div>
                     </div>
                   </div>
-                  <div className="text-emerald-300 text-xs font-black pt-1">③ 签发加盖帝国领事公署防伪红印章！</div>
+                  <div className="text-emerald-300 text-xs font-black pt-1">{t('review.step3')}</div>
                 </div>
               )}
             </div>
@@ -1832,7 +1849,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
             {/* 步骤进度指示器 */}
             <div className="space-y-1.5 text-left text-[11px]">
               <div className="flex items-center justify-between text-gray-400 font-bold">
-                <span>领事审查进度</span>
+                <span>{t('review.progress')}</span>
                 <span className="font-mono text-sky-400">
                   {applyingStep === 1 ? '35%' : applyingStep === 2 ? '70%' : '100%'}
                 </span>
@@ -1864,10 +1881,10 @@ export const VisaModal: React.FC<VisaModalProps> = ({
             <div className="text-center space-y-1 border-b border-amber-500/30 pb-3">
               <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/40 text-amber-300 px-3 py-1 rounded-full text-[11px] font-bold">
                 <Crown size={14} className="text-amber-400" />
-                <span>阿米诺斯帝国出入境公署 · 领事准许公证书</span>
+                <span>{t('cert.title')}</span>
               </div>
               <h2 className="text-white text-lg sm:text-xl font-black tracking-wide pt-1">
-                {awardedVisaCertificate.visa.country} 官方签证核发凭证
+                {t('cert.subtitle', { country: awardedVisaCertificate.visa.country })}
               </h2>
               <p className="text-gray-400 text-[10px] font-mono">
                 OFFICIAL CONSULAR VISA CERTIFICATE — ISSUED IN {gameYear}
@@ -1880,7 +1897,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
               <div className="absolute right-3 bottom-3 w-24 h-24 rounded-full border-4 border-red-500/80 bg-red-950/40 flex flex-col items-center justify-center text-red-400 rotate-[-15deg] shadow-lg pointer-events-none select-none backdrop-blur-xs">
                 <div className="text-[9px] font-black uppercase tracking-tighter text-red-300">CONSULATE</div>
                 <Stamp size={20} className="my-0.5 text-red-400" />
-                <div className="text-[9px] font-black text-red-200">【领事特批印】</div>
+                <div className="text-[9px] font-black text-red-200">{t('cert.stamp')}</div>
                 <div className="text-[7px] font-mono text-red-400 opacity-80">{awardedVisaCertificate.visa.countryCode}-1870</div>
               </div>
 
@@ -1898,7 +1915,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                     {awardedVisaCertificate.visa.visaCode}
                   </span>
                   <div className="text-gray-400 text-[10px] font-mono mt-0.5">
-                    类别: {awardedVisaCertificate.visa.categoryLabel}
+                    {t('cert.category', { category: awardedVisaCertificate.visa.categoryLabel })}
                   </div>
                 </div>
               </div>
@@ -1906,23 +1923,23 @@ export const VisaModal: React.FC<VisaModalProps> = ({
               {/* 凭证信息表 */}
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="bg-[#181a26] p-2 rounded-xl border border-black/50">
-                  <span className="text-gray-400 text-[10px] block font-bold">持证公民名称</span>
+                  <span className="text-gray-400 text-[10px] block font-bold">{t('cert.holder')}</span>
                   <span className="text-white font-black">{passport.holderName}</span>
                 </div>
                 <div className="bg-[#181a26] p-2 rounded-xl border border-black/50">
-                  <span className="text-gray-400 text-[10px] block font-bold">绑定帝国护照</span>
+                  <span className="text-gray-400 text-[10px] block font-bold">{t('cert.passport')}</span>
                   <span className="text-sky-300 font-mono font-bold">{passport.passportNumber}</span>
                 </div>
                 <div className="bg-[#181a26] p-2 rounded-xl border border-black/50">
-                  <span className="text-gray-400 text-[10px] block font-bold">有效期限与签发</span>
+                  <span className="text-gray-400 text-[10px] block font-bold">{t('cert.validity')}</span>
                   <span className="text-emerald-300 font-mono font-bold">
-                    {awardedVisaCertificate.issuedVisa.durationMonths} 个月 (至 {awardedVisaCertificate.issuedVisa.expireYear}.{awardedVisaCertificate.issuedVisa.expireMonth < 10 ? '0' + awardedVisaCertificate.issuedVisa.expireMonth : awardedVisaCertificate.issuedVisa.expireMonth})
+                    {t('cert.validityValue', { months: awardedVisaCertificate.visa.durationMonths, date: `${awardedVisaCertificate.issuedVisa.expireYear}.${awardedVisaCertificate.issuedVisa.expireMonth < 10 ? '0' + awardedVisaCertificate.issuedVisa.expireMonth : awardedVisaCertificate.issuedVisa.expireMonth}` })}
                   </span>
                 </div>
                 <div className="bg-[#181a26] p-2 rounded-xl border border-black/50">
-                  <span className="text-gray-400 text-[10px] block font-bold">准许入境次数</span>
+                  <span className="text-gray-400 text-[10px] block font-bold">{t('cert.entries')}</span>
                   <span className="text-amber-300 font-bold">
-                    {awardedVisaCertificate.issuedVisa.entriesRemaining} 次入境许可
+                    {t('cert.entriesValue', { count: awardedVisaCertificate.issuedVisa.entriesRemaining })}
                   </span>
                 </div>
               </div>
@@ -1931,7 +1948,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
               <div className="bg-[#181a26] p-2.5 rounded-xl border border-black/50 space-y-1">
                 <div className="text-amber-400 text-[11px] font-bold flex items-center gap-1">
                   <Sparkles size={12} />
-                  <span>享有的官方特权待遇：</span>
+                  <span>{t('cert.perks')}</span>
                 </div>
                 <div className="space-y-0.5 text-[11px] text-gray-200">
                   {awardedVisaCertificate.visa.benefits.slice(0, 3).map((b, i) => (
@@ -1950,7 +1967,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                 onClick={() => setAwardedVisaCertificate(null)}
                 className="w-full sm:flex-1 bg-[#25283a] hover:bg-[#31354d] text-gray-200 font-bold py-2.5 rounded-xl border border-black text-xs cursor-pointer active:translate-y-0.5 transition-colors shadow-[0_2px_0_#000]"
               >
-                收下证书并存入背包
+                {t('cert.collect')}
               </button>
               <button
                 onClick={() => {
@@ -1960,7 +1977,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
                 className="w-full sm:flex-1 bg-sky-500 hover:bg-sky-400 text-black font-black py-2.5 rounded-xl border-2 border-black text-xs cursor-pointer active:translate-y-0.5 transition-all shadow-[0_2px_0_#000] flex items-center justify-center gap-1.5"
               >
                 <Ship size={15} />
-                <span>前往【出境游历】启航</span>
+                <span>{t('cert.travel')}</span>
               </button>
             </div>
           </div>
@@ -1976,7 +1993,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
             </div>
 
             <div>
-              <div className="text-amber-400 font-bold text-xs">出境游历圆满归航</div>
+              <div className="text-amber-400 font-bold text-xs">{t('trip.title')}</div>
               <h2 className="text-white text-base font-black mt-0.5">{travelResultModal.destination}</h2>
             </div>
 
@@ -1993,7 +2010,7 @@ export const VisaModal: React.FC<VisaModalProps> = ({
               onClick={() => setTravelResultModal(null)}
               className="w-full bg-sky-500 hover:bg-sky-400 text-black font-black py-2.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer text-xs"
             >
-              收下战果并收录海关印章
+              {t('trip.collect')}
             </button>
           </div>
         </div>

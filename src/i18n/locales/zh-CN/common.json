@@ -1,0 +1,9 @@
+{
+  "language": "语言",
+  "listSeparator": "、",
+  "duration": {
+    "day": "{{count}} 天",
+    "hour": "{{count}} 小时",
+    "minute": "{{count}} 分"
+  }
+}

@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Yellowtail&family=Dancing+Script:wght@700&family=Pacifico&family=Caveat:wght@700&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -18,4 +17,14 @@ html, body, button, input, select, textarea {
 /* Special font rule for AmiGo Lite calligraphy header to override global default */
 .font-amigo-title {
   font-family: 'Yellowtail', 'Dancing Script', 'Pacifico', 'Caveat', cursive !important;
+}
+
+/* 系统设置「减少动画」：关掉弹窗滑入、开箱等过渡与动画（见 hooks/useSettings.ts） */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }

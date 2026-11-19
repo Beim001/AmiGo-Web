@@ -1,0 +1,18 @@
+{
+  "heirMeta": "{{relation}} · {{gender}} · {{age}} 岁",
+  "choose": "由 TA 继承",
+  "title": "传承家业",
+  "intro": "{{name}} 已辞世，享年 {{age}} 岁。请选择由谁继续书写家族的故事。",
+  "rules": "继承人将接手全部现金、存款、贷款、房产与股票，并获得一半声望。未满 18 岁的继承人，一半现金与存款由监护人代管，成年后返还。",
+  "keepRecords": "把 {{name}} 的人生大事写入族谱（共 {{count}} 条），在「家族大事记」中永久保留",
+  "children": "子嗣",
+  "descendants": "孙辈及后代（可跳过子辈直接继承）",
+  "siblings": "兄弟姐妹",
+  "noHeirs": "没有在世的子嗣或年满 {{age}} 岁的兄弟姐妹，只能重开人生。",
+  "restart": "重开人生（重新出生登记）",
+  "later": "稍后再决定",
+  "confirmRestart": "确定重开人生吗？当前所有进度与资产都会清空。",
+  "confirmHeir": "确定由 {{relation}} {{name}} 继承家业吗？",
+  "cancel": "再想想",
+  "confirm": "确定"
+}

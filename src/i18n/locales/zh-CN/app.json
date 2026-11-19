@@ -1,0 +1,52 @@
+{
+  "defaultPlayerName": "AmiGo·玩家",
+  "resetPlayerName": "阿米诺斯市民",
+  "connecting": "正在连接 AmiGO 账号服务...",
+  "toast": {
+    "deceasedCannotAdvance": "💀 角色已故，无法继续推进时间。可在「推演」或个人中心「重置人生」",
+    "seasonEnded": "📜 {{year}} 年，{{event}}。本赛季推演到此为止，下一赛季开放后继续。",
+    "seasonEndedDefault": "本赛季结束",
+    "died": "💀 {{date}}：{{name}} 因健康耗尽离世，享年 {{age}} 岁",
+    "crisisTag": "⚠️ 时局剧变",
+    "crisis": "$t(app:toast.crisisTag)：{{title}}！贷款利率上浮 {{rate}}｜{{notes}}",
+    "newMonth": "🗓️ 已步入 {{date}}｜{{notes}}",
+    "birthRegistered": "🎉 出生登记成功！{{name}}，出生在{{classLabel}}之家（{{surname}}家族），性别：{{gender}}，初始年龄：8岁",
+    "lifeReset": "✨ 人生已重置！角色与所有状态已恢复初始状态",
+    "inPrison": "⛓️ 正在狱中服刑，出狱后才能处理",
+    "achievement": "🏆 成就达成：{{title}} —— {{desc}}",
+    "immunity": "🛡️ 痊愈后获得了{{disease}}抗体",
+    "logoutSyncFailed": "⚠️ 无法同步存档到云端，请检查网络后再退出"
+  },
+  "jailed": "⛓️ 因{{crime}}入狱 {{months}} 个月",
+  "donate": {
+    "notRegistered": "请先完成出生登记",
+    "noMoney": "现金不足（需 {{amount}} {{symbol}}）",
+    "thanks": "感谢你的善举！声望 +{{gain}}",
+    "capped": "已捐款（本月因慈善获得的声望已达上限）"
+  },
+  "familyLabel": "{{surname}}家 · {{classLabel}}",
+  "originLabel": "{{classLabel}} · {{surname}}家族",
+  "notRegistered": "尚未出生登记",
+  "noAntibodies": "暂无",
+  "auction": {
+    "alreadyAdmitted": "你已经可以入场了",
+    "ticketNoMoney": "现金不足，门票需要 {{price}} {{symbol}}",
+    "ticketBought": "🎟️ 已购买门票（-{{price}} {{symbol}}），欢迎入场",
+    "lotMissing": "拍品不存在",
+    "lotFallbackName": "拍品",
+    "passed": "你放弃了「{{name}}」",
+    "bidRequired": "请输入出价",
+    "bidNoMoney": "现金不足（需要 {{want}} {{symbol}}，现金 {{coins}} {{symbol}}）",
+    "bidInvalid": "出价无效",
+    "outbid": "其他竞买人跟价到 {{price}} {{symbol}}，要继续加价吗？",
+    "wonBuyout": "🎉 一口价以 {{paid}} {{symbol}} 拍得「{{name}}」",
+    "wonHammer": "🎉 落槌！以 {{paid}} {{symbol}} 拍得「{{name}}」"
+  },
+  "cloudConflict": {
+    "title": "☁️ 发现两份不同的存档",
+    "desc": "这台设备上的进度与云端存档不一致（可能在其他设备上玩过）。请选择要保留哪一份，另一份将被覆盖。",
+    "remoteSavedAt": "云端存档保存于 {{time}}",
+    "useCloud": "使用云端存档",
+    "useLocal": "使用本机存档"
+  }
+}

@@ -1,0 +1,151 @@
+{
+  "toast": {
+    "notRegistered": "请先前往出生登记处申领帝国公民身份",
+    "passportNoMoney": "现金不足！办理帝国出入境护照需 {{fee}} {{symbol}} 工本费",
+    "passportIssued": "阿米诺斯帝国出入境护照签发成功！已加盖皇家出入境公署防伪钢印",
+    "needPassport": "无法申办！请先在【护照证件】页面申领帝国公民护照",
+    "alreadyHeld": "您已持有【{{country}}】有效签证（剩余 {{entries}} 次入境），无需重复申请",
+    "visaNoMoney": "资金不足！申办该签证共需 {{total}} {{symbol}}（工本规费 {{cost}} {{symbol}} + 领事加急 {{expedite}} {{symbol}}）",
+    "assetsShort": "验资未通过！该签证要求个人资产达到 {{amount}} {{symbol}}",
+    "approved": "【{{country}} · {{type}}】审核通过！已获得官方领事签证准许公证书",
+    "invalid": "该签证已失效或入境次数已耗尽，请重新申办",
+    "travelNoMoney": "差旅费不足！出境登船需支付 {{fee}} {{symbol}} 跨洋远洋客轮头等舱票"
+  },
+  "title": "签证申办",
+  "tabs": {
+    "hall": "申办大厅",
+    "travel": "出境游历",
+    "passport": "护照证件",
+    "customs": "戳印海关",
+    "myVisas": "已持签证 ({{count}})"
+  },
+  "noPassport": {
+    "title": "您尚未申领帝国出入境护照",
+    "desc": "申办各国签证及登船出境通关前，需先在护照署登记并申领有效护照本。",
+    "go": "前往申领"
+  },
+  "search": "搜索国家名称、三字代码 (GBR/USA/PRU) 或签证关键字...",
+  "noMatch": "未找到符合搜索条件的国家或签证",
+  "clearSearch": "清空搜索框",
+  "granted": "已获签证",
+  "visaCount": "{{count}} 款签证",
+  "consulate": "{{country}} 领事馆与签证处",
+  "consulateCount": "共 {{count}} 款可申办官方签证方案",
+  "backToCountries": "返回国家列表",
+  "categories": {
+    "all": "全部类型",
+    "business": "商贸考察",
+    "tourism": "文旅漫游",
+    "study": "学术深造",
+    "investment": "黄金投资",
+    "work": "重工派遣"
+  },
+  "sorts": {
+    "default": "默认推荐排序",
+    "cost_asc": "规费从低到高",
+    "cost_desc": "规费从高到低",
+    "duration": "有效期从长到短"
+  },
+  "listView": "列表视图",
+  "gridView": "卡片视图",
+  "noVisaInType": "该类型下暂无对应签证",
+  "showAllTypes": "查看全部类型",
+  "heldBadge": "已获批持有",
+  "listMeta": "有效 {{months}}月 · 需验资 {{amount}} {{symbol}}",
+  "detailButton": "详情",
+  "held": "已持有",
+  "apply": "申办",
+  "heldValid": "已持有效",
+  "validity": "有效期 {{months}} 个月",
+  "requirements": "申请门槛与条件：",
+  "perks": "签证权益与特权：",
+  "heldValidVisa": "已持有效签证",
+  "applyNow": "立即申办",
+  "mine": {
+    "title": "名下有效出入境签证批文",
+    "count": "有效签证: {{count}} 本",
+    "empty": "暂无任何签发的有效签证",
+    "emptyDesc": "前往【申办大厅】搜索与提交各国签证申请，获批后即可登船开启出境游历与商贸考察。",
+    "go": "前往选办签证 →",
+    "valid": "有效签注中",
+    "expired": "已失效",
+    "entriesLabel": "剩余入境: ",
+    "entries": "{{count}} 次",
+    "period": "签发: {{from}} 至 {{to}}",
+    "travel": "前往登船出境"
+  },
+  "travel": {
+    "title": "帝国远洋客轮港口口岸 (Departures)",
+    "ticket": "客舱票: 400 {{symbol}} / 次",
+    "noticeTitle": "远洋跨国航行须知",
+    "notice": "持有任一国家有效签证即可搭乘远洋客轮出境。出境可斩获海外外贸大单、学术见识增长、收集异国海关戳印并全面恢复体魄健康。",
+    "ports": "可通关目的地港口列表：",
+    "empty": "暂无有效签证可供登船",
+    "emptyDesc": "您名下暂无有效签注。请前往【申办大厅】申领目的地签证。",
+    "go": "前往办理签证 →",
+    "entries": "{{type}} · 剩余 {{count}} 次出境",
+    "board": "即刻登船 (400 {{symbol}})"
+  },
+  "passport": {
+    "authority": "阿米诺斯帝国出入境管理局",
+    "valid": "有效证件 (Valid)",
+    "unissued": "未申领 (Unissued)",
+    "number": "护照号码 / Passport No.",
+    "name": "持照人姓名 / Full Name",
+    "defaultName": "帝国公民",
+    "nationality": "国籍 / Nationality",
+    "nationalityValue": "阿米诺斯帝国 (Aminoac)",
+    "rating": "出入境信用评级 / Rating",
+    "ratingValue": "{{score}} (AAA 卓越)",
+    "issuedAt": "签发日期: {{date}} · 防伪钢印已激活",
+    "fee": "申领需缴纳工本费 300 {{symbol}}",
+    "apply": "即刻申领护照 (300 {{symbol}})",
+    "carried": "已随身携带护照本"
+  },
+  "customs": {
+    "title": "出入境海关戳印收集册 (Customs Record)",
+    "count": "累计章戳: {{count}} 枚",
+    "empty": "暂无海关通关戳印记录",
+    "emptyDesc": "使用签证完成出境游历或商务考察后，海关边检公署将在此加盖通关印章。"
+  },
+  "detail": {
+    "fee": "官方规费：",
+    "validity": "有效期限：",
+    "minAssets": "验资门槛：",
+    "expediteFee": "领事特急费：",
+    "months": "{{months}} 个月",
+    "perks": "签证核心权益与待遇：",
+    "held": "名下已持有此签证",
+    "applyNormal": "常规申办 ({{cost}} {{symbol}})",
+    "expedite": "加急 (+{{fee}} {{symbol}})"
+  },
+  "expedited": "加急",
+  "review": {
+    "office": "{{country}} 驻帝国总领事馆 · 签证审查处",
+    "checking": "正在核验 {{type}}",
+    "step1": "① 递交出入境申请履历与资产证明...",
+    "step2": "② 领事官审核资信额度 (≥ {{amount}} {{symbol}})...",
+    "approved": "官方核准",
+    "step3": "③ 签发加盖帝国领事公署防伪红印章！",
+    "progress": "领事审查进度"
+  },
+  "cert": {
+    "title": "阿米诺斯帝国出入境公署 · 领事准许公证书",
+    "subtitle": "{{country}} 官方签证核发凭证",
+    "stamp": "【领事特批印】",
+    "category": "类别: {{category}}",
+    "holder": "持证公民名称",
+    "passport": "绑定帝国护照",
+    "validity": "有效期限与签发",
+    "entries": "准许入境次数",
+    "validityValue": "{{months}} 个月 (至 {{date}})",
+    "entriesValue": "{{count}} 次入境许可",
+    "perks": "享有的官方特权待遇：",
+    "collect": "收下证书并存入背包",
+    "travel": "前往【出境游历】启航"
+  },
+  "trip": {
+    "title": "出境游历圆满归航",
+    "collect": "收下战果并收录海关印章"
+  }
+}

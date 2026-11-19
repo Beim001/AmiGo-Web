@@ -2,7 +2,15 @@ node_modules/
 build/
 dist/
 coverage/
+idea/
 .DS_Store
 *.log
 .env*
 !.env.example
+docs/
+CLAUDE.md
+
+# Cloudflare Workers 本地文件
+.dev.vars
+.wrangler/
+

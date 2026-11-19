@@ -1,0 +1,52 @@
+{
+  "toast": {
+    "copied": "已复制公民身份编号",
+    "stamped": "已加盖出生登记公章",
+    "royalSurname": "你出生在皇族纳海王朝，家族姓只能是「{{surname}}」",
+    "registered": "已完成出生登记：{{name}}，{{classLabel}}之家 · {{surname}}家族，性别【{{gender}}】",
+    "renamed": "已更新公民姓名【{{name}}】"
+  },
+  "error": {
+    "nameRequired": "请输入名字",
+    "nameInvalid": "姓名不合规，请修改后重试"
+  },
+  "title": "出生登记",
+  "citizen": "合法公民身份",
+  "age": "({{age}} 岁)",
+  "legalFemale": "法定性别：女",
+  "legalMale": "法定性别：男",
+  "idNumber": "公民身份编号",
+  "copyHint": "点击复制",
+  "status": "公民状态",
+  "effective": "正式生效",
+  "initialAge": "初始年龄",
+  "initialAgeValue": "8 岁",
+  "issuer": "签发机构：阿米诺斯民政公署",
+  "era": "登记纪元：公历 {{year}} 年",
+  "stampHint": "点击加盖公章",
+  "stampOffice": "阿米诺斯民政署",
+  "stampName": "【出生登记章】",
+  "editName": "修改姓名",
+  "genderRights": "性别权利",
+  "nameLabel": "公民姓名（名 · 姓，合计 2–10 字）",
+  "randomName": "随机姓名",
+  "givenName": "名",
+  "givenNamePlaceholder": "例如 阿德弟吉",
+  "surname": "姓（家族姓）",
+  "surnamePlaceholder": "留空则随机",
+  "surnameLocked": "家族姓在出生登记时确定，不能修改",
+  "surnameHint": "家族会沿用这个姓；留空则随机",
+  "preview": "{{length}}/10 · 预览：{{name}}",
+  "face": "捏脸",
+  "random": "随机",
+  "faceHint": "预览为成年后的样子。五官与肤色出生后不能再改，发型、发色、胡子可以在商城的理发店修改。胡子只有男性显示；少数人天生「倾国倾城」，会使用特殊外貌。",
+  "notes": {
+    "title": "登记说明",
+    "n1": "• 生理性别将在登记时由系统完全随机确定（登记完成后可在「性别权利」中更正）。",
+    "n2": "• 登记成功后将确立合法公民身份，生成公民身份编号并加盖登记公章，初始年龄确立为 8 岁。",
+    "n3": "• 家族会沿用你填写的姓；留空则按出身随机。家族阶层仍随机决定，若出生在皇族，家族姓固定为纳海。"
+  },
+  "cancel": "取消",
+  "save": "保存修改",
+  "submit": "完成出生登记"
+}

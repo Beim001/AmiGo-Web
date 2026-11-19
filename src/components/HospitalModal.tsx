@@ -1,4 +1,13 @@
-import React, { useState } from 'react';
+import {
+  addLifeLog } from '../lib/lifeLog';
+import React,
+  { useState } from 'react';
+import type { DiseaseInfo } from '../lib/disease';
+import { MAINTENANCE_COST,
+  MAINTENANCE_CHANCE } from '../lib/traits';
+import { VACCINE_SUCCESS,
+  RECOVERY_IMMUNITY,
+  ANTIBODY_INHERIT } from '../lib/disease';
 import {
   ChevronLeft,
   Hospital,
@@ -7,12 +16,14 @@ import {
   Stethoscope,
   Zap,
   CheckCircle2,
-  CircleDollarSign,
   History,
   Building2,
   RefreshCw,
   ChevronRight,
 } from 'lucide-react';
+import { CurrencyIcon } from './CurrencyIcon';
+import { CURRENCY } from '../data/seasons';
+import { useTranslation } from 'react-i18next';
 
 export interface HospitalModalProps {
   onClose: () => void;
@@ -20,6 +31,20 @@ export interface HospitalModalProps {
   setCoins: React.Dispatch<React.SetStateAction<number>>;
   health: number;
   setHealth: React.Dispatch<React.SetStateAction<number>>;
+  /** 未满 18 岁：医疗费用由父母承担（免费） */
+  parentsPay?: boolean;
+  /** 当前所患疾病 */
+  disease?: DiseaseInfo | null;
+  onCureDisease?: () => void;
+  /** 保养（第 50 题）：返回提示文字 */
+  onMaintenance?: (target: 'self' | 'spouse') => string;
+  hasSpouse?: boolean;
+  /** 生育年龄说明 */
+  fertilityText?: string;
+  /** 已问世的疫苗（第 53 题） */
+  vaccines?: Array<{ id: string; name: string; cost: number; owned: boolean }>;
+  antibodyText?: string;
+  onVaccinate?: (diseaseId: string, target: 'self' | 'children') => string;
 }
 
 export interface HospitalInfo {
@@ -184,7 +209,17 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
   setCoins,
   health,
   setHealth,
+  parentsPay = false,
+  disease = null,
+  onCureDisease,
+  onMaintenance,
+  hasSpouse = false,
+  fertilityText = '',
+  vaccines = [],
+  antibodyText,
+  onVaccinate,
 }) => {
+  const { t } = useTranslation('hospital');
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>('h1');
   const [isSelectingHospital, setIsSelectingHospital] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'treatments' | 'pharmacy' | 'history'>('treatments');
@@ -202,6 +237,8 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
   });
 
   const currentHospital = HOSPITALS.find((h) => h.id === selectedHospitalId) || HOSPITALS[0];
+  // 未满 18 岁由父母承担医疗费
+  const costOf = (baseCost: number) => (parentsPay ? 0 : Math.round(baseCost * currentHospital.discount));
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -209,15 +246,15 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
   };
 
   const handleTreatment = (title: string, baseCost: number, baseRecover: number) => {
-    const finalCost = Math.round(baseCost * currentHospital.discount);
+    const finalCost = costOf(baseCost);
     const finalRecover = Math.min(100, baseRecover + currentHospital.bonusRecover);
 
     if (coins < finalCost) {
-      showToast(`❌ 金钱不足！需要 ${finalCost.toLocaleString()} ₽，拥有 ${coins.toLocaleString()} ₽`);
+      showToast(t('toast.noMoney', { cost: finalCost.toLocaleString(), coins: coins.toLocaleString(), symbol: CURRENCY.symbol }));
       return;
     }
     if (health >= 100 && finalRecover > 0) {
-      showToast('💖 你的健康度已达 100% 满值，无需额外治疗！');
+      showToast(t('toast.full'));
       return;
     }
 
@@ -238,14 +275,16 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
       localStorage.setItem('amigo_hospital_logs', JSON.stringify(updatedLogs));
     } catch (e) {}
 
-    showToast(`🩺 在【${currentHospital.name}】成功进行【${title}】！健康度 +${finalRecover}%，花费 ${finalCost.toLocaleString()} ₽`);
+    // 只记录从危急状态（健康 < 30）恢复的就诊
+    if (health < 30) addLifeLog('健康', '转危为安', `在${currentHospital.name}接受「${title}」，健康 ${health} → ${Math.min(100, health + finalRecover)}。`);
+    showToast(t('toast.treated', { hospital: currentHospital.name, title, recover: finalRecover, payment: parentsPay ? t('parentsPay') : t('spent', { cost: finalCost.toLocaleString(), symbol: CURRENCY.symbol }) }));
   };
 
   const getHealthStatus = (h: number) => {
-    if (h >= 90) return { text: '体魄强健 · 状态极佳', color: 'text-emerald-400' };
-    if (h >= 70) return { text: '精力充沛 · 稍需养护', color: 'text-sky-400' };
-    if (h >= 40) return { text: '身体抱恙 · 亚健康', color: 'text-amber-400' };
-    return { text: '重度疲劳 · 紧急治疗', color: 'text-rose-400' };
+    if (h >= 90) return { text: t('status.excellent'), color: 'text-emerald-400' };
+    if (h >= 70) return { text: t('status.good'), color: 'text-sky-400' };
+    if (h >= 40) return { text: t('status.fair'), color: 'text-amber-400' };
+    return { text: t('status.poor'), color: 'text-rose-400' };
   };
 
   const status = getHealthStatus(health);
@@ -279,19 +318,109 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
           <div className="bg-[#2a2d3e] border-2 border-rose-500/80 px-5 py-1.5 rounded-xl shadow-[0_3px_0_#000] flex items-center gap-2">
             <Heart size={18} className="text-rose-400 fill-rose-500/30 flex-shrink-0" />
             <span className="text-rose-300 text-sm font-black tracking-widest">
-              {isSelectingHospital ? '选择诊治医院' : '健康'}
+              {isSelectingHospital ? t('chooseHospital') : t('title')}
             </span>
           </div>
         </div>
 
         <div className="flex items-center bg-[#151722] rounded-full px-2.5 py-1 border border-black text-xs font-mono font-black z-10">
-          <CircleDollarSign size={14} className="text-yellow-400 mr-1" />
-          <span>{coins.toLocaleString()} ₽</span>
+          <CurrencyIcon size={14} className="text-yellow-400 mr-1" />
+          <span>{coins.toLocaleString()} {CURRENCY.symbol}</span>
         </div>
       </div>
 
       {/* Main Container */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+        {parentsPay && (
+          <div className="bg-emerald-950/80 border-2 border-emerald-500/60 text-emerald-200 text-xs font-black px-3 py-2 rounded-xl shadow-[0_2px_0_#000]">
+            {t('minorNotice')}
+          </div>
+        )}
+        {disease && (
+          <div className="bg-red-950/80 border-2 border-red-500/70 rounded-2xl p-3 shadow-[0_3px_0_#000] space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-red-200 font-black text-sm">{t('disease.current', { name: disease.name })}</div>
+                <div className="text-red-300/80 text-[11px] font-bold">
+                  {t('disease.damage', { damage: disease.monthlyDamage })}{disease.selfHealMonths === null ? t('disease.noSelfHeal') : t('disease.selfHeal', { months: disease.selfHealMonths })}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  const cost = costOf(disease.cost);
+                  if (coins < cost) {
+                    showToast(t('toast.cureNoMoney', { disease: disease.name, cost: cost.toLocaleString(), symbol: CURRENCY.symbol }));
+                    return;
+                  }
+                  setCoins((prev) => prev - cost);
+                  onCureDisease?.();
+                  addLifeLog('健康', `治愈${disease.name}`, `在${currentHospital.name}就医痊愈。`);
+                  showToast(t('toast.cured', { hospital: currentHospital.name, disease: disease.name, payment: parentsPay ? t('parentsPay') : t('spent', { cost: cost.toLocaleString(), symbol: CURRENCY.symbol }) }));
+                }}
+                className="bg-red-400 hover:bg-red-300 text-black text-xs font-black px-3 py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer shrink-0"
+              >
+                {t('disease.cure', { cost: costOf(disease.cost).toLocaleString(), symbol: CURRENCY.symbol })}
+              </button>
+            </div>
+          </div>
+        )}
+        {onVaccinate && (
+          <div className="bg-sky-950/70 border-2 border-sky-500/60 rounded-2xl p-3 shadow-[0_3px_0_#000] space-y-2">
+            <div className="text-sky-200 font-black text-sm">{t('vaccine.title')}</div>
+            <p className="text-sky-200/80 text-[11px] font-bold leading-relaxed">
+              {t('vaccine.rules', { success: Math.round(VACCINE_SUCCESS * 100), recovery: Math.round(RECOVERY_IMMUNITY * 100), inherit: Math.round(ANTIBODY_INHERIT * 100), antibodies: antibodyText ?? t('vaccine.none') })}
+            </p>
+            {vaccines.length === 0 ? (
+              <p className="text-sky-200/70 text-[11px] font-bold">{t('vaccine.notYet')}</p>
+            ) : (
+              <div className="space-y-1.5">
+                {vaccines.map((v) => (
+                  <div key={v.id} className="flex items-center gap-2 bg-black/20 rounded-xl px-2 py-1.5">
+                    <span className="text-white text-xs font-black flex-1">
+                      {t('vaccine.name', { name: v.name })} <span className="text-sky-300/80 font-bold">{t('vaccine.price', { cost: v.cost.toLocaleString(), symbol: CURRENCY.symbol })}</span>
+                    </span>
+                    <button
+                      onClick={() => showToast(onVaccinate(v.id, 'self'))}
+                      disabled={v.owned}
+                      className="bg-sky-400 hover:bg-sky-300 text-black text-[10px] font-black px-2 py-1 rounded-lg border-2 border-black cursor-pointer disabled:opacity-40"
+                    >
+                      {v.owned ? t('vaccine.owned') : t('vaccine.self')}
+                    </button>
+                    <button
+                      onClick={() => showToast(onVaccinate(v.id, 'children'))}
+                      className="bg-sky-400 hover:bg-sky-300 text-black text-[10px] font-black px-2 py-1 rounded-lg border-2 border-black cursor-pointer"
+                    >
+                      {t('vaccine.children')}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {onMaintenance && (
+          <div className="bg-violet-950/70 border-2 border-violet-500/60 rounded-2xl p-3 shadow-[0_3px_0_#000] space-y-2">
+            <div className="text-violet-200 font-black text-sm">{t('maintenance.title', { cost: MAINTENANCE_COST.toLocaleString(), symbol: CURRENCY.symbol })}</div>
+            <p className="text-violet-200/80 text-[11px] font-bold leading-relaxed">
+              {t('maintenance.rules', { pct: Math.round(MAINTENANCE_CHANCE * 100) })}{fertilityText}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => showToast(onMaintenance('self'))}
+                className="bg-violet-400 hover:bg-violet-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer"
+              >
+                {t('maintenance.self')}
+              </button>
+              <button
+                onClick={() => showToast(onMaintenance('spouse'))}
+                disabled={!hasSpouse}
+                className="bg-violet-400 hover:bg-violet-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer disabled:opacity-40"
+              >
+                {t('maintenance.spouse')}
+              </button>
+            </div>
+          </div>
+        )}
         {/* Health Dashboard Card */}
         <div className="bg-[#232635] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] space-y-3 relative overflow-hidden">
           <div className="flex justify-between items-center">
@@ -300,7 +429,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                 <Heart size={22} className="text-rose-400 fill-rose-500/40" />
               </div>
               <div>
-                <h3 className="text-white font-black text-sm">当前健康指数</h3>
+                <h3 className="text-white font-black text-sm">{t('healthIndex')}</h3>
                 <span className={`text-[10px] font-bold ${status.color}`}>{status.text}</span>
               </div>
             </div>
@@ -325,7 +454,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
             <div className="flex items-center justify-between px-1">
               <div className="text-xs font-black text-gray-300 flex items-center gap-1.5">
                 <Building2 size={15} className="text-rose-400" />
-                <span>各大诊治医院与专科机构 (共 {HOSPITALS.length} 所)</span>
+                <span>{t('hospitalList', { count: HOSPITALS.length })}</span>
               </div>
             </div>
 
@@ -339,7 +468,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                     onClick={() => {
                       setSelectedHospitalId(hosp.id);
                       setIsSelectingHospital(false);
-                      showToast(`🏥 已切换就诊医院至【${hosp.name}】`);
+                      showToast(t('toast.switched', { name: hosp.name }));
                     }}
                     className={`bg-[#232635] border-2 rounded-2xl p-3.5 shadow-[0_4px_0_#000] cursor-pointer transition-all hover:bg-[#2a2d3e] active:translate-y-0.5 relative overflow-hidden ${
                       isSelected
@@ -380,11 +509,11 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                         {isSelected ? (
                           <span className="bg-emerald-500 text-black font-black text-[10px] px-2.5 py-1 rounded-xl border-2 border-black shadow-[0_2px_0_#000] flex items-center gap-1">
                             <CheckCircle2 size={12} />
-                            就诊中
+                            {t('visiting')}
                           </span>
                         ) : (
                           <button className="bg-rose-500 hover:bg-rose-400 text-white font-black text-xs px-3 py-1.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] active:translate-y-0.5 flex items-center gap-1 transition-all">
-                            <span>前往</span>
+                            <span>{t('go')}</span>
                             <ChevronRight size={13} />
                           </button>
                         )}
@@ -392,11 +521,11 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                     </div>
 
                     <div className="mt-2.5 pt-2 border-t border-gray-700/60 flex items-center justify-between text-[10px] font-mono font-bold text-gray-400">
-                      <span>诊费折扣: {(hosp.discount * 100).toFixed(0)}%</span>
+                      <span>{t('discount', { pct: (hosp.discount * 100).toFixed(0) })}</span>
                       {hosp.bonusRecover > 0 ? (
-                        <span className="text-emerald-400">疗效加成: +{hosp.bonusRecover}% 健康</span>
+                        <span className="text-emerald-400">{t('bonus', { pct: hosp.bonusRecover })}</span>
                       ) : (
-                        <span>常规诊疗</span>
+                        <span>{t('regular')}</span>
                       )}
                     </div>
                   </div>
@@ -415,7 +544,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                 </div>
                 <div className="overflow-hidden">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-rose-300 font-bold block">当前就诊医院</span>
+                    <span className="text-xs text-rose-300 font-bold block">{t('currentHospital')}</span>
                     <span className="bg-rose-500/30 text-rose-200 border border-rose-400/40 text-[9px] font-black px-1.5 rounded">
                       {currentHospital.badge}
                     </span>
@@ -434,7 +563,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                 className="bg-rose-500 hover:bg-rose-400 text-white text-xs font-black px-3 py-2 rounded-xl border-2 border-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer flex-shrink-0 flex items-center gap-1 transition-all"
               >
                 <RefreshCw size={12} />
-                <span>更换医院</span>
+                <span>{t('switchHospital')}</span>
               </button>
             </div>
 
@@ -449,7 +578,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                 }`}
               >
                 <Stethoscope size={14} />
-                <span>诊疗项目</span>
+                <span>{t('tabs.treatments')}</span>
               </button>
               <button
                 onClick={() => setActiveTab('pharmacy')}
@@ -460,7 +589,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                 }`}
               >
                 <Pill size={14} />
-                <span>处方药房</span>
+                <span>{t('tabs.pharmacy')}</span>
               </button>
               <button
                 onClick={() => setActiveTab('history')}
@@ -471,7 +600,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                 }`}
               >
                 <History size={14} />
-                <span>就诊记录</span>
+                <span>{t('tabs.logs')}</span>
               </button>
             </div>
 
@@ -479,7 +608,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
             {activeTab === 'treatments' && (
               <div className="space-y-3">
                 {currentHospital.treatments.map((item) => {
-                  const finalCost = Math.round(item.baseCost * currentHospital.discount);
+                  const finalCost = costOf(item.baseCost);
                   const finalRecover = Math.min(100, item.baseRecover + currentHospital.bonusRecover);
 
                   return (
@@ -507,11 +636,11 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                       <div className="flex justify-between items-center pt-2 border-t border-gray-700/80">
                         <div className="flex items-center gap-2">
                           <span className="text-emerald-400 text-xs font-black font-mono">
-                            健康度 +{finalRecover}%
+                            {t('recover', { pct: finalRecover })}
                           </span>
                           <span className="text-gray-500 text-[10px]">|</span>
                           <span className="text-yellow-400 font-mono font-black text-xs">
-                            {finalCost.toLocaleString()} ₽
+                            {finalCost.toLocaleString()} {CURRENCY.symbol}
                           </span>
                         </div>
 
@@ -519,7 +648,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                           onClick={() => handleTreatment(item.title, item.baseCost, item.baseRecover)}
                           className="bg-rose-500 hover:bg-rose-400 active:translate-y-0.5 text-white text-xs font-black px-3.5 py-1.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] cursor-pointer transition-all"
                         >
-                          接受诊疗
+                          {t('treat')}
                         </button>
                       </div>
                     </div>
@@ -532,7 +661,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
             {activeTab === 'pharmacy' && (
               <div className="space-y-3">
                 {PHARMACY.map((item) => {
-                  const finalCost = Math.round(item.baseCost * currentHospital.discount);
+                  const finalCost = costOf(item.baseCost);
                   const finalRecover = Math.min(100, item.baseRecover + currentHospital.bonusRecover);
 
                   return (
@@ -548,7 +677,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                           <h4 className="text-white font-black text-xs sm:text-sm">{item.title}</h4>
                           <p className="text-gray-400 text-[10px] font-bold mt-0.5">{item.desc}</p>
                           <div className="text-emerald-400 font-mono font-black text-[11px] mt-1">
-                            效果：健康度 +{finalRecover}%
+                            {t('effect', { pct: finalRecover })}
                           </div>
                         </div>
                       </div>
@@ -559,7 +688,7 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                         }
                         className="bg-amber-400 hover:bg-amber-300 text-black text-xs font-black px-3 py-1.5 rounded-xl border-2 border-black shadow-[0_2px_0_#000] active:translate-y-0.5 cursor-pointer flex-shrink-0 whitespace-nowrap"
                       >
-                        {finalCost.toLocaleString()} ₽
+                        {finalCost.toLocaleString()} {CURRENCY.symbol}
                       </button>
                     </div>
                   );
@@ -571,12 +700,12 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
             {activeTab === 'history' && (
               <div className="bg-[#232635] border-2 border-black rounded-2xl p-3.5 shadow-[0_4px_0_#000] space-y-3">
                 <div className="flex justify-between items-center border-b border-gray-700 pb-2">
-                  <span className="text-white font-black text-xs">医院门诊与处方记录</span>
-                  <span className="text-gray-400 text-[10px]">共 {logs.length} 条</span>
+                  <span className="text-white font-black text-xs">{t('logsTitle')}</span>
+                  <span className="text-gray-400 text-[10px]">{t('logsCount', { count: logs.length })}</span>
                 </div>
 
                 {logs.length === 0 ? (
-                  <div className="py-8 text-center text-gray-500 text-xs font-bold">暂无诊疗记录</div>
+                  <div className="py-8 text-center text-gray-500 text-xs font-bold">{t('noLogs')}</div>
                 ) : (
                   <div className="space-y-2 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
                     {logs.map((log) => (
@@ -597,11 +726,11 @@ export const HospitalModal: React.FC<HospitalModalProps> = ({
                         <div className="text-right flex-shrink-0">
                           {log.healthAdded > 0 && (
                             <div className="text-emerald-400 text-xs font-mono font-black">
-                              +{log.healthAdded}% 健康
+                              {t('logHealth', { pct: log.healthAdded })}
                             </div>
                           )}
                           <div className="text-gray-400 text-[10px] font-mono">
-                            -{log.cost.toLocaleString()} ₽
+                            -{log.cost.toLocaleString()} {CURRENCY.symbol}
                           </div>
                         </div>
                       </div>

@@ -1,171 +1,343 @@
 import React, { useState } from 'react';
-import { ShieldCheck, GitFork, Crown, Building2, Shield, Sparkles } from 'lucide-react';
+import { traitNames, affinityBonus, traitById } from '../lib/traits';
+import { antibodyNames } from '../lib/disease';
+import { CharacterAvatar } from './CharacterAvatar';
+import { outfitFor } from '../data/clothing';
+import type { Appearance } from '../lib/appearance';
+import type { RankedFamily } from '../lib/familyRank';
+import { wealthScore } from '../lib/familyRank';
+import type { Guardianship } from '../lib/guardianship';
+import { reputationLevel } from '../lib/reputation';
+import { OwnedHeirloom, heirloomById, QUALITY_STYLE, HeirloomDef } from '../lib/heirlooms';
+import { Medal, Watch, Gem, BookOpen, Swords, ScrollText, Amphora, Map as MapIcon2, Gavel } from 'lucide-react';
+import { nextPromotion, classById } from '../lib/lineage';
+import { applySurname } from '../lib/names';
+import { recordGiftsGiven } from '../lib/achievements';
+import { GiftInventory, giftById, giftAffinityGain, removeGift, tasteOf, GIFT_QUALITY_STYLE, GIFT_TASTE_LABEL } from '../lib/gifts';
+import { validatePlayerName } from '../utils/sensitiveWords';
+import { addLifeLog } from '../lib/lifeLog';
+import { ShieldCheck, GitFork, Crown, Building2, Shield, Sparkles, Heart, Baby } from 'lucide-react';
+import {
+  FamilyState,
+  FamilyMemberView,
+  InteractionKind,
+  GIFT_COST,
+  CONSULT_REWARD_MIN,
+  CONSULT_REWARD_MAX,
+  SPAR_HEALTH_GAIN,
+  AFFINITY_GAIN,
+  buildFamilyMembers,
+  getOrigin,
+  arrangeMarriage,
+  canArrangeMarriage,
+  MATCHMAKING_FEE,
+  MATCHMAKING_AFFINITY_PENALTY,
+  HEIR_MAX_DEPTH,
+  renameChild,
+  DISCONTENT_THRESHOLD,
+  SPLIT_AFTER_MONTHS,
+  buildChronicles,
+  canInteract,
+  canDoInteraction,
+  applyInteraction,
+} from '../lib/family';
+import { CURRENCY } from '../data/seasons';
+import { useTranslation } from 'react-i18next';
 
-export interface FamilyMember {
-  id: string;
-  name: string;
-  relation: string;
-  generation: string;
+
+export interface FamilyTabProps {
+  isRegistered: boolean;
+  playerName: string;
+  gender: string | null;
   age: number;
-  status: '在世' | '已故' | '远游';
-  occupation: string;
-  affinity: number;
-  avatarBg: string;
-  desc: string;
-  traits: string[];
+  playerOccupation: string;
+  gameYear: number;
+  gameMonth: number;
+  coins: number;
+  setCoins: React.Dispatch<React.SetStateAction<number>>;
+  setHealth: React.Dispatch<React.SetStateAction<number>>;
+  family: FamilyState;
+  setFamily: React.Dispatch<React.SetStateAction<FamilyState>>;
+  onOpenMarriage: () => void;
+  onGoToBirthRegistration: () => void;
+  /** 当家人（玩家）的特质：「亲和」互动好感额外 +1 */
+  playerTraits?: string[];
+  reputation?: number;
+  ranking?: RankedFamily[];
+  cohesion?: number;
+  wealth?: number;
+  guardianship?: Guardianship | null;
+  heirlooms?: OwnedHeirloom[];
+  /** 本月有拍卖会 */
+  auctionOpen?: boolean;
+  /** 这一世用过简洁模式：排行榜上标「偷懒」 */
+  lazy?: boolean;
+  /** 主角的抗体（第 53 题） */
+  playerAntibodies?: string[];
+  /** 主角外貌与服装（第 61 题） */
+  playerAppearance?: Appearance | null;
+  equippedClothing?: string;
+  /** 主动传位（第 58 题）：返回错误提示，成功返回 null */
+  onRetireTo?: (heirId: string) => string | null;
+  onOpenAuction?: () => void;
+  /** 抽奖得到的礼物背包 */
+  giftInventory?: GiftInventory;
+  setGiftInventory?: React.Dispatch<React.SetStateAction<GiftInventory>>;
 }
 
-const FAMILY_MEMBERS: FamilyMember[] = [
-  {
-    id: 'm1',
-    name: '亚历山大·瓦伦丁',
-    relation: '祖父',
-    generation: '一世 (祖辈)',
-    age: 78,
-    status: '已故',
-    occupation: '帝国前皇家首席工匠',
-    affinity: 100,
-    avatarBg: '#525a66',
-    desc: '曾主持设计卡罗尼亚大铁桥，奠定了瓦伦丁家族的社会地位与技术基业。',
-    traits: ['皇家勋章', '匠人精神', '遗产继承'],
-  },
-  {
-    id: 'm2',
-    name: '维克多·瓦伦丁',
-    relation: '父亲',
-    generation: '二世 (父辈)',
-    age: 52,
-    status: '在世',
-    occupation: '高级机械总工程师',
-    affinity: 92,
-    avatarBg: '#3d6185',
-    desc: '现任家族族长，对你寄予厚望，常在机械设计与职场规划上给予悉心指点。',
-    traits: ['现任族长', '严肃严谨', '工坊主理'],
-  },
-  {
-    id: 'm3',
-    name: '艾琳娜·瓦伦丁',
-    relation: '母亲',
-    generation: '二世 (父辈)',
-    age: 49,
-    status: '在世',
-    occupation: '帝国医学院讲师',
-    affinity: 98,
-    avatarBg: '#a64245',
-    desc: '温柔体贴，精通草药与医学，时刻关怀你的健康与身心状态。',
-    traits: ['关怀备至', '医疗背景', '理财高手'],
-  },
-  {
-    id: 'm4',
-    name: '罗兰·瓦伦丁',
-    relation: '叔叔',
-    generation: '二世 (父辈)',
-    age: 45,
-    status: '远游',
-    occupation: '远洋商队船长',
-    affinity: 78,
-    avatarBg: '#8a6538',
-    desc: '性格豪爽不羁，常年穿梭于各大洲贸易港口，时不时寄回稀奇古怪的海外珍品。',
-    traits: ['海外商旅', '神秘礼物', '见多识广'],
-  },
-  {
-    id: 'm5',
-    name: '你 (玩家)',
-    relation: '你自己',
-    generation: '三世 (平辈)',
-    age: 22,
-    status: '在世',
-    occupation: '助理工程师',
-    affinity: 100,
-    avatarBg: '#a68245',
-    desc: '瓦伦丁家族第三代长子，毕业于帝国理工学院，承载着家族复兴的希望。',
-    traits: ['家族继承人', '理工高材生', '潜力无限'],
-  },
-  {
-    id: 'm6',
-    name: '莉莉安·瓦伦丁',
-    relation: '妹妹',
-    generation: '三世 (平辈)',
-    age: 18,
-    status: '在世',
-    occupation: '皇家艺术学院学生',
-    affinity: 95,
-    avatarBg: '#a1476b',
-    desc: '活泼开朗，充满艺术天赋，擅长油画与音乐，是家里的开心果。',
-    traits: ['艺术天才', '灵感充沛', '家族团宠'],
-  },
-  {
-    id: 'm7',
-    name: '埃里克·瓦伦丁',
-    relation: '堂弟',
-    generation: '三世 (平辈)',
-    age: 15,
-    status: '在世',
-    occupation: '市立中学学生',
-    affinity: 85,
-    avatarBg: '#3d7a63',
-    desc: '罗兰叔叔的儿子，极具发明头脑，常常偷偷拆装家里的齿轮钟表。',
-    traits: ['鬼马发明家', '好奇心强', '崇拜你'],
-  },
-];
+/** 辈分层级不低于此值（祖辈及以上）、不高于 FOLD_BELOW_LEVEL（曾孙辈及以下）的默认折叠 */
+const FOLD_ABOVE_LEVEL = 2;
+const FOLD_BELOW_LEVEL = -3;
 
-const FAMILY_HEIRLOOMS = [
-  {
-    id: 'h1',
-    name: '皇家工匠怀表',
-    quality: '史诗',
-    qualityTag: 'bg-purple-900/80 text-purple-300 border-purple-500',
-    icon: Crown,
-    desc: '祖父传承下来的金质双齿轮怀表，刻有皇家徽章。',
-    buff: '推演与研究效率 +15%',
-    owner: '维克多 (父亲)',
-  },
-  {
-    id: 'h2',
-    name: '瓦伦丁工坊地契',
-    quality: '稀有',
-    qualityTag: 'bg-blue-900/80 text-blue-300 border-blue-500',
-    icon: Building2,
-    desc: '首都中央大街7号机械工坊的地契与产权文书。',
-    buff: '每月自动注入 ￥2,500 家族基金',
-    owner: '家族共有',
-  },
-  {
-    id: 'h3',
-    name: '名流社交勋章',
-    quality: '罕见',
-    qualityTag: 'bg-amber-900/80 text-amber-300 border-amber-500',
-    icon: Shield,
-    desc: '帝国皇室授予瓦伦丁家族的勋章，象征名门荣誉。',
-    buff: '官员与名流交涉成功率 +20%',
-    owner: '你 (玩家)',
-  },
-];
-
-const FAMILY_CHRONICLES = [
-  { year: '1860年', title: '皇家工匠勋章', desc: '祖父亚历山大主持大铁桥项目，获得皇室颁发的首席工匠金质勋章。' },
-  { year: '1888年', title: '主导首都给排水改造', desc: '父亲维克多主导首都给排水机械化改建工程，家族社会威望大幅上升。' },
-  { year: '1898年', title: '创立瓦伦丁科技基金', desc: '家族设立专项科技助学基金，资助十余名贫困理工学子。' },
-  { year: '1900年', title: '第三代继承人破局', desc: '【你】以优异成绩考入帝国理工学院并完成首次机械推演，家族迎来新篇章。' },
-];
-
-export const FamilyTab: React.FC = () => {
-  const [subTab, setSubTab] = useState<'tree' | 'heirlooms' | 'chronicles'>('tree');
-  const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
+export const FamilyTab: React.FC<FamilyTabProps> = ({
+  isRegistered,
+  playerName,
+  gender,
+  age,
+  playerOccupation,
+  gameYear,
+  gameMonth,
+  coins,
+  setCoins,
+  setHealth,
+  family,
+  setFamily,
+  onOpenMarriage,
+  onGoToBirthRegistration,
+  playerTraits = [],
+  reputation = 0,
+  ranking = [],
+  cohesion = 0,
+  wealth = 0,
+  guardianship = null,
+  heirlooms = [],
+  auctionOpen = false,
+  onOpenAuction,
+  giftInventory = {},
+  lazy = false,
+  playerAntibodies = [],
+  onRetireTo,
+  setGiftInventory,
+  playerAppearance = null,
+  equippedClothing = 'default',
+}) => {
+  const { t } = useTranslation('family');
+  const sep = t('listSeparator', { ns: 'common' });
+  const [subTab, setSubTab] = useState<'tree' | 'ranking' | 'heirlooms' | 'chronicles'>('tree');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [nameDraft, setNameDraft] = useState('');
+  const [confirmRetire, setConfirmRetire] = useState<string | null>(null);
+  const [showElders, setShowElders] = useState(false);
+  const [showYounger, setShowYounger] = useState(false);
+
+  /** 家主权限（第 73 题）：为 30 岁以上仍未婚的子女、孙辈包办婚事 */
+  const handleArrange = (member: FamilyMemberView) => {
+    const blocked = canArrangeMarriage(member);
+    if (blocked) {
+      showToast(blocked);
+      return;
+    }
+    if (coins < MATCHMAKING_FEE) {
+      showToast(t('toast.matchmakingNoMoney', { fee: MATCHMAKING_FEE.toLocaleString(), symbol: CURRENCY.symbol }));
+      return;
+    }
+    const r = arrangeMarriage(family, member.id, gameYear, gameMonth);
+    if (!r) {
+      showToast(t('toast.matchmakingNoCandidate'));
+      return;
+    }
+    setCoins((prev) => prev - MATCHMAKING_FEE);
+    setFamily(r.state);
+    addLifeLog('大事', `为${member.name}包办婚事`, `${member.name}奉家主之命与 ${r.spouse.name}（${r.spouse.occupation}）成婚。`);
+    showToast(t('toast.matchmakingDone', { name: member.name, spouse: r.spouse.name, fee: MATCHMAKING_FEE.toLocaleString(), symbol: CURRENCY.symbol, penalty: MATCHMAKING_AFFINITY_PENALTY }));
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage((prev) => (prev === msg ? null : prev)), 3000);
   };
 
-  const generations = ['一世 (祖辈)', '二世 (父辈)', '三世 (平辈)'];
+  const members = buildFamilyMembers(family, {
+    playerName,
+    playerGender: gender,
+    playerAge: age,
+    playerOccupation,
+    gameYear,
+    gameMonth,
+  });
+  const chronicles = buildChronicles(family, gameYear, gameMonth);
+  const origin = getOrigin(family);
+  const selectedMember = members.find((m) => m.id === selectedId) || null;
+
+  const livingCount = members.filter((m) => m.status !== '已故').length;
+  const generationCount = new Set(members.map((m) => m.level)).size;
+  // 辈分由高到低排列；后代可以延续到任意代（曾孙辈、玄孙辈……）
+  const generationLevels = [...new Map(members.map((m) => [m.generation, m.level])).entries()].sort((a, b) => b[1] - a[1]);
+  // 第 73 题：默认只展开父辈、平辈、子辈、孙辈；祖辈及以上、曾孙辈及以下各折成一行
+  const elderGenerations = generationLevels.filter(([, lv]) => lv >= FOLD_ABOVE_LEVEL).map(([g]) => g);
+  const mainGenerations = generationLevels.filter(([, lv]) => lv < FOLD_ABOVE_LEVEL && lv > FOLD_BELOW_LEVEL).map(([g]) => g);
+  const youngerGenerations = generationLevels.filter(([, lv]) => lv <= FOLD_BELOW_LEVEL).map(([g]) => g);
+
+  const renderGeneration = (gen: string) => (
+    <div key={gen} className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000]">
+      <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-gray-700">
+        {gen === '子辈' ? <Baby size={16} className="text-yellow-400" /> : <GitFork size={16} className="text-yellow-400" />}
+        <span className="text-yellow-400 font-black text-xs tracking-wider">{gen}</span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {members
+          .filter((m) => m.generation === gen)
+          .map((member) => (
+            <div
+              key={member.id}
+              onClick={() => {
+                setSelectedId(member.id);
+                setNameDraft('');
+              }}
+              className={`bg-[#21232e] border-2 rounded-lg p-2.5 flex items-center justify-between cursor-pointer hover:border-yellow-400 transition-all shadow-[0_2px_0_#000] active:translate-y-0.5 ${member.isPlayer ? 'border-yellow-500/70' : 'border-black'}`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className="w-9 h-9 rounded-full border-2 border-black flex items-center justify-center font-black text-white text-xs shadow-[0_1px_0_#000] flex-shrink-0"
+                  style={{ backgroundColor: member.avatarBg }}
+                >
+                  {member.name[0]}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-white font-black text-xs truncate">{member.name}</span>
+                    <span className="text-[10px] text-gray-400 font-bold shrink-0">({member.relation})</span>
+                  </div>
+                  <div className="text-[10px] text-gray-300 font-bold mt-0.5 truncate max-w-[160px]">
+                    {member.status === '已故' ? t('ageDeceased', { age: member.age }) : t('age', { age: member.age })} · {member.occupation}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <span
+                  className={`text-[9px] font-black px-1.5 py-0.5 rounded border border-black ${
+                    member.status === '在世'
+                      ? 'bg-emerald-900/80 text-emerald-300'
+                      : member.status === '已故'
+                      ? 'bg-gray-800 text-gray-400'
+                      : 'bg-amber-900/80 text-amber-300'
+                  }`}
+                >
+                  {member.status}
+                </span>
+                {!member.isPlayer && <span className="text-[10px] text-yellow-400 font-bold">{t('affinity', { affinity: member.affinity })}</span>}
+              </div>
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+  const foldRow = (open: boolean, toggle: () => void, label: string, gens: string[]) =>
+    gens.length > 0 && (
+      <button
+        onClick={toggle}
+        className="w-full bg-[#2d2f3d] hover:bg-[#33364a] border-2 border-black rounded-xl px-3 py-2 shadow-[0_3px_0_#000] flex items-center justify-between text-xs font-black text-yellow-400 cursor-pointer"
+      >
+        <span className="flex items-center gap-2">
+          <GitFork size={16} />
+          {t('foldRow', { label, generations: gens.join(sep), count: members.filter((m) => gens.includes(m.generation)).length })}
+        </span>
+        <span className="text-gray-300">{open ? t('collapse') : t('expand')}</span>
+      </button>
+    );
+
+  const handleInteraction = (member: FamilyMemberView, kind: InteractionKind) => {
+    const blocked = canInteract(family, member, gameYear, gameMonth) || canDoInteraction(member, kind, age);
+    if (blocked) {
+      showToast(blocked);
+      return;
+    }
+
+    if (kind === 'gift') {
+      if (coins < GIFT_COST) {
+        showToast(t('toast.giftNoMoney', { cost: GIFT_COST.toLocaleString(), symbol: CURRENCY.symbol }));
+        return;
+      }
+      setCoins((prev) => prev - GIFT_COST);
+      recordGiftsGiven(1);
+    }
+
+    setFamily((prev) => applyInteraction(prev, member, kind, gameYear, gameMonth, affinityBonus(playerTraits)));
+    const newAffinity = Math.min(100, member.affinity + AFFINITY_GAIN[kind] + affinityBonus(playerTraits));
+
+    if (kind === 'spar') {
+      setHealth((prev) => Math.min(100, prev + SPAR_HEALTH_GAIN));
+      showToast(t('toast.spar', { name: member.name, health: SPAR_HEALTH_GAIN, affinity: newAffinity }));
+    } else if (kind === 'consult') {
+      const reward = CONSULT_REWARD_MIN + Math.floor(Math.random() * (CONSULT_REWARD_MAX - CONSULT_REWARD_MIN + 1));
+      setCoins((prev) => prev + reward);
+      showToast(t('toast.consult', { name: member.name, reward: reward.toLocaleString(), symbol: CURRENCY.symbol, affinity: newAffinity }));
+    } else {
+      showToast(t('toast.gift', { name: member.name, cost: GIFT_COST.toLocaleString(), symbol: CURRENCY.symbol, affinity: newAffinity }));
+    }
+    setSelectedId(null);
+  };
+
+  // 送出背包里的礼物（第 35 题）：按品质与喜好增加好感，算作本月互动
+  const handleGiveGift = (member: FamilyMemberView, giftId: string) => {
+    const blocked = canInteract(family, member, gameYear, gameMonth);
+    if (blocked) {
+      showToast(blocked);
+      return;
+    }
+    const gift = giftById(giftId);
+    const remaining = removeGift(giftInventory, giftId);
+    if (!gift || !remaining || !setGiftInventory) {
+      showToast(t('toast.giftMissing'));
+      return;
+    }
+    const gain = giftAffinityGain(gift, member, family.giftTastes);
+    const bonus = affinityBonus(playerTraits);
+    setGiftInventory(remaining);
+    recordGiftsGiven(1);
+    setFamily((prev) => applyInteraction(prev, member, 'gift', gameYear, gameMonth, bonus, gain));
+    const newAffinity = Math.min(100, member.affinity + gain + bonus);
+    const liked = tasteOf(member, family.giftTastes) === gift.taste;
+    showToast(t(liked ? 'toast.giftLiked' : 'toast.giftGiven', { name: member.name, gift: gift.name, gain: gain + bonus, affinity: newAffinity }));
+    setSelectedId(null);
+  };
+
+  if (!isRegistered) {
+    return (
+      <div className="flex-1 overflow-y-auto bg-[#252632] flex flex-col items-center justify-center p-6 text-center gap-3">
+        <ShieldCheck size={48} className="text-yellow-400" />
+        <p className="text-white font-black">{t('notRegisteredTitle')}</p>
+        <p className="text-gray-400 text-xs font-bold">{t('notRegisteredDesc')}</p>
+        <button
+          onClick={onGoToBirthRegistration}
+          className="bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black py-2 px-4 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer"
+        >
+          {t('goRegister')}
+        </button>
+      </div>
+    );
+  }
+
+  const blockedThisMonth = selectedMember ? canInteract(family, selectedMember, gameYear, gameMonth) : null;
+  const actionBtn = (kind: InteractionKind, label: string, color: string) => {
+    const reason = selectedMember ? blockedThisMonth || canDoInteraction(selectedMember, kind, age) : null;
+    return (
+      <button
+        onClick={() => selectedMember && handleInteraction(selectedMember, kind)}
+        title={reason || undefined}
+        className={`${reason ? 'bg-gray-600 text-gray-300' : `${color} text-black`} text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 cursor-pointer`}
+      >
+        {label}
+      </button>
+    );
+  };
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#252632] pb-6 flex flex-col relative">
-      {/* Toast Notification */}
       {toastMessage && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-black/90 text-yellow-300 border-2 border-yellow-500 text-xs font-black px-4 py-2 rounded-xl shadow-[0_4px_0_#000] animate-in fade-in slide-in-from-top-2 duration-200 text-center max-w-[85%]">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[60] bg-black/90 text-yellow-300 border-2 border-yellow-500 text-xs font-black px-4 py-2 rounded-xl shadow-[0_4px_0_#000] animate-in fade-in slide-in-from-top-2 duration-200 text-center max-w-[85%] pointer-events-none">
           {toastMessage}
         </div>
       )}
@@ -176,144 +348,232 @@ export const FamilyTab: React.FC = () => {
           <div className="w-24 h-24 border-[6px] border-black rounded-full absolute -top-8 left-10"></div>
           <div className="w-32 h-32 border-[6px] border-black rounded-full absolute -bottom-16 right-0"></div>
         </div>
-        <span className="relative z-10 drop-shadow-[0_2px_0_#000] font-black tracking-widest text-2xl">
-          家族世系
-        </span>
+        <span className="relative z-10 drop-shadow-[0_2px_0_#000] font-black tracking-widest text-2xl">{t('title')}</span>
       </div>
 
       <div className="p-4 space-y-4">
         {/* Family Crest & Overview Card */}
         <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3.5 shadow-[0_4px_0_#000] relative overflow-hidden">
           <div className="flex items-center gap-3">
-            {/* Crest Badge */}
-            <div className="w-14 h-14 rounded-xl bg-[#8a6538] border-2 border-black flex items-center justify-center shadow-[0_2px_0_#000] flex-shrink-0 relative">
+            <div className="w-14 h-14 rounded-xl bg-[#8a6538] border-2 border-black flex items-center justify-center shadow-[0_2px_0_#000] flex-shrink-0">
               <ShieldCheck size={32} className="text-yellow-300 drop-shadow-[0_2px_0_#000]" strokeWidth={2} />
-              <div className="absolute -top-1 -right-1 bg-yellow-400 text-black text-[9px] font-black px-1 rounded border border-black">
-                Lv.4
-              </div>
             </div>
-
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <h2 className="text-white font-black text-lg drop-shadow-[0_1.5px_0_#000]">瓦伦丁家族</h2>
+                <h2 className="text-white font-black text-lg drop-shadow-[0_1.5px_0_#000]">{t('familyName', { surname: origin.surname })}</h2>
                 <span className="text-[10px] font-black bg-yellow-400 text-black px-2 py-0.5 rounded border border-black shadow-[0_1px_0_#000]">
-                  帝国名门望族
+                  {origin.classLabel}
                 </span>
               </div>
-              <p className="text-gray-300 text-xs font-bold mt-1 italic">“坚忍如钢，智慧永存”</p>
+              <p className="text-gray-300 text-xs font-bold mt-1 italic">{origin.isValentine ? '“坚忍如钢，智慧永存”' : t('origin', { classLabel: origin.classLabel })}</p>
             </div>
           </div>
 
-          {/* Stat Grid */}
           <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-gray-700/80 text-center">
             <div className="bg-[#21232e] p-1.5 rounded-lg border border-black">
-              <div className="text-[10px] text-gray-400 font-bold">传承</div>
-              <div className="text-yellow-400 font-black text-sm">3 代</div>
+              <div className="text-[10px] text-gray-400 font-bold">{t('overview.generations')}</div>
+              <div className="text-yellow-400 font-black text-sm">{t('overview.generationsValue', { count: generationCount })}</div>
             </div>
             <div className="bg-[#21232e] p-1.5 rounded-lg border border-black">
-              <div className="text-[10px] text-gray-400 font-bold">族员</div>
-              <div className="text-white font-black text-sm">7 人</div>
+              <div className="text-[10px] text-gray-400 font-bold">{t('overview.living')}</div>
+              <div className="text-white font-black text-sm">{t('overview.people', { count: livingCount })}</div>
             </div>
             <div className="bg-[#21232e] p-1.5 rounded-lg border border-black">
-              <div className="text-[10px] text-gray-400 font-bold">信托基金</div>
-              <div className="text-emerald-400 font-black text-xs mt-0.5">￥28.5w</div>
+              <div className="text-[10px] text-gray-400 font-bold">{t('overview.marriage')}</div>
+              <div className={`font-black text-xs mt-0.5 truncate ${family.spouse ? 'text-rose-300' : 'text-gray-400'}`}>
+                {family.spouse ? t('overview.married') : t('overview.unmarried')}
+              </div>
             </div>
             <div className="bg-[#21232e] p-1.5 rounded-lg border border-black">
-              <div className="text-[10px] text-gray-400 font-bold">月度收益</div>
-              <div className="text-amber-300 font-black text-xs mt-0.5">+￥6800</div>
+              <div className="text-[10px] text-gray-400 font-bold">{t('overview.children')}</div>
+              <div className="text-amber-300 font-black text-sm">{t('overview.people', { count: family.children.length })}</div>
             </div>
           </div>
+
+          {guardianship && (
+            <div className="mt-3 bg-sky-950/70 border-2 border-sky-500/60 rounded-xl p-2.5 text-[11px] font-bold text-sky-100">
+              {guardianship.phase === 'holding'
+                ? t('guardianHolding', { guardian: guardianship.guardianName, amount: guardianship.held.toLocaleString(), symbol: CURRENCY.symbol })
+                : t('guardianSupport', { guardian: guardianship.guardianName, amount: guardianship.supportPerMonth.toLocaleString(), symbol: CURRENCY.symbol, months: guardianship.supportMonthsLeft })}
+            </div>
+          )}
+          {(() => {
+            const unhappy = members.filter((m) => !m.isPlayer && m.status !== '已故' && m.age >= 18 && (family.discontent?.[m.id] ?? 0) > 0);
+            return unhappy.length > 0 ? (
+              <div className="mt-3 bg-red-950/70 border-2 border-red-500/60 rounded-xl p-2.5 text-[11px] font-bold text-red-100 space-y-0.5">
+                <div className="text-red-300 font-black">{t('discontentTitle', { threshold: DISCONTENT_THRESHOLD, months: SPLIT_AFTER_MONTHS })}</div>
+                {unhappy.map((m) => (
+                  <div key={m.id}>
+                    {t('discontentRow', { relation: m.relation, name: m.name, affinity: m.affinity, months: family.discontent?.[m.id] })}
+                  </div>
+                ))}
+              </div>
+            ) : null;
+          })()}
+
+          {!family.spouse && (
+            <button
+              onClick={onOpenMarriage}
+              className="mt-3 w-full bg-rose-400 hover:bg-rose-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5 flex items-center justify-center gap-1 cursor-pointer"
+            >
+              <Heart size={14} /> {t('goMarriage')}
+            </button>
+          )}
         </div>
 
         {/* Sub-tab Navigation */}
         <div className="flex bg-[#21232e] p-1 rounded-xl border-2 border-black gap-1 shadow-[0_2px_0_#000]">
-          <button
-            onClick={() => setSubTab('tree')}
-            className={`flex-1 py-1.5 text-xs font-black rounded-lg border transition-all ${
-              subTab === 'tree'
-                ? 'bg-yellow-400 text-black border-black shadow-[0_1px_0_#000]'
-                : 'text-gray-400 border-transparent hover:text-white'
-            }`}
-          >
-            世系族谱
-          </button>
-          <button
-            onClick={() => setSubTab('heirlooms')}
-            className={`flex-1 py-1.5 text-xs font-black rounded-lg border transition-all ${
-              subTab === 'heirlooms'
-                ? 'bg-yellow-400 text-black border-black shadow-[0_1px_0_#000]'
-                : 'text-gray-400 border-transparent hover:text-white'
-            }`}
-          >
-            传家宝 & 特权
-          </button>
-          <button
-            onClick={() => setSubTab('chronicles')}
-            className={`flex-1 py-1.5 text-xs font-black rounded-lg border transition-all ${
-              subTab === 'chronicles'
-                ? 'bg-yellow-400 text-black border-black shadow-[0_1px_0_#000]'
-                : 'text-gray-400 border-transparent hover:text-white'
-            }`}
-          >
-            家族大事记
-          </button>
+          {([
+            'tree',
+            'ranking',
+            'heirlooms',
+            'chronicles',
+          ] as const).map((id) => (
+            <button
+              key={id}
+              onClick={() => setSubTab(id)}
+              className={`flex-1 py-1.5 text-xs font-black rounded-lg border transition-all ${
+                subTab === id ? 'bg-yellow-400 text-black border-black shadow-[0_1px_0_#000]' : 'text-gray-400 border-transparent hover:text-white'
+              }`}
+            >
+              {t(`tabs.${id}`)}
+            </button>
+          ))}
         </div>
 
-        {/* Tab 1: 世系族谱 (Family Tree) */}
+        {/* Tab 1: 世系族谱 */}
         {subTab === 'tree' && (
           <div className="space-y-4">
-            {generations.map((gen) => {
-              const membersInGen = FAMILY_MEMBERS.filter((m) => m.generation === gen);
-              return (
-                <div key={gen} className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000]">
-                  <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-gray-700">
-                    <GitFork size={16} className="text-yellow-400" />
-                    <span className="text-yellow-400 font-black text-xs tracking-wider">{gen}</span>
+            {foldRow(showElders, () => setShowElders((v) => !v), t('foldElders'), elderGenerations)}
+            {showElders && elderGenerations.map(renderGeneration)}
+            {mainGenerations.map(renderGeneration)}
+            {foldRow(showYounger, () => setShowYounger((v) => !v), t('foldYounger'), youngerGenerations)}
+            {showYounger && youngerGenerations.map(renderGeneration)}
+          </div>
+        )}
+
+        {/* 家族排行：凝聚力 30% + 财力 40% + 影响力 30% */}
+        {subTab === 'ranking' && (
+          <div className="space-y-3">
+            {(() => {
+              const promo = nextPromotion(origin.classId);
+              if (!promo) {
+                return (
+                  <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] text-xs font-bold text-gray-300">
+                    {t(origin.classId === 'noble' ? 'ranking.topClassNoble' : 'ranking.topClass', { classLabel: origin.classLabel })}
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {membersInGen.map((member) => (
-                      <div
-                        key={member.id}
-                        onClick={() => setSelectedMember(member)}
-                        className="bg-[#21232e] border-2 border-black rounded-lg p-2.5 flex items-center justify-between cursor-pointer hover:border-yellow-400 transition-all shadow-[0_2px_0_#000] active:translate-y-0.5"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          {/* Avatar Circle */}
-                          <div
-                            className="w-9 h-9 rounded-full border-2 border-black flex items-center justify-center font-black text-white text-xs shadow-[0_1px_0_#000] flex-shrink-0"
-                            style={{ backgroundColor: member.avatarBg }}
-                          >
-                            {member.name[0]}
-                          </div>
-
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-white font-black text-xs">{member.name}</span>
-                              <span className="text-[10px] text-gray-400 font-bold">({member.relation})</span>
-                            </div>
-                            <div className="text-[10px] text-gray-300 font-bold mt-0.5 truncate max-w-[140px]">
-                              {member.occupation}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col items-end gap-1">
-                          <span
-                            className={`text-[9px] font-black px-1.5 py-0.5 rounded border border-black ${
-                              member.status === '在世'
-                                ? 'bg-emerald-900/80 text-emerald-300'
-                                : member.status === '已故'
-                                ? 'bg-gray-800 text-gray-400'
-                                : 'bg-amber-900/80 text-amber-300'
-                            }`}
-                          >
-                            {member.status}
-                          </span>
-                          <span className="text-[10px] text-yellow-400 font-bold">好感 {member.affinity}%</span>
-                        </div>
+                );
+              }
+              const toLabel = classById(promo.to).label;
+              const wealthOk = wealth >= promo.minNetWorth;
+              const repOk = reputation >= promo.minReputation;
+              return (
+                <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] space-y-1.5 text-xs font-bold">
+                  <div className="text-white font-black">{t('ranking.promotionTitle', { classLabel: toLabel })}</div>
+                  <div className={wealthOk ? 'text-emerald-300' : 'text-gray-400'}>
+                    {t('ranking.promotionWealth', { mark: wealthOk ? '✔' : '✘', required: promo.minNetWorth.toLocaleString(), current: wealth.toLocaleString(), symbol: CURRENCY.symbol })}
+                  </div>
+                  <div className={repOk ? 'text-emerald-300' : 'text-gray-400'}>
+                    {t('ranking.promotionReputation', { mark: repOk ? '✔' : '✘', required: promo.minReputation, current: reputation })}
+                  </div>
+                </div>
+              );
+            })()}
+            <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] grid grid-cols-3 gap-2 text-center">
+              <div className="bg-[#21232e] rounded-lg border border-black p-1.5">
+                <div className="text-[10px] text-gray-400 font-bold">{t('ranking.cohesion')}</div>
+                <div className="text-rose-300 font-black text-sm">{cohesion}</div>
+                <div className="text-[9px] text-gray-500 font-bold">{t('ranking.cohesionHint')}</div>
+              </div>
+              <div className="bg-[#21232e] rounded-lg border border-black p-1.5">
+                <div className="text-[10px] text-gray-400 font-bold">{t('ranking.wealth')}</div>
+                <div className="text-amber-300 font-black text-sm">{Math.round(wealthScore(wealth))}</div>
+                <div className="text-[9px] text-gray-500 font-bold truncate">{wealth.toLocaleString()} {CURRENCY.symbol}</div>
+              </div>
+              <div className="bg-[#21232e] rounded-lg border border-black p-1.5">
+                <div className="text-[10px] text-gray-400 font-bold">{t('ranking.influence')}</div>
+                <div className="text-sky-300 font-black text-sm">{reputation}</div>
+                <div className="text-[9px] text-gray-500 font-bold">{reputationLevel(reputation)}</div>
+              </div>
+            </div>
+            <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-2 shadow-[0_4px_0_#000] space-y-1.5">
+              {ranking.map((f) => (
+                <div
+                  key={f.surname}
+                  className={`flex items-center justify-between gap-2 p-2 rounded-lg border-2 ${f.isPlayer ? 'bg-[#3b3524] border-yellow-400' : 'bg-[#21232e] border-black'}`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`w-6 text-center font-black text-xs ${f.rank <= 3 ? 'text-yellow-400' : 'text-gray-400'}`}>#{f.rank}</span>
+                    <div className="min-w-0">
+                      <div className={`font-black text-xs truncate ${f.isPlayer ? 'text-yellow-300' : 'text-white'}`}>
+                        {t('familyName', { surname: f.surname })}{f.isPlayer ? t('ranking.you') : ''}
+                        {f.isPlayer && lazy && <span className="ml-1 text-[9px] font-black px-1 rounded border border-black bg-gray-500 text-white align-middle">{t('ranking.lazy')}</span>}
                       </div>
-                    ))}
+                      <div className="text-[10px] text-gray-400 font-bold">
+                        {t('ranking.rowStats', { classLabel: f.classLabel, cohesion: Math.round(f.cohesion), wealth: Math.round(wealthScore(f.wealth)), influence: Math.round(f.influence) })}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-amber-300 font-black font-mono text-sm shrink-0">{f.score}</span>
+                </div>
+              ))}
+            </div>
+            {(family.splitBranches?.length ?? 0) > 0 && (
+              <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] text-[11px] font-bold text-gray-300 space-y-0.5">
+                <div className="text-white font-black text-xs mb-1">{t('ranking.branches')}</div>
+                {family.splitBranches!.map((b, i) => (
+                  <div key={i}>{b.year}.{b.month} · {b.relation} {b.name}</div>
+                ))}
+              </div>
+            )}
+            <p className="text-[10px] text-gray-500 font-bold text-center">{t('ranking.formula')}</p>
+          </div>
+        )}
+
+        {/* Tab 2: 传家宝（仅展示） */}
+        {subTab === 'heirlooms' && (
+          <div className="space-y-3">
+            {auctionOpen && onOpenAuction && (
+              <button
+                onClick={onOpenAuction}
+                className="w-full bg-amber-700 hover:bg-amber-600 text-amber-50 text-xs font-black py-2.5 rounded-xl border-2 border-black shadow-[0_3px_0_#000] flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Gavel size={14} /> {t('heirlooms.auctionOpen')}
+              </button>
+            )}
+            <p className="text-[10px] text-gray-500 font-bold text-center">{t('heirlooms.hint')}</p>
+            {heirlooms.length === 0 && (
+              <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-4 shadow-[0_4px_0_#000] text-center text-gray-400 text-xs font-bold">
+                {t('heirlooms.empty', { surname: origin.surname })}
+              </div>
+            )}
+            {heirlooms.map((owned) => {
+              const item = heirloomById(owned.id);
+              if (!item) return null;
+              const ICONS: Record<HeirloomDef['icon'], React.ElementType> = {
+                crown: Crown, building: Building2, shield: Shield, medal: Medal, watch: Watch, ring: Gem, book: BookOpen,
+                sword: Swords, gem: Gem, scroll: ScrollText, vase: Amphora, map: MapIcon2,
+              };
+              const Icon = ICONS[item.icon] ?? Sparkles;
+              return (
+                <div key={owned.id} className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] flex items-start gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-[#3b3c4d] border-2 border-black flex items-center justify-center flex-shrink-0 shadow-[0_2px_0_#000]">
+                    <Icon size={26} className="text-yellow-400 drop-shadow-[0_1px_0_#000]" strokeWidth={2} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-white font-black text-sm">{item.name}</h3>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${QUALITY_STYLE[item.quality]}`}>{item.quality}</span>
+                    </div>
+                    <p className="text-gray-300 text-xs font-bold mt-1 leading-tight">{item.desc}</p>
+                    <div className="mt-2 pt-2 border-t border-gray-700/70 flex items-center justify-between gap-2">
+                      <span className="text-emerald-400 text-xs font-black flex items-center gap-1">
+                        <Sparkles size={12} /> {item.meaning}
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-bold text-right">
+                        {t('heirlooms.meta', { source: owned.source, year: owned.year, value: item.value.toLocaleString(), symbol: CURRENCY.symbol })}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
@@ -321,53 +581,18 @@ export const FamilyTab: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 2: 传家宝 & 特权 (Heirlooms) */}
-        {subTab === 'heirlooms' && (
-          <div className="space-y-3">
-            {FAMILY_HEIRLOOMS.map((item) => (
-              <div key={item.id} className="bg-[#2d2f3d] border-2 border-black rounded-xl p-3 shadow-[0_4px_0_#000] flex items-start gap-3">
-                <div className="w-12 h-12 rounded-xl bg-[#3b3c4d] border-2 border-black flex items-center justify-center flex-shrink-0 shadow-[0_2px_0_#000]">
-                  <item.icon size={26} className="text-yellow-400 drop-shadow-[0_1px_0_#000]" strokeWidth={2} />
-                </div>
-
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-white font-black text-sm">{item.name}</h3>
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${item.qualityTag}`}>
-                      {item.quality}
-                    </span>
-                  </div>
-                  <p className="text-gray-300 text-xs font-bold mt-1 leading-tight">{item.desc}</p>
-
-                  <div className="mt-2 pt-2 border-t border-gray-700/70 flex items-center justify-between">
-                    <span className="text-emerald-400 text-xs font-black flex items-center gap-1">
-                      <Sparkles size={12} /> {item.buff}
-                    </span>
-                    <span className="text-[10px] text-gray-400 font-bold">保管: {item.owner}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Tab 3: 家族大事记 (Chronicles) */}
+        {/* Tab 3: 家族大事记 */}
         {subTab === 'chronicles' && (
           <div className="bg-[#2d2f3d] border-2 border-black rounded-xl p-4 shadow-[0_4px_0_#000] space-y-4">
-            {FAMILY_CHRONICLES.map((c, i) => (
-              <div key={i} className="flex gap-3 relative">
+            {chronicles.map((c, i) => (
+              <div key={`${c.year}_${c.month}_${i}`} className="flex gap-3 relative">
                 <div className="flex flex-col items-center">
                   <div className="w-3.5 h-3.5 rounded-full bg-yellow-400 border-2 border-black shadow-[0_1px_0_#000] z-10 mt-1"></div>
-                  {i < FAMILY_CHRONICLES.length - 1 && (
-                    <div className="w-0.5 flex-1 bg-yellow-400/50 my-1"></div>
-                  )}
+                  {i < chronicles.length - 1 && <div className="w-0.5 flex-1 bg-yellow-400/50 my-1"></div>}
                 </div>
-
                 <div className="flex-1 pb-1">
                   <div className="flex items-center gap-2">
-                    <span className="bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded border border-black">
-                      {c.year}
-                    </span>
+                    <span className="bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded border border-black">{t('chronicleYear', { year: c.year })}</span>
                     <h4 className="text-white font-black text-sm">{c.title}</h4>
                   </div>
                   <p className="text-gray-300 text-xs font-bold mt-1 leading-relaxed">{c.desc}</p>
@@ -378,12 +603,12 @@ export const FamilyTab: React.FC = () => {
         )}
       </div>
 
-      {/* Member Details Inspector Modal */}
+      {/* Member Details Modal */}
       {selectedMember && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-[#2d2f3d] border-4 border-black rounded-2xl p-4 max-w-sm w-full shadow-[0_8px_0_#000] relative animate-in fade-in zoom-in-95">
             <button
-              onClick={() => setSelectedMember(null)}
+              onClick={() => setSelectedId(null)}
               className="absolute top-3 right-3 text-gray-400 hover:text-white font-black text-lg bg-black/40 px-2 py-0.5 rounded border border-black"
             >
               ✕
@@ -396,80 +621,194 @@ export const FamilyTab: React.FC = () => {
               >
                 {selectedMember.name[0]}
               </div>
-
               <div>
                 <h3 className="text-white font-black text-base">{selectedMember.name}</h3>
                 <div className="text-xs text-yellow-400 font-bold">
-                  {selectedMember.relation} · {selectedMember.age}岁
+                  {selectedMember.relation} · {selectedMember.status === '已故' ? t('ageDeceased', { age: selectedMember.age }) : t('age', { age: selectedMember.age })}
                 </div>
               </div>
             </div>
 
             <div className="bg-[#21232e] p-2.5 rounded-xl border-2 border-black space-y-1.5 text-xs font-bold mb-3">
               <div className="flex justify-between text-gray-300">
-                <span>身份职业:</span>
+                <span>{t('member.occupation')}</span>
                 <span className="text-white font-black">{selectedMember.occupation}</span>
               </div>
               <div className="flex justify-between text-gray-300">
-                <span>家族辈分:</span>
+                <span>{t('member.generation')}</span>
                 <span className="text-white font-black">{selectedMember.generation}</span>
               </div>
+              {selectedMember.parents && (
+                <div className="flex justify-between gap-3 text-gray-300">
+                  <span className="shrink-0">{t('member.parents')}</span>
+                  <span className="text-white font-black text-right">{selectedMember.parents}</span>
+                </div>
+              )}
               <div className="flex justify-between text-gray-300">
-                <span>生存状态:</span>
+                <span>{t('member.status')}</span>
                 <span className="text-emerald-400 font-black">{selectedMember.status}</span>
               </div>
+              {!selectedMember.isPlayer && (
+                <div className="flex justify-between text-gray-300">
+                  <span>{t('member.affinity')}</span>
+                  <span className="text-yellow-400 font-black">{selectedMember.affinity}%</span>
+                </div>
+              )}
             </div>
 
-            <p className="text-gray-300 text-xs font-bold leading-relaxed mb-3">
-              {selectedMember.desc}
-            </p>
+            <p className="text-gray-300 text-xs font-bold leading-relaxed mb-3">{selectedMember.desc}</p>
 
+            {(selectedMember.isPlayer ? playerTraits : selectedMember.traitIds ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {(selectedMember.isPlayer ? playerTraits : selectedMember.traitIds ?? []).map((id) => (
+                  <span key={id} title={traitById(id)?.desc} className="bg-fuchsia-500/20 text-fuchsia-200 text-[10px] font-black px-2 py-0.5 rounded border border-fuchsia-500/50">
+                    ✦ {traitNames([id])[0]}
+                  </span>
+                ))}
+              </div>
+            )}
+            {(selectedMember.isPlayer ? playerAppearance : selectedMember.appearance) && (
+              <div className="w-20 h-24 mx-auto mb-2 bg-[#21232e] rounded-xl border border-black relative">
+                <CharacterAvatar
+                  clothing={selectedMember.isPlayer ? equippedClothing : outfitFor(origin.classId, selectedMember.gender, selectedMember.age, selectedMember.id)}
+                  appearance={selectedMember.isPlayer ? playerAppearance : selectedMember.appearance}
+                  age={selectedMember.age}
+                  gender={selectedMember.gender}
+                />
+              </div>
+            )}
+            {selectedMember.isChild && selectedMember.ambition !== undefined && (
+              <div className={`text-[10px] font-bold mb-2 ${selectedMember.ambition >= 80 ? 'text-rose-300' : 'text-gray-400'}`}>
+                {t('member.ambition', { ambition: selectedMember.ambition })}
+                {selectedMember.ambition >= 80 && selectedMember.age >= 18 ? t('member.ambitionHigh') : ''}
+              </div>
+            )}
+            {(selectedMember.isPlayer ? playerAntibodies : selectedMember.antibodies ?? []).length > 0 && (
+              <div className="text-[10px] text-sky-300 font-bold mb-2">
+                {t('member.antibodies', { names: antibodyNames(selectedMember.isPlayer ? playerAntibodies : selectedMember.antibodies).join(sep) })}
+              </div>
+            )}
             <div className="flex flex-wrap gap-1.5 mb-4">
               {selectedMember.traits.map((trait, idx) => (
-                <span
-                  key={idx}
-                  className="bg-yellow-400/20 text-yellow-300 text-[10px] font-black px-2 py-0.5 rounded border border-yellow-500/50"
-                >
+                <span key={idx} className="bg-yellow-400/20 text-yellow-300 text-[10px] font-black px-2 py-0.5 rounded border border-yellow-500/50">
                   #{trait}
                 </span>
               ))}
             </div>
 
-            {/* Actions */}
-            <div className="grid grid-cols-3 gap-2">
+            {selectedMember.isChild && (
+              <div className="bg-[#21232e] border-2 border-black rounded-xl p-2.5 mb-3 space-y-1.5">
+                <div className="text-[11px] text-gray-300 font-bold">{t('member.nameChildHint', { surname: origin.surname })}</div>
+                <div className="flex gap-1.5">
+                  <input
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    placeholder={selectedMember.name.split('·')[0]}
+                    maxLength={10}
+                    className="flex-1 min-w-0 bg-[#181a24] text-white text-xs font-bold px-2 py-1.5 rounded-lg border border-black focus:outline-none focus:border-yellow-400"
+                  />
+                  <button
+                    onClick={() => {
+                      const full = applySurname(nameDraft, origin.surname);
+                      const check = validatePlayerName(full);
+                      if (!nameDraft.trim() || !check.valid) {
+                        showToast(t('toast.nameInvalid', { reason: check.reason || t('toast.nameRequired') }));
+                        return;
+                      }
+                      if (members.some((m) => m.name === full && m.id !== selectedMember.id)) {
+                        showToast(t('toast.nameTaken'));
+                        return;
+                      }
+                      setFamily((prev) => renameChild(prev, selectedMember.id, full));
+                      showToast(t('toast.renamed', { name: full }));
+                      setNameDraft('');
+                    }}
+                    className="bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black px-3 rounded-lg border-2 border-black cursor-pointer shrink-0"
+                  >
+                    {t('member.nameChild')}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {onRetireTo && selectedMember.depth !== undefined && selectedMember.depth <= HEIR_MAX_DEPTH && selectedMember.status !== '已故' && selectedMember.age >= 18 && age >= 50 && (
               <button
                 onClick={() => {
-                  showToast(`你与 ${selectedMember.name} 交流了机械与人生心得，获得经验 +50！`);
-                  setSelectedMember(null);
+                  if (confirmRetire !== selectedMember.id) {
+                    setConfirmRetire(selectedMember.id);
+                    return;
+                  }
+                  setConfirmRetire(null);
+                  const err = onRetireTo(selectedMember.id);
+                  if (err) showToast(err);
+                  else setSelectedId(null);
                 }}
-                className="bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5"
+                className="w-full mb-3 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
               >
-                切磋交流
+                {confirmRetire === selectedMember.id ? t('member.retireConfirm', { name: selectedMember.name }) : t('member.retire')}
               </button>
+            )}
+            {selectedMember.income !== undefined && (
+              <div className="text-[10px] text-emerald-300 font-bold mb-2">
+                {t('member.income', { occupation: selectedMember.occupation, income: selectedMember.income.toLocaleString(), symbol: CURRENCY.symbol })}
+              </div>
+            )}
+            {selectedMember.arranged && (
+              <div className={`text-[10px] font-bold mb-2 ${selectedMember.arranged === 'estranged' ? 'text-rose-300' : 'text-gray-300'}`}>
+                {t('member.arranged', { status: t(`arranged.${selectedMember.arranged}`) })}
+              </div>
+            )}
+            {canArrangeMarriage(selectedMember) === null && (
               <button
-                onClick={() => {
-                  showToast(`向 ${selectedMember.name} 请教了家族经验，获得指导加成！`);
-                  setSelectedMember(null);
-                }}
-                className="bg-sky-400 hover:bg-sky-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5"
+                onClick={() => handleArrange(selectedMember)}
+                className="w-full mb-3 bg-pink-400 hover:bg-pink-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] cursor-pointer"
               >
-                家族请教
+                {t('member.matchmaking', { fee: MATCHMAKING_FEE.toLocaleString(), symbol: CURRENCY.symbol, penalty: MATCHMAKING_AFFINITY_PENALTY })}
               </button>
-              <button
-                onClick={() => {
-                  showToast(
-                    `给 ${selectedMember.name} 准备了礼物，好感度升至 ${Math.min(
-                      100,
-                      selectedMember.affinity + 2
-                    )}%！`
-                  );
-                  setSelectedMember(null);
-                }}
-                className="bg-rose-400 hover:bg-rose-300 text-black text-xs font-black py-2 rounded-xl border-2 border-black shadow-[0_3px_0_#000] active:translate-y-0.5"
-              >
-                赠送礼物
-              </button>
-            </div>
+            )}
+            {!selectedMember.isPlayer && selectedMember.status !== '已故' && (
+              <>
+                <div className="text-[11px] text-gray-300 font-bold mb-2">
+                  {t('member.giftTaste')}<span className="text-rose-300 font-black">{GIFT_TASTE_LABEL[tasteOf(selectedMember, family.giftTastes) ?? 'toy']}</span>
+                  <span className="text-gray-500">{t('member.giftTasteHint')}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {actionBtn('spar', t('member.spar'), 'bg-yellow-400 hover:bg-yellow-300')}
+                  {actionBtn('consult', t('member.consult'), 'bg-sky-400 hover:bg-sky-300')}
+                  {actionBtn('gift', t('member.gift', { cost: GIFT_COST, symbol: CURRENCY.symbol }), 'bg-rose-400 hover:bg-rose-300')}
+                </div>
+                <p className="text-[10px] text-gray-400 font-bold mt-2 text-center">
+                  {blockedThisMonth || t('member.interactLimit')}
+                </p>
+                {Object.keys(giftInventory).length > 0 && (
+                  <div className="mt-3 border-t border-gray-700 pt-2">
+                    <div className="text-[10px] text-gray-400 font-black mb-1.5">{t('member.giftBag')}</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(giftInventory).map(([id, count]) => {
+                        const gift = giftById(id);
+                        if (!gift) return null;
+                        const liked = tasteOf(selectedMember, family.giftTastes) === gift.taste;
+                        return (
+                          <button
+                            key={id}
+                            onClick={() => handleGiveGift(selectedMember, id)}
+                            disabled={!!blockedThisMonth}
+                            title={`${gift.desc}（${GIFT_TASTE_LABEL[gift.taste]}）`}
+                            className={`flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-lg border border-black ${blockedThisMonth ? 'bg-gray-700 text-gray-400' : 'bg-[#21232e] text-white hover:bg-[#2d2f3d] cursor-pointer'}`}
+                          >
+                            <span className={`px-1 rounded ${GIFT_QUALITY_STYLE[gift.quality]}`}>{gift.quality}</span>
+                            {gift.name} ×{count}
+                            <span className={liked ? 'text-rose-300' : 'text-gray-400'}>
+                              {liked ? '♥' : ''}+{giftAffinityGain(gift, selectedMember, family.giftTastes)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
