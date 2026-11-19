@@ -89,7 +89,8 @@ npm test                         # 单元测试：前端规则库（happy-dom）
     │                                 #   从 App 拆出的功能 hook：useCredits（致谢名单）、useAntibodies（抗体与疫苗）、
     │                                 #   useGodMode（测试兑换码）、useSeason（赛季进度与成绩上报）、
     │                                 #   useSuccession（家族传承、传位与逼宫）、useSimpleMode（简洁模式与智能快进）、
-    │                                 #   useOverlays（全屏弹窗的开关，按打开顺序叠放）、useAuth（账号登录状态与退出登录）
+    │                                 #   useOverlays（全屏弹窗的开关，按打开顺序叠放）、useAuth（账号登录状态与退出登录）、
+    │                                 #   useMonthAdvance（推进月份与一键快进：读写存档，调用 monthTick 结算）
     ├── data/
     │   ├── currencies.ts             # 货币（帝国卢布、苏维埃卢布、诺镑），每个赛季指定一种
     │   ├── fixedFamilies.ts          # 固定家族列表（皇族、贵族与以后出现的家族）
@@ -173,7 +174,7 @@ npm test                         # 单元测试：前端规则库（happy-dom）
 | 组件 / 函数 | 作用 |
 | :--- | :--- |
 | `App()` | 根组件。游戏进度状态（出生登记、现金、健康、游戏年月、银行、家族、疾病与抗体、特质、声望、推演、拍卖会、外貌、寿命等）统一由 `hooks/useGameState.ts` 的 reducer 管理并自动存档；账号状态由 `hooks/useAuth.ts` 管理，`components/AuthGate.tsx` 负责登录前的关卡；全屏弹窗的开关由 `hooks/useOverlays.ts` 管理，`components/OverlayHost.tsx` 负责渲染。 |
-| `handleNextMonth()` | 推进一个月：读取存档中的输入，调用 `lib/monthTick.ts` 的纯函数 `advanceMonth` 完成全部月度结算，再把结果写回状态与存档。结算内容：俸禄或零花、月薪、童工薪水、房租、居家开销、存贷利息、股市、健康与疾病、家族（生育、情人、好感衰减与分家、监护、声望、阶层提升）、推演事件、拍卖会、人生日志；健康归零时进入传承流程。 |
+| `handleNextMonth()`（`hooks/useMonthAdvance.ts`） | 推进一个月：读取存档中的输入，调用 `lib/monthTick.ts` 的纯函数 `advanceMonth` 完成全部月度结算，再把结果写回状态与存档。结算内容：俸禄或零花、月薪、童工薪水、房租、居家开销、存贷利息、股市、健康与疾病、家族（生育、情人、好感衰减与分家、监护、声望、阶层提升）、推演事件、拍卖会、人生日志；健康归零时进入传承流程。 |
 | `handleRegisterBirth()` | 出生登记：随机家族阶层与出身（起始资产、父母家、家人），名字中的姓换成家族姓，初始年龄 8 岁。 |
 | `handleSuccession()`（`hooks/useSuccession.ts`） | 角色去世后由继承人接续（未成年继承人进入监护），可选择把前任的大事写入家族大事记。 |
 | `handleResetLife()` / `handleLogout()` | 重置人生（保留账号级数据与成就）；退出登录（邮箱账号先同步云端再清除本地存档）。 |
