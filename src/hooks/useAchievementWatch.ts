@@ -5,6 +5,7 @@ import { unlockAchievement, ACHIEVEMENTS, earnsNeet, ACHIEVEMENT_EVENT } from '.
 import { LAST_WORK_MONTH_KEY } from '../lib/monthly';
 import { loadStored } from '../lib/storage';
 import { CLOTHING } from '../data/clothing';
+import { playSfx } from '../lib/audio';
 
 /**
  * 成就的自动检查：解锁时弹出提示，集齐全部成就时自动播放一次致谢名单；
@@ -40,7 +41,10 @@ export const useAchievementWatch = ({
   React.useEffect(() => {
     const onUnlock = (e: Event) => {
       const def = ACHIEVEMENTS.find((a) => a.id === (e as CustomEvent).detail);
-      if (def) showToast(t('toast.achievement', { title: def.title, desc: def.desc }));
+      if (def) {
+        playSfx('achievement');
+        showToast(t('toast.achievement', { title: def.title, desc: def.desc }));
+      }
       autoPlayCreditsIfComplete();
     };
     autoPlayCreditsIfComplete();

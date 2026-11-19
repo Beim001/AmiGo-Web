@@ -10,10 +10,11 @@ import { addLifeLog, clearLifeLog } from '../lib/lifeLog';
 import { unlockAchievement } from '../lib/achievements';
 import { saveStored } from '../lib/storage';
 import { CLOTHING_COUPON_KEY } from '../lib/clothingCoupon';
+import { SETTINGS_KEY } from '../lib/settings';
 
 // 重置人生时保留的存档键（账号级数据，不属于某一段人生）
-// 赛季进度与成就一样跨人生保留（第 55 题）；服饰与服饰 7 折券属于账号，重置人生不清空
-const KEYS_KEPT_ON_RESET = new Set(['amigo_owned_clothes', 'amigo_equipped_clothing', CLOTHING_COUPON_KEY, 'amigo_simple_mode', 'amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements', 'amigo_credits_seen', 'amigo_credits_rank', 'amigo_gifts_given', 'amigo_season_id', 'amigo_season_joined_at', 'amigo_season_sim_points', 'amigo_season_lazy', 'amigo_season_cheat']);
+// 赛季进度与成就一样跨人生保留（第 55 题）；服饰与服饰 7 折券属于账号、系统设置属于设备，重置人生不清空
+const KEYS_KEPT_ON_RESET = new Set(['amigo_owned_clothes', 'amigo_equipped_clothing', CLOTHING_COUPON_KEY, SETTINGS_KEY, 'amigo_simple_mode', 'amigo_active_user', 'amigo_local_uid', 'amigo_redeemed_codes', 'amigo_achievements', 'amigo_credits_seen', 'amigo_credits_rank', 'amigo_gifts_given', 'amigo_season_id', 'amigo_season_joined_at', 'amigo_season_sim_points', 'amigo_season_lazy', 'amigo_season_cheat']);
 
 /**
  * 一段人生的开始与结束：出生登记（随机家族出身、特质、外貌与寿命）和重置人生（清空本段人生的存档，保留账号级数据）。

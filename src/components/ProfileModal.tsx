@@ -123,11 +123,6 @@ export const ProfileModal = ({
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
-  // Settings States
-  const [bgmEnabled, setBgmEnabled] = useState(true);
-  const [sfxEnabled, setSfxEnabled] = useState(true);
-  const [highFps, setHighFps] = useState(true);
-
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -327,12 +322,6 @@ export const ProfileModal = ({
             onClose={onClose}
             onLogout={onLogout}
             showToast={showToast}
-            bgmEnabled={bgmEnabled}
-            setBgmEnabled={setBgmEnabled}
-            sfxEnabled={sfxEnabled}
-            setSfxEnabled={setSfxEnabled}
-            highFps={highFps}
-            setHighFps={setHighFps}
             confirmReset={confirmReset}
             setConfirmReset={setConfirmReset}
             confirmLogout={confirmLogout}

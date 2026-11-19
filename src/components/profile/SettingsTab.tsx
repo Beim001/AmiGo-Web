@@ -1,21 +1,17 @@
 import React from 'react';
-import { Baby, Settings, Volume2, VolumeX, RotateCcw, Save, LogOut } from 'lucide-react';
+import { Baby, Settings, Volume2, VolumeX, Music, Sparkles, RotateCcw, Save, LogOut } from 'lucide-react';
 import type { ProfileModalProps } from '../ProfileModal';
 import { useTranslation } from 'react-i18next';
+import { useSettings } from '../../hooks/useSettings';
+import { TRACKS, TrackChoice } from '../../lib/settings';
 
-// 「系统设置」标签页：简洁模式、音效与画面开关、保存进度、重置人生、退出登录
+// 「系统设置」标签页：简洁模式、背景音乐与音效（开关、音量、曲目）、减少动画、保存进度、重置人生、退出登录
 
 type Toggle = React.Dispatch<React.SetStateAction<boolean>>;
 
 interface SettingsTabProps
   extends Pick<ProfileModalProps, 'simpleMode' | 'onToggleSimpleMode' | 'onSaveProgress' | 'onResetLife' | 'setCoins' | 'onClose' | 'onLogout'> {
   showToast: (msg: string) => void;
-  bgmEnabled: boolean;
-  setBgmEnabled: Toggle;
-  sfxEnabled: boolean;
-  setSfxEnabled: Toggle;
-  highFps: boolean;
-  setHighFps: Toggle;
   confirmReset: boolean;
   setConfirmReset: Toggle;
   confirmLogout: boolean;
@@ -31,18 +27,38 @@ export const SettingsTab = ({
   onClose,
   onLogout,
   showToast,
-  bgmEnabled,
-  setBgmEnabled,
-  sfxEnabled,
-  setSfxEnabled,
-  highFps,
-  setHighFps,
   confirmReset,
   setConfirmReset,
   confirmLogout,
   setConfirmLogout,
 }: SettingsTabProps) => {
   const { t } = useTranslation('profile');
+  const [settings, updateSettings] = useSettings();
+
+  const renderSwitch = (on: boolean, onClick: () => void) => (
+    <button
+      onClick={onClick}
+      className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors cursor-pointer shrink-0 ${on ? 'bg-yellow-400' : 'bg-gray-700'}`}
+    >
+      <div className={`w-4 h-4 rounded-full bg-black absolute top-0.5 transition-transform ${on ? 'left-6' : 'left-0.5'}`}></div>
+    </button>
+  );
+
+  const renderVolume = (label: string, value: number, onChange: (v: number) => void) => (
+    <label className="flex items-center gap-2 text-[11px] text-gray-300 font-bold">
+      <span className="shrink-0 w-14">{label}</span>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={Math.round(value * 100)}
+        onChange={(e) => onChange(Number(e.target.value) / 100)}
+        className="flex-1 accent-yellow-400 cursor-pointer"
+      />
+      <span className="w-9 text-right font-mono">{Math.round(value * 100)}%</span>
+    </label>
+  );
   return (
     <div className="space-y-3">
       <div className="bg-[#2d2f3d] border-2 border-black rounded-2xl p-4 shadow-[0_4px_0_#000] space-y-3">
@@ -67,76 +83,71 @@ export const SettingsTab = ({
           </button>
         </div>
 
-        <div className="flex justify-between items-center bg-[#21232e] p-3 rounded-xl border border-black">
-          <div className="flex items-center gap-2">
-            {bgmEnabled ? <Volume2 size={18} className="text-yellow-400" /> : <VolumeX size={18} className="text-gray-500" />}
-            <div>
-              <div className="text-white font-black text-xs">{t('settings.bgm')}</div>
-              <div className="text-gray-400 text-[10px]">{t('settings.bgmDesc')}</div>
+        <div className="bg-[#21232e] p-3 rounded-xl border border-black space-y-2.5">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              {settings.bgm ? <Music size={18} className="text-yellow-400" /> : <VolumeX size={18} className="text-gray-500" />}
+              <div>
+                <div className="text-white font-black text-xs">{t('settings.bgm')}</div>
+                <div className="text-gray-400 text-[10px]">{t('settings.bgmDesc')}</div>
+              </div>
             </div>
+            {renderSwitch(settings.bgm, () => {
+              updateSettings({ bgm: !settings.bgm });
+              showToast(settings.bgm ? t('settings.bgmOff') : t('settings.bgmOn'));
+            })}
           </div>
-          <button
-            onClick={() => {
-              setBgmEnabled(!bgmEnabled);
-              showToast(bgmEnabled ? t('settings.bgmOff') : t('settings.bgmOn'));
-            }}
-            className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors cursor-pointer ${
-              bgmEnabled ? 'bg-yellow-400' : 'bg-gray-700'
-            }`}
-          >
-            <div
-              className={`w-4 h-4 rounded-full bg-black absolute top-0.5 transition-transform ${
-                bgmEnabled ? 'left-6' : 'left-0.5'
-              }`}
-            ></div>
-          </button>
+          {settings.bgm && (
+            <>
+              {renderVolume(t('settings.bgmVolume'), settings.bgmVolume, (v) => updateSettings({ bgmVolume: v }))}
+              <label className="flex items-center gap-2 text-[11px] text-gray-300 font-bold">
+                <span className="shrink-0 w-14">{t('settings.track')}</span>
+                <select
+                  value={settings.track}
+                  onChange={(e) => updateSettings({ track: e.target.value as TrackChoice })}
+                  className="flex-1 min-w-0 bg-[#2d2f3d] text-white text-[11px] font-bold px-2 py-1.5 rounded-lg border border-black focus:outline-none focus:border-yellow-400"
+                >
+                  <option value="all">{t('settings.trackAll')}</option>
+                  {TRACKS.map((track) => (
+                    <option key={track.id} value={track.id}>
+                      {track.name} · {track.author}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          )}
+        </div>
+
+        <div className="bg-[#21232e] p-3 rounded-xl border border-black space-y-2.5">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              {settings.sfx ? <Volume2 size={18} className="text-yellow-400" /> : <VolumeX size={18} className="text-gray-500" />}
+              <div>
+                <div className="text-white font-black text-xs">{t('settings.sfx')}</div>
+                <div className="text-gray-400 text-[10px]">{t('settings.sfxDesc')}</div>
+              </div>
+            </div>
+            {renderSwitch(settings.sfx, () => {
+              updateSettings({ sfx: !settings.sfx });
+              showToast(settings.sfx ? t('settings.sfxOff') : t('settings.sfxOn'));
+            })}
+          </div>
+          {settings.sfx && renderVolume(t('settings.sfxVolume'), settings.sfxVolume, (v) => updateSettings({ sfxVolume: v }))}
         </div>
 
         <div className="flex justify-between items-center bg-[#21232e] p-3 rounded-xl border border-black">
           <div className="flex items-center gap-2">
-            {sfxEnabled ? <Volume2 size={18} className="text-yellow-400" /> : <VolumeX size={18} className="text-gray-500" />}
+            <Sparkles size={18} className={settings.reduceMotion ? 'text-gray-500' : 'text-yellow-400'} />
             <div>
-              <div className="text-white font-black text-xs">{t('settings.sfx')}</div>
-              <div className="text-gray-400 text-[10px]">{t('settings.sfxDesc')}</div>
+              <div className="text-white font-black text-xs">{t('settings.reduceMotion')}</div>
+              <div className="text-gray-400 text-[10px]">{t('settings.reduceMotionDesc')}</div>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setSfxEnabled(!sfxEnabled);
-              showToast(sfxEnabled ? t('settings.sfxOff') : t('settings.sfxOn'));
-            }}
-            className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors cursor-pointer ${
-              sfxEnabled ? 'bg-yellow-400' : 'bg-gray-700'
-            }`}
-          >
-            <div
-              className={`w-4 h-4 rounded-full bg-black absolute top-0.5 transition-transform ${
-                sfxEnabled ? 'left-6' : 'left-0.5'
-              }`}
-            ></div>
-          </button>
-        </div>
-
-        <div className="flex justify-between items-center bg-[#21232e] p-3 rounded-xl border border-black">
-          <div>
-            <div className="text-white font-black text-xs">{t('settings.fps')}</div>
-            <div className="text-gray-400 text-[10px]">{t('settings.fpsDesc')}</div>
-          </div>
-          <button
-            onClick={() => {
-              setHighFps(!highFps);
-              showToast(highFps ? t('settings.fpsOff') : t('settings.fpsOn'));
-            }}
-            className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors cursor-pointer ${
-              highFps ? 'bg-yellow-400' : 'bg-gray-700'
-            }`}
-          >
-            <div
-              className={`w-4 h-4 rounded-full bg-black absolute top-0.5 transition-transform ${
-                highFps ? 'left-6' : 'left-0.5'
-              }`}
-            ></div>
-          </button>
+          {renderSwitch(settings.reduceMotion, () => {
+            updateSettings({ reduceMotion: !settings.reduceMotion });
+            showToast(settings.reduceMotion ? t('settings.reduceMotionOff') : t('settings.reduceMotionOn'));
+          })}
         </div>
       </div>
 

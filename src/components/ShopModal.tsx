@@ -9,6 +9,7 @@ import { drawGacha, hitLimitedPity, GACHA_PITY_KEY, INITIAL_PITY, PITY_RARE, PIT
 import { unlockAchievement } from '../lib/achievements';
 import { loadStored, saveStored } from '../lib/storage';
 import { CURRENCY } from '../data/seasons';
+import { playSfx } from '../lib/audio';
 import { couponPrice, loadCouponLeft, saveCouponLeft } from '../lib/clothingCoupon';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -257,6 +258,7 @@ export const ShopModal = ({
       }
 
       setDrawResult(rewards);
+      playSfx('reward');
       if (hitLimitedPity(rewards)) unlockAchievement('pity_limited');
     }, 1500);
   };

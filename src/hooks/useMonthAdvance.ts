@@ -15,6 +15,7 @@ import { LAST_WORK_MONTH_KEY } from '../lib/monthly';
 import { addLifeLog } from '../lib/lifeLog';
 import { unlockAchievement } from '../lib/achievements';
 import { JOB_POSITIONS, readCurrentJobId } from '../components/JobModal';
+import { playSfx } from '../lib/audio';
 
 /**
  * 推进游戏月份：读取存档中的输入，调用纯函数 advanceMonth（lib/monthTick.ts）完成月度结算，
@@ -179,6 +180,7 @@ export const useMonthAdvance = ({
     } else {
       showToast(t('toast.newMonth', { date: `${nextY}.${mStr}`, notes: notes.join('｜') }));
     }
+    playSfx('month');
     // 等本月结算写入本地存档后再同步到云端
     setTimeout(() => void cloud.saveNow(), 1500);
   };

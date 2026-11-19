@@ -38,6 +38,7 @@ import { JOB_POSITIONS, readCurrentJobId } from './components/JobModal';
 import { loadStored, saveStored } from './lib/storage';
 import { useCloudSave } from './lib/cloudSave';
 import { useTranslation } from 'react-i18next';
+import { useSettingsEffects } from './hooks/useSettings';
 
 export default function App() {
   const { t } = useTranslation('app');
@@ -185,6 +186,8 @@ export default function App() {
   const { usedSimpleMode, handleMaintenance, fertilityText } = simple;
 
   useAchievementWatch({ game, currentAge, showToast, autoPlayCreditsIfComplete });
+  // 背景音乐、点击音效与减少动画（系统设置）
+  useSettingsEffects();
 
   // 家族排行榜：凝聚力（在世成员对当家人的平均好感）、财力（家族资产净值）、影响力（声望）
   const familyMembersView = buildFamilyMembers(family, { playerName, playerGender: gender, playerAge: currentAge, playerOccupation, gameYear, gameMonth });

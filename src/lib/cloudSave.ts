@@ -7,11 +7,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AppUser } from './bilibiliToy';
 import { isPasswordUser } from './authClient';
+import { SETTINGS_KEY } from './settings';
 
 const GAME_KEY_PREFIXES = ['amigo_', 'aminoac_'];
 const CLOUD_META_PREFIX = 'amigo_cloud_';
 /** 不属于游戏进度、不上传的键 */
-const NON_SAVE_KEYS = new Set(['amigo_active_user', 'amigo_local_uid']);
+// 系统设置（音量、减少动画等）只属于这台设备，不随云存档同步
+const NON_SAVE_KEYS = new Set(['amigo_active_user', 'amigo_local_uid', SETTINGS_KEY]);
 
 const OWNER_KEY = 'amigo_cloud_owner';
 const VERSION_KEY = 'amigo_cloud_version';
