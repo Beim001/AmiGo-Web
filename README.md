@@ -84,13 +84,16 @@ npm test                         # 单元测试：前端规则库（happy-dom）
     ├── i18n/                         # 界面多语言（i18next + react-i18next）：index.ts 初始化与语言切换，
     │                                 #   locales/<语言代码>/ 下按命名空间存放语言包，i18next.d.ts 让 t() 的键名参与类型检查
     │                                 #   README.md 列出未翻译的内容及原因
-    ├── App.tsx                       # 主应用：全局状态与处理函数，组合各界面与功能 hook
+    ├── App.tsx                       # 主应用：调用各功能 hook，组合登录关卡、主界面、弹窗与开发工具
+    ├── App.test.ts                   # 应用外壳冒烟测试：已登录能进入主界面、未登录停在登录首屏
     ├── hooks/                        # useGameState（统一游戏状态：useReducer、初始化与自动存档）；
     │                                 #   从 App 拆出的功能 hook：useCredits（致谢名单）、useAntibodies（抗体与疫苗）、
     │                                 #   useGodMode（测试兑换码）、useSeason（赛季进度与成绩上报）、
     │                                 #   useSuccession（家族传承、传位与逼宫）、useSimpleMode（简洁模式与智能快进）、
     │                                 #   useOverlays（全屏弹窗的开关，按打开顺序叠放）、useAuth（账号登录状态与退出登录）、
-    │                                 #   useMonthAdvance（推进月份与一键快进：读写存档，调用 monthTick 结算）
+    │                                 #   useMonthAdvance（推进月份与一键快进：读写存档，调用 monthTick 结算）、
+    │                                 #   useLifeCycle（出生登记与重置人生）、usePlayerActions（声望、入狱、捐款、处理推演事件）、
+    │                                 #   useAchievementWatch（成就自动检查与解锁提示）、useAvatar（头像来源与显示）
     ├── data/
     │   ├── currencies.ts             # 货币（帝国卢布、苏维埃卢布、诺镑），每个赛季指定一种
     │   ├── fixedFamilies.ts          # 固定家族列表（皇族、贵族与以后出现的家族）
@@ -125,6 +128,8 @@ npm test                         # 单元测试：前端规则库（happy-dom）
         ├── OverlayHost.tsx                 # 渲染当前打开的全屏弹窗（开关见 hooks/useOverlays.ts）
         ├── AuthGate.tsx                    # 进入游戏前的关卡：加载中、登录首屏、邮箱验证拦截
         ├── GameWorkspace.tsx               # 游戏主界面：完整模式的顶部栏、标签页与底部导航，或简洁模式一屏视图
+        ├── CloudConflictDialog.tsx         # 云端存档冲突时选择保留本机或云端进度
+        ├── DevTools.tsx                    # 开发测试工具的接线（DevToolsPanel 的各项测试操作）
         ├── AuthScreen.tsx / AuthModal.tsx  # 登录首屏 / 游戏内账号管理
         ├── LanguageSwitcher.tsx      # 登录首屏右上角的语言选择，选择保存在本机
         ├── EmailVerificationScreen.tsx     # 邮箱未验证拦截页
@@ -175,9 +180,9 @@ npm test                         # 单元测试：前端规则库（happy-dom）
 | :--- | :--- |
 | `App()` | 根组件。游戏进度状态（出生登记、现金、健康、游戏年月、银行、家族、疾病与抗体、特质、声望、推演、拍卖会、外貌、寿命等）统一由 `hooks/useGameState.ts` 的 reducer 管理并自动存档；账号状态由 `hooks/useAuth.ts` 管理，`components/AuthGate.tsx` 负责登录前的关卡；全屏弹窗的开关由 `hooks/useOverlays.ts` 管理，`components/OverlayHost.tsx` 负责渲染。 |
 | `handleNextMonth()`（`hooks/useMonthAdvance.ts`） | 推进一个月：读取存档中的输入，调用 `lib/monthTick.ts` 的纯函数 `advanceMonth` 完成全部月度结算，再把结果写回状态与存档。结算内容：俸禄或零花、月薪、童工薪水、房租、居家开销、存贷利息、股市、健康与疾病、家族（生育、情人、好感衰减与分家、监护、声望、阶层提升）、推演事件、拍卖会、人生日志；健康归零时进入传承流程。 |
-| `handleRegisterBirth()` | 出生登记：随机家族阶层与出身（起始资产、父母家、家人），名字中的姓换成家族姓，初始年龄 8 岁。 |
+| `handleRegisterBirth()`（`hooks/useLifeCycle.ts`） | 出生登记：随机家族阶层与出身（起始资产、父母家、家人），名字中的姓换成家族姓，初始年龄 8 岁。 |
 | `handleSuccession()`（`hooks/useSuccession.ts`） | 角色去世后由继承人接续（未成年继承人进入监护），可选择把前任的大事写入家族大事记。 |
-| `handleResetLife()` / `handleLogout()` | 重置人生（保留账号级数据与成就）；退出登录（邮箱账号先同步云端再清除本地存档）。 |
+| `handleResetLife()`（`hooks/useLifeCycle.ts`）/ `handleLogout()`（`hooks/useAuth.ts`） | 重置人生（保留账号级数据与成就）；退出登录（邮箱账号先同步云端再清除本地存档）。 |
 | `ProfileModal`（`components/ProfileModal.tsx`，各标签页见 `components/profile/`） | 个人中心：名片资料、帝国排行榜、成就（含致谢名单重播）、系统设置、礼包兑换、关于我们；改名敏感词校验与冻结、慈善捐款。 |
 | `ShopModal` / `ChestAnimation`（`components/ShopModal.tsx`） | 服饰商城与宝箱抽奖（保底规则见 `gacha.ts`）、理发店。 |
 | `BankModal`（`components/BankModal.tsx`） | 多银行开户、存取款、贷款借还与流水。 |

@@ -5,6 +5,7 @@ import type { OverlayId, Overlays } from '../hooks/useOverlays';
 import type { useCloudSave } from '../lib/cloudSave';
 import type { useSeason } from '../hooks/useSeason';
 import type { useAntibodies } from '../hooks/useAntibodies';
+import type { useAvatar } from '../hooks/useAvatar';
 import type { AppUser } from '../lib/bilibiliToy';
 import type { SocialClass } from '../lib/lineage';
 import type { FamilyOrigin } from '../lib/family';
@@ -62,13 +63,7 @@ export interface OverlayHostProps {
   usedSimpleMode: boolean;
   fertilityText: string;
   handleMaintenance: (target: 'self' | 'spouse') => string;
-  avatarSource: string;
-  setAvatarSource: (source: string) => void;
-  bilibiliAvatar: string | null;
-  setBilibiliAvatar: (url: string | null) => void;
-  isAvatarModalOpen: boolean;
-  setIsAvatarModalOpen: (open: boolean) => void;
-  renderAvatarContent: () => React.ReactNode;
+  avatar: ReturnType<typeof useAvatar>;
   showToast: (msg: string) => void;
   setActiveTab: (tab: string) => void;
   changeReputation: (delta: number) => void;
@@ -300,13 +295,13 @@ export const OverlayHost: React.FC<OverlayHostProps> = (props) => {
             onResetLife={props.handleResetLife}
             onSaveProgress={cloud.enabled ? cloud.saveNow : undefined}
             authUser={authUser}
-            avatarSource={props.avatarSource}
-            setAvatarSource={props.setAvatarSource}
-            bilibiliAvatar={props.bilibiliAvatar}
-            setBilibiliAvatar={props.setBilibiliAvatar}
-            isAvatarModalOpen={props.isAvatarModalOpen}
-            setIsAvatarModalOpen={props.setIsAvatarModalOpen}
-            renderAvatarContent={props.renderAvatarContent}
+            avatarSource={props.avatar.avatarSource}
+            setAvatarSource={props.avatar.setAvatarSource}
+            bilibiliAvatar={props.avatar.bilibiliAvatar}
+            setBilibiliAvatar={props.avatar.setBilibiliAvatar}
+            isAvatarModalOpen={props.avatar.isAvatarModalOpen}
+            setIsAvatarModalOpen={props.avatar.setIsAvatarModalOpen}
+            renderAvatarContent={props.avatar.renderAvatarContent}
             ownedClothes={ownedClothes}
             isRegistered={isRegistered}
             age={currentAge}

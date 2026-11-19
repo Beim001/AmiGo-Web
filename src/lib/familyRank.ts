@@ -58,6 +58,15 @@ const readJson = <T,>(key: string, fallback: T): T => {
 
 /** 家族资产净值 */
 /** 家人的月收入按几个月计入家族资产净值（第 73 题：家人收入只计入家族财力） */
+/** 没有在世亲属时的凝聚力 */
+export const DEFAULT_COHESION = 50;
+
+/** 家族凝聚力：在世亲属（不含当家人）对当家人好感的平均值，取整 */
+export const familyCohesion = (members: Array<{ isPlayer?: boolean; status: string; affinity: number }>): number => {
+  const living = members.filter((m) => !m.isPlayer && m.status !== '已故');
+  return living.length > 0 ? Math.round(living.reduce((sum, m) => sum + m.affinity, 0) / living.length) : DEFAULT_COHESION;
+};
+
 export const KIN_INCOME_MONTHS = 12;
 
 export const familyNetWorth = (cash: number, deposit: number, loan: number, held = 0, heirloomValue = 0, kinIncome = 0): number => {
