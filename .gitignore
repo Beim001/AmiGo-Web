@@ -2,6 +2,7 @@ node_modules/
 build/
 dist/
 coverage/
+idea/
 .DS_Store
 *.log
 .env*
@@ -13,7 +14,3 @@ CLAUDE.md
 .dev.vars
 .wrangler/
 
-*.xlsx
-wiki-contributors.md
-list.md
-copilotsg.md
