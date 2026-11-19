@@ -10,7 +10,7 @@
 #      注意：*.workers.dev 默认域名在中国大陆无法访问，必须使用自有域名
 #   6. npm run deploy
 
-name = "amigo-web"
+name = "amigo"
 main = "worker/src/index.ts"
 compatibility_date = "2025-06-01"
 
