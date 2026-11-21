@@ -9,13 +9,15 @@ import { currentSeason } from '../../src/data/seasons';
 export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
-  /** 站点地址，用于邮件中的链接，例如 https://amigo.example.com（本地为 http://localhost:3000） */
+  /** 站点地址，用于邮件中的链接，例如 https://www.aminoac.com（本地为 http://localhost:3000） */
   APP_URL?: string;
-  /** 发件人，例如 "AmiGO <noreply@amigo.example.com>"；与 RESEND_API_KEY 都配置后才真正发信 */
+  /** 发件人，例如 "AmiGO <noreply@auth.aminoac.com>"；与 RESEND_API_KEY 都配置后才真正发信 */
   MAIL_FROM?: string;
   RESEND_API_KEY?: string;
   /** 'true' 时在接口响应里附带邮件链接，便于本地测试；线上不要开启 */
   DEV_MODE?: string;
+  /** Resend 使用的邮件模板 */
+  RESEND_TEMPLATE_ID?: string;
   /** 管理员邮箱，逗号分隔；这些已验证账号可以查看举报、隐藏或恢复赛季成绩 */
   ADMIN_EMAILS?: string;
 }
