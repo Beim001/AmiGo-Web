@@ -26,8 +26,10 @@ migrations_dir = "worker/migrations"
 
 [vars]
 # 站点地址（邮件链接用），例如 "https://amigo.example.com"；留空时使用请求的来源地址
-APP_URL = ""
+APP_URL = "https://www.aminoac.com"
 # 发件人，例如 "AmiGO <noreply@amigo.example.com>"；与 RESEND_API_KEY 都配置后才真正发信
-MAIL_FROM = ""
+MAIL_FROM = "AmiGO <noreply@auth.aminoac.com>"
+# 使用 Resend 的模板
+RESEND_TEMPLATE_ID = "account-verification"
 # 赛季排行管理员邮箱，逗号分隔，例如 "a@example.com,b@example.com"；这些已验证账号可在排行榜中处理举报、隐藏作弊成绩
 ADMIN_EMAILS = "beim@outlook.jp,beimhub@gmail.com"
